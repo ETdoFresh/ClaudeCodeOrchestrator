@@ -5,6 +5,7 @@
         Width="500" Height="220"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
+        ShowInTaskbar="False"
         Background="#2D2D30"
         AutomationProperties.AutomationId="NewTaskDialog">
 

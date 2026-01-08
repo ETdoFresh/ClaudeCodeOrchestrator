@@ -5,6 +5,7 @@
         Width="400" Height="160"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
+        ShowInTaskbar="False"
         Background="#2D2D30">
 
     <Grid RowDefinitions="*,Auto" Margin="20">
