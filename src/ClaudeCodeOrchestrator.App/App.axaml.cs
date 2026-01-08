@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using ClaudeCodeOrchestrator.App.Automation;
 using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.Core.Services;
 using ClaudeCodeOrchestrator.Git.Services;
@@ -11,6 +12,7 @@ namespace ClaudeCodeOrchestrator.App;
 public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
+    private AutomationServer? _automationServer;
 
     public override void Initialize()
     {
@@ -31,8 +33,15 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow();
 
+            // Start automation server for CLI integration testing
+            _automationServer = new AutomationServer(new AutomationExecutor());
+            _automationServer.Start();
+
             desktop.ShutdownRequested += (_, _) =>
             {
+                // Dispose automation server
+                _automationServer?.Dispose();
+
                 // Dispose services on shutdown
                 _serviceProvider?.Dispose();
             };

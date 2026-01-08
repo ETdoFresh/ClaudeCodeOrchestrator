@@ -38,24 +38,29 @@
 
     <Grid RowDefinitions="Auto,*">
         <!-- Menu Bar -->
-        <Menu Grid.Row="0" Background="#333333">
-            <MenuItem Header="_File">
-                <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}" />
+        <Menu Grid.Row="0" Background="#333333" AutomationProperties.AutomationId="MainMenu">
+            <MenuItem Header="_File" AutomationProperties.AutomationId="FileMenu">
+                <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}"
+                          AutomationProperties.AutomationId="OpenRepositoryMenuItem" />
                 <Separator />
-                <MenuItem Header="_Close Repository" Command="{Binding CloseRepositoryCommand}" IsEnabled="{Binding IsRepositoryOpen}" />
+                <MenuItem Header="_Close Repository" Command="{Binding CloseRepositoryCommand}"
+                          IsEnabled="{Binding IsRepositoryOpen}"
+                          AutomationProperties.AutomationId="CloseRepositoryMenuItem" />
                 <Separator />
-                <MenuItem Header="E_xit" />
+                <MenuItem Header="E_xit" AutomationProperties.AutomationId="ExitMenuItem" />
             </MenuItem>
-            <MenuItem Header="_Task">
-                <MenuItem Header="_New Task..." Command="{Binding CreateTaskCommand}" IsEnabled="{Binding IsRepositoryOpen}" />
+            <MenuItem Header="_Task" AutomationProperties.AutomationId="TaskMenu">
+                <MenuItem Header="_New Task..." Command="{Binding CreateTaskCommand}"
+                          IsEnabled="{Binding IsRepositoryOpen}"
+                          AutomationProperties.AutomationId="NewTaskMenuItem" />
             </MenuItem>
-            <MenuItem Header="_View">
-                <MenuItem Header="_Explorer" />
-                <MenuItem Header="_Output" />
-                <MenuItem Header="_Worktrees" />
+            <MenuItem Header="_View" AutomationProperties.AutomationId="ViewMenu">
+                <MenuItem Header="_Explorer" AutomationProperties.AutomationId="ExplorerMenuItem" />
+                <MenuItem Header="_Output" AutomationProperties.AutomationId="OutputMenuItem" />
+                <MenuItem Header="_Worktrees" AutomationProperties.AutomationId="WorktreesMenuItem" />
             </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="_About" />
+            <MenuItem Header="_Help" AutomationProperties.AutomationId="HelpMenu">
+                <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />
             </MenuItem>
         </Menu>
 
