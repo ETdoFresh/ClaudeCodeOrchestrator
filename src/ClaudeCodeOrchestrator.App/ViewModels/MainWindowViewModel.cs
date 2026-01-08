@@ -1,17 +1,49 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodeOrchestrator.App.Services;
+using ClaudeCodeOrchestrator.App.ViewModels.Docking;
+using ClaudeCodeOrchestrator.App.Views.Docking;
+using ClaudeCodeOrchestrator.Core.Services;
+using ClaudeCodeOrchestrator.Git.Models;
+using ClaudeCodeOrchestrator.Git.Services;
 
 namespace ClaudeCodeOrchestrator.App.ViewModels;
 
 /// <summary>
 /// Main window view model.
 /// </summary>
-public partial class MainWindowViewModel : ViewModelBase
+public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    private readonly IDialogService _dialogService;
+    private readonly IGitService _gitService;
+    private readonly IWorktreeService _worktreeService;
+    private readonly ISessionService _sessionService;
+    private readonly IDispatcher _dispatcher;
+
     private object? _layout;
     private string? _currentRepositoryPath;
     private string _windowTitle = "Claude Code Orchestrator";
     private bool _isRepositoryOpen;
+    private bool _disposed;
+
+    /// <summary>
+    /// Reference to DockFactory for dynamic document creation.
+    /// </summary>
+    public DockFactory? Factory { get; set; }
+
+    public MainWindowViewModel()
+    {
+        // Get services from locator
+        _dialogService = ServiceLocator.GetRequiredService<IDialogService>();
+        _gitService = ServiceLocator.GetRequiredService<IGitService>();
+        _worktreeService = ServiceLocator.GetRequiredService<IWorktreeService>();
+        _sessionService = ServiceLocator.GetRequiredService<ISessionService>();
+        _dispatcher = ServiceLocator.GetRequiredService<IDispatcher>();
+
+        // Subscribe to session events
+        _sessionService.SessionCreated += OnSessionCreated;
+        _sessionService.SessionEnded += OnSessionEnded;
+    }
 
     /// <summary>
     /// Gets or sets the dock layout (IRootDock).
@@ -48,15 +80,62 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenRepositoryAsync()
     {
-        // Will be implemented with folder picker
-        await Task.CompletedTask;
+        try
+        {
+            var path = await _dialogService.ShowFolderPickerAsync("Select Git Repository");
+            if (string.IsNullOrEmpty(path)) return;
+
+            // Validate it's a git repository
+            var repoInfo = await _gitService.OpenRepositoryAsync(path);
+
+            SetRepository(path);
+
+            // Load worktrees
+            await RefreshWorktreesAsync();
+
+            // Update file browser
+            Factory?.UpdateFileBrowser(path);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Repository",
+                $"Failed to open repository: {ex.Message}");
+        }
     }
 
     [RelayCommand]
     private async Task CreateTaskAsync()
     {
-        // Will be implemented with new task dialog
-        await Task.CompletedTask;
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            await _dialogService.ShowErrorAsync("No Repository",
+                "Please open a repository first.");
+            return;
+        }
+
+        try
+        {
+            var taskDescription = await _dialogService.ShowNewTaskDialogAsync();
+            if (string.IsNullOrEmpty(taskDescription)) return;
+
+            // Create worktree
+            var worktree = await _worktreeService.CreateWorktreeAsync(
+                CurrentRepositoryPath,
+                taskDescription);
+
+            // Add to list
+            var vm = WorktreeViewModel.FromModel(worktree);
+            SetupWorktreeCallbacks(vm);
+            Worktrees.Insert(0, vm);
+
+            // Create session for the worktree
+            await CreateSessionForWorktreeAsync(worktree, taskDescription);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Creating Task",
+                $"Failed to create task: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -67,12 +146,204 @@ public partial class MainWindowViewModel : ViewModelBase
         WindowTitle = "Claude Code Orchestrator";
         Sessions.Clear();
         Worktrees.Clear();
+        Factory?.UpdateFileBrowser(null);
     }
 
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
         IsRepositoryOpen = true;
-        WindowTitle = $"Claude Code Orchestrator - {System.IO.Path.GetFileName(path)}";
+        WindowTitle = $"Claude Code Orchestrator - {Path.GetFileName(path)}";
+    }
+
+    private async Task RefreshWorktreesAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            var worktrees = await _worktreeService.GetWorktreesAsync(CurrentRepositoryPath);
+
+            await _dispatcher.InvokeAsync(() =>
+            {
+                Worktrees.Clear();
+                foreach (var wt in worktrees)
+                {
+                    var vm = WorktreeViewModel.FromModel(wt);
+                    SetupWorktreeCallbacks(vm);
+                    Worktrees.Add(vm);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Loading Worktrees",
+                $"Failed to load worktrees: {ex.Message}");
+        }
+    }
+
+    private void SetupWorktreeCallbacks(WorktreeViewModel vm)
+    {
+        vm.OnOpenSessionRequested = OnOpenSessionRequestedAsync;
+        vm.OnMergeRequested = OnMergeRequestedAsync;
+        vm.OnDeleteRequested = OnDeleteRequestedAsync;
+    }
+
+    private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            // Get the WorktreeInfo to create a session
+            var worktreeInfo = await _worktreeService.GetWorktreeAsync(
+                CurrentRepositoryPath, worktree.Id);
+
+            if (worktreeInfo is null) return;
+
+            // Check if session already exists for this worktree
+            if (worktree.HasActiveSession && !string.IsNullOrEmpty(worktree.ActiveSessionId))
+            {
+                // Activate existing session document
+                Factory?.ActivateSessionDocument(worktree.ActiveSessionId);
+                return;
+            }
+
+            // Create new session with continuation prompt
+            await CreateSessionForWorktreeAsync(worktreeInfo, "Continue working on this task.");
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Session",
+                $"Failed to open session: {ex.Message}");
+        }
+    }
+
+    private async Task OnMergeRequestedAsync(WorktreeViewModel worktree)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            var confirmed = await _dialogService.ShowConfirmAsync("Merge Worktree",
+                $"Are you sure you want to merge '{worktree.BranchName}' into '{worktree.BaseBranch}'?");
+
+            if (!confirmed) return;
+
+            var result = await _worktreeService.MergeWorktreeAsync(
+                CurrentRepositoryPath,
+                worktree.Id,
+                worktree.BaseBranch);
+
+            if (result.Success)
+            {
+                worktree.Status = WorktreeStatus.Merged;
+            }
+            else
+            {
+                var message = result.ConflictingFiles?.Count > 0
+                    ? $"Merge conflicts in: {string.Join(", ", result.ConflictingFiles)}"
+                    : result.ErrorMessage ?? "Unknown error";
+
+                await _dialogService.ShowErrorAsync("Merge Failed", message);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Merging",
+                $"Failed to merge worktree: {ex.Message}");
+        }
+    }
+
+    private async Task OnDeleteRequestedAsync(WorktreeViewModel worktree)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            var confirmed = await _dialogService.ShowConfirmAsync("Delete Worktree",
+                $"Are you sure you want to delete worktree '{worktree.BranchName}'?\n\nThis action cannot be undone.");
+
+            if (!confirmed) return;
+
+            await _worktreeService.DeleteWorktreeAsync(
+                CurrentRepositoryPath,
+                worktree.Id,
+                force: true);
+
+            Worktrees.Remove(worktree);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Deleting",
+                $"Failed to delete worktree: {ex.Message}");
+        }
+    }
+
+    private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, string prompt)
+    {
+        try
+        {
+            var session = await _sessionService.CreateSessionAsync(worktree, prompt);
+
+            // Mark the worktree as having an active session
+            var worktreeVm = Worktrees.FirstOrDefault(w => w.Id == worktree.Id);
+            if (worktreeVm != null)
+            {
+                worktreeVm.HasActiveSession = true;
+                worktreeVm.ActiveSessionId = session.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Creating Session",
+                $"Failed to create session: {ex.Message}");
+        }
+    }
+
+    private void OnSessionCreated(object? sender, SessionCreatedEventArgs e)
+    {
+        _dispatcher.Post(() =>
+        {
+            // Create new document for session
+            var branch = GetWorktreeBranch(e.Session.WorktreeId);
+            var document = new SessionDocumentViewModel(
+                e.Session.Id,
+                e.Session.Title,
+                branch);
+
+            // Add to document dock via factory
+            Factory?.AddSessionDocument(document);
+        });
+    }
+
+    private void OnSessionEnded(object? sender, SessionEndedEventArgs e)
+    {
+        _dispatcher.Post(() =>
+        {
+            // Update worktree to show no active session
+            var worktree = Worktrees.FirstOrDefault(w =>
+                w.ActiveSessionId == e.SessionId);
+
+            if (worktree != null)
+            {
+                worktree.HasActiveSession = false;
+                worktree.ActiveSessionId = null;
+            }
+        });
+    }
+
+    private string GetWorktreeBranch(string worktreeId)
+    {
+        return Worktrees.FirstOrDefault(w => w.Id == worktreeId)?.BranchName ?? "unknown";
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _sessionService.SessionCreated -= OnSessionCreated;
+        _sessionService.SessionEnded -= OnSessionEnded;
     }
 }

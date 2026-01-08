@@ -39,6 +39,21 @@ public partial class WorktreeViewModel : ViewModelBase
     [ObservableProperty]
     private string? _activeSessionId;
 
+    /// <summary>
+    /// Callback for opening a session for this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnOpenSessionRequested { get; set; }
+
+    /// <summary>
+    /// Callback for merging this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnMergeRequested { get; set; }
+
+    /// <summary>
+    /// Callback for deleting this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnDeleteRequested { get; set; }
+
     public string StatusText => Status switch
     {
         WorktreeStatus.Active => "Active",
@@ -52,13 +67,15 @@ public partial class WorktreeViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenSessionAsync()
     {
-        // TODO: Open or create session for this worktree
+        if (OnOpenSessionRequested != null)
+            await OnOpenSessionRequested(this);
     }
 
     [RelayCommand(CanExecute = nameof(CanMerge))]
     private async Task MergeAsync()
     {
-        // TODO: Merge worktree to base branch
+        if (OnMergeRequested != null)
+            await OnMergeRequested(this);
     }
 
     private bool CanMerge() => Status == WorktreeStatus.ReadyToMerge && !HasUncommittedChanges;
@@ -66,7 +83,8 @@ public partial class WorktreeViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        // TODO: Delete worktree
+        if (OnDeleteRequested != null)
+            await OnDeleteRequested(this);
     }
 
     public static WorktreeViewModel FromModel(WorktreeInfo info) => new()

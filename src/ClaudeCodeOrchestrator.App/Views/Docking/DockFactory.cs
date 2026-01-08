@@ -13,6 +13,10 @@ namespace ClaudeCodeOrchestrator.App.Views.Docking;
 public class DockFactory : Factory
 {
     private readonly object _context;
+    private IDocumentDock? _documentDock;
+    private FileBrowserViewModel? _fileBrowser;
+    private WorktreesViewModel? _worktreesViewModel;
+    private OutputViewModel? _outputViewModel;
 
     public DockFactory(object context)
     {
@@ -22,9 +26,9 @@ public class DockFactory : Factory
     public override IRootDock CreateLayout()
     {
         // Create tool view models
-        var fileBrowser = new FileBrowserViewModel();
-        var worktrees = new WorktreesViewModel();
-        var output = new OutputViewModel();
+        _fileBrowser = new FileBrowserViewModel();
+        _worktreesViewModel = new WorktreesViewModel();
+        _outputViewModel = new OutputViewModel();
 
         // Create welcome document
         var welcomeDoc = new SessionDocumentViewModel
@@ -38,8 +42,8 @@ public class DockFactory : Factory
         {
             Id = "LeftDock",
             Title = "Explorer",
-            ActiveDockable = fileBrowser,
-            VisibleDockables = CreateList<IDockable>(fileBrowser),
+            ActiveDockable = _fileBrowser,
+            VisibleDockables = CreateList<IDockable>(_fileBrowser),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible
         };
@@ -49,20 +53,20 @@ public class DockFactory : Factory
         {
             Id = "BottomDock",
             Title = "Panel",
-            ActiveDockable = worktrees,
-            VisibleDockables = CreateList<IDockable>(worktrees, output),
+            ActiveDockable = _worktreesViewModel,
+            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _outputViewModel),
             Alignment = Alignment.Bottom,
             GripMode = GripMode.Visible
         };
 
-        // Document dock (sessions)
-        var documentDock = new DocumentDock
+        // Document dock (sessions) - store reference for dynamic document creation
+        _documentDock = new DocumentDock
         {
             Id = "DocumentDock",
             Title = "Documents",
             ActiveDockable = welcomeDoc,
             VisibleDockables = CreateList<IDockable>(welcomeDoc),
-            CanCreateDocument = false
+            CanCreateDocument = false // We handle document creation ourselves
         };
 
         // Main content proportional dock (documents + bottom panel)
@@ -70,9 +74,9 @@ public class DockFactory : Factory
         {
             Id = "MainContent",
             Orientation = Orientation.Vertical,
-            ActiveDockable = documentDock,
+            ActiveDockable = _documentDock,
             VisibleDockables = CreateList<IDockable>(
-                documentDock,
+                _documentDock,
                 new ProportionalDockSplitter { Id = "MainSplitter" },
                 bottomDock
             ),
@@ -95,7 +99,7 @@ public class DockFactory : Factory
         // Set proportions
         leftDock.Proportion = 0.2;
         mainContent.Proportion = 0.8;
-        documentDock.Proportion = 0.7;
+        _documentDock.Proportion = 0.7;
         bottomDock.Proportion = 0.3;
 
         // Root dock
@@ -108,6 +112,95 @@ public class DockFactory : Factory
 
         return rootDock;
     }
+
+    /// <summary>
+    /// Adds a new session document to the document dock.
+    /// </summary>
+    public void AddSessionDocument(SessionDocumentViewModel document)
+    {
+        if (_documentDock is null) return;
+
+        // Register context for new document
+        if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+        {
+            contextDict[document.Id] = () => _context;
+        }
+
+        // Add to visible dockables
+        _documentDock.VisibleDockables ??= CreateList<IDockable>();
+        _documentDock.VisibleDockables.Add(document);
+
+        // Make it active
+        _documentDock.ActiveDockable = document;
+
+        // Initialize the document
+        InitDockable(document, _documentDock);
+    }
+
+    /// <summary>
+    /// Activates an existing session document by session ID.
+    /// </summary>
+    public void ActivateSessionDocument(string sessionId)
+    {
+        if (_documentDock?.VisibleDockables is null) return;
+
+        var doc = _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .FirstOrDefault(d => d.SessionId == sessionId);
+
+        if (doc != null)
+        {
+            _documentDock.ActiveDockable = doc;
+        }
+    }
+
+    /// <summary>
+    /// Removes a session document from the dock.
+    /// </summary>
+    public void RemoveSessionDocument(string sessionId)
+    {
+        if (_documentDock?.VisibleDockables is null) return;
+
+        var doc = _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .FirstOrDefault(d => d.SessionId == sessionId);
+
+        if (doc != null)
+        {
+            _documentDock.VisibleDockables.Remove(doc);
+
+            // Dispose the document
+            if (doc is IDisposable disposable)
+                disposable.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Updates the file browser with a new root path.
+    /// </summary>
+    public void UpdateFileBrowser(string? path)
+    {
+        if (_fileBrowser is null) return;
+
+        if (string.IsNullOrEmpty(path))
+        {
+            _fileBrowser.ClearDirectory();
+        }
+        else
+        {
+            _fileBrowser.LoadDirectory(path);
+        }
+    }
+
+    /// <summary>
+    /// Gets the worktrees view model for external updates.
+    /// </summary>
+    public WorktreesViewModel? GetWorktreesViewModel() => _worktreesViewModel;
+
+    /// <summary>
+    /// Gets the output view model for logging.
+    /// </summary>
+    public OutputViewModel? GetOutputViewModel() => _outputViewModel;
 
     public override void InitLayout(IDockable layout)
     {

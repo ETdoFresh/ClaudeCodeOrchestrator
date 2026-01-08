@@ -23,6 +23,15 @@ public partial class FileBrowserViewModel : ToolViewModelBase
         Title = "Explorer";
     }
 
+    /// <summary>
+    /// Clears the file browser, removing all items and root path.
+    /// </summary>
+    public void ClearDirectory()
+    {
+        RootPath = null;
+        Items.Clear();
+    }
+
     public void LoadDirectory(string path)
     {
         RootPath = path;

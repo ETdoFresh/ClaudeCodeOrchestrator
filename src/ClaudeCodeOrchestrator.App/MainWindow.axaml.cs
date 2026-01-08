@@ -6,19 +6,32 @@ namespace ClaudeCodeOrchestrator.App;
 
 public partial class MainWindow : Window
 {
+    private MainWindowViewModel? _viewModel;
+
     public MainWindow()
     {
         InitializeComponent();
 
         // Create and set view model
-        var viewModel = new MainWindowViewModel();
-        DataContext = viewModel;
+        _viewModel = new MainWindowViewModel();
+        DataContext = _viewModel;
 
         // Create dock factory and layout
-        var factory = new DockFactory(viewModel);
+        var factory = new DockFactory(_viewModel);
         var layout = factory.CreateLayout();
         factory.InitLayout(layout);
 
-        viewModel.Layout = layout;
+        // Connect factory and layout to view model
+        _viewModel.Factory = factory;
+        _viewModel.Layout = layout;
+
+        // Handle window closing for cleanup
+        Closing += OnWindowClosing;
+    }
+
+    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        // Dispose view model to unsubscribe from events
+        _viewModel?.Dispose();
     }
 }

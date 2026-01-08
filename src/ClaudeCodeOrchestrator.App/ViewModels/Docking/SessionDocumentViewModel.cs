@@ -1,15 +1,21 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.Core.Models;
+using ClaudeCodeOrchestrator.Core.Services;
+using ClaudeCodeOrchestrator.SDK.Messages;
 
 namespace ClaudeCodeOrchestrator.App.ViewModels.Docking;
 
 /// <summary>
 /// Document view model for a session tab.
 /// </summary>
-public partial class SessionDocumentViewModel : DocumentViewModelBase
+public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposable
 {
+    private readonly ISessionService? _sessionService;
+    private readonly IDispatcher? _dispatcher;
+    private bool _disposed;
+
     private string _sessionId = string.Empty;
     private SessionState _state = SessionState.Starting;
     private string _inputText = string.Empty;
@@ -68,6 +74,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
+    /// <summary>
+    /// Default constructor for design-time and welcome document.
+    /// </summary>
     public SessionDocumentViewModel()
     {
         Id = Guid.NewGuid().ToString();
@@ -76,6 +85,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase
         CanFloat = true;
     }
 
+    /// <summary>
+    /// Constructor for session-backed documents.
+    /// </summary>
     public SessionDocumentViewModel(string sessionId, string title, string worktreeBranch)
     {
         SessionId = sessionId;
@@ -84,21 +96,128 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase
         WorktreeBranch = worktreeBranch;
         CanClose = true;
         CanFloat = true;
+
+        // Get services
+        _sessionService = ServiceLocator.GetService<ISessionService>();
+        _dispatcher = ServiceLocator.GetService<IDispatcher>();
+
+        // Subscribe to session events
+        if (_sessionService != null)
+        {
+            _sessionService.MessageReceived += OnMessageReceived;
+            _sessionService.SessionStateChanged += OnSessionStateChanged;
+        }
+    }
+
+    private void OnMessageReceived(object? sender, SessionMessageEventArgs e)
+    {
+        if (e.SessionId != SessionId) return;
+
+        _dispatcher?.Post(() => ProcessMessage(e.Message));
+    }
+
+    private void ProcessMessage(ISDKMessage message)
+    {
+        switch (message)
+        {
+            case SDKAssistantMessage assistantMsg:
+                ProcessAssistantMessage(assistantMsg);
+                break;
+
+            case SDKResultMessage resultMsg:
+                ProcessResultMessage(resultMsg);
+                break;
+
+            // Could handle SDKStreamEvent for real-time streaming updates
+        }
+    }
+
+    private void ProcessAssistantMessage(SDKAssistantMessage msg)
+    {
+        var vm = new AssistantMessageViewModel { Uuid = msg.Uuid };
+
+        foreach (var block in msg.Message.Content)
+        {
+            switch (block)
+            {
+                case TextContentBlock textBlock:
+                    vm.TextContent += textBlock.Text;
+                    break;
+
+                case ThinkingContentBlock thinkingBlock:
+                    vm.ThinkingContent = thinkingBlock.Thinking;
+                    break;
+
+                case ToolUseContentBlock toolBlock:
+                    vm.ToolUses.Add(new ToolUseViewModel
+                    {
+                        Id = toolBlock.Id,
+                        ToolName = toolBlock.Name,
+                        InputJson = toolBlock.Input?.ToString() ?? "{}",
+                        Status = ToolUseStatus.Running
+                    });
+                    break;
+
+                case ToolResultContentBlock toolResultBlock:
+                    // Find and update the corresponding tool use
+                    var toolUse = vm.ToolUses.FirstOrDefault(t => t.Id == toolResultBlock.ToolUseId);
+                    if (toolUse != null)
+                    {
+                        toolUse.OutputJson = toolResultBlock.Content;
+                        toolUse.Status = toolResultBlock.IsError ? ToolUseStatus.Failed : ToolUseStatus.Completed;
+                    }
+                    break;
+            }
+        }
+
+        Messages.Add(vm);
+    }
+
+    private void ProcessResultMessage(SDKResultMessage msg)
+    {
+        TotalCost = msg.TotalCostUsd;
+        IsProcessing = false;
+
+        State = msg.IsError ? SessionState.Error : SessionState.Completed;
+    }
+
+    private void OnSessionStateChanged(object? sender, SessionStateChangedEventArgs e)
+    {
+        if (e.Session.Id != SessionId) return;
+
+        _dispatcher?.Post(() =>
+        {
+            State = e.Session.State;
+            IsProcessing = e.Session.State == SessionState.Processing;
+        });
     }
 
     [RelayCommand(CanExecute = nameof(CanSendMessage))]
     private async Task SendMessageAsync()
     {
         if (string.IsNullOrWhiteSpace(InputText)) return;
+        if (_sessionService is null) return;
 
         var text = InputText;
         InputText = string.Empty;
 
-        Messages.Add(new UserMessageViewModel { Content = text });
+        // Add user message to UI
+        Messages.Add(new UserMessageViewModel
+        {
+            Uuid = Guid.NewGuid().ToString(),
+            Content = text
+        });
         IsProcessing = true;
 
-        // TODO: Wire up to session service
-        await Task.CompletedTask;
+        try
+        {
+            await _sessionService.SendMessageAsync(SessionId, text);
+        }
+        catch
+        {
+            IsProcessing = false;
+            // Error will be shown via state change event
+        }
     }
 
     private bool CanSendMessage() => !IsProcessing && !string.IsNullOrWhiteSpace(InputText);
@@ -106,9 +225,29 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase
     [RelayCommand(CanExecute = nameof(CanInterrupt))]
     private async Task InterruptAsync()
     {
-        // TODO: Wire up to session service
-        await Task.CompletedTask;
+        if (_sessionService is null) return;
+
+        try
+        {
+            await _sessionService.InterruptSessionAsync(SessionId);
+        }
+        catch
+        {
+            // Error handling
+        }
     }
 
     private bool CanInterrupt() => IsProcessing;
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_sessionService != null)
+        {
+            _sessionService.MessageReceived -= OnMessageReceived;
+            _sessionService.SessionStateChanged -= OnSessionStateChanged;
+        }
+    }
 }

@@ -1,0 +1,37 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ClaudeCodeOrchestrator.App.Views.Dialogs.NewTaskDialog"
+        Title="New Task"
+        Width="500" Height="220"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#2D2D30">
+
+    <Grid RowDefinitions="*,Auto" Margin="20">
+        <StackPanel Grid.Row="0" Spacing="12">
+            <TextBlock Text="Describe the task you want Claude to work on:"
+                       Foreground="#CCCCCC" FontSize="13" />
+            <TextBox x:Name="TaskDescriptionBox"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Height="80"
+                     Watermark="e.g., Add user authentication with JWT tokens..."
+                     Background="#3C3C3C"
+                     Foreground="#CCCCCC"
+                     BorderBrush="#3F3F46"
+                     CaretBrush="#CCCCCC" />
+            <TextBlock x:Name="ErrorText"
+                       Foreground="#F44747"
+                       FontSize="12"
+                       IsVisible="False" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="Cancel" Click="Cancel_Click" Width="80"
+                    Background="#3C3C3C" Foreground="#CCCCCC" />
+            <Button Content="Create" Click="Create_Click" Width="80"
+                    Background="#0E639C" Foreground="White" />
+        </StackPanel>
+    </Grid>
+</Window>
