@@ -56,4 +56,12 @@ public interface IWorktreeService
         string repoPath,
         string worktreeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the Claude session ID for a worktree.
+    /// </summary>
+    Task UpdateClaudeSessionIdAsync(
+        string worktreePath,
+        string claudeSessionId,
+        CancellationToken cancellationToken = default);
 }

@@ -46,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Subscribe to session events
         _sessionService.SessionCreated += OnSessionCreated;
         _sessionService.SessionEnded += OnSessionEnded;
+        _sessionService.ClaudeSessionIdReceived += OnClaudeSessionIdReceived;
     }
 
     /// <summary>
@@ -398,6 +399,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         });
     }
 
+    private async void OnClaudeSessionIdReceived(object? sender, ClaudeSessionIdReceivedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            // Find the worktree by ID
+            var worktree = await _worktreeService.GetWorktreeAsync(CurrentRepositoryPath, e.WorktreeId);
+            if (worktree == null) return;
+
+            // Save the Claude session ID to the worktree metadata
+            await _worktreeService.UpdateClaudeSessionIdAsync(worktree.Path, e.ClaudeSessionId);
+        }
+        catch
+        {
+            // Ignore errors saving session ID - it's not critical
+        }
+    }
+
     private string GetWorktreeBranch(string worktreeId)
     {
         return Worktrees.FirstOrDefault(w => w.Id == worktreeId)?.BranchName ?? "unknown";
@@ -426,14 +446,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (worktreeInfo is null) return;
 
-            // Check for existing Claude session history on disk
-            var historyService = new SessionHistoryService();
-            var existingSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
+            // Use the worktree's stored Claude session ID, or find one from disk
+            var claudeSessionId = worktreeInfo.ClaudeSessionId;
+            if (string.IsNullOrEmpty(claudeSessionId))
+            {
+                // Fallback: search for existing sessions on disk
+                var historyService = new SessionHistoryService();
+                claudeSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
+            }
 
-            if (!string.IsNullOrEmpty(existingSessionId))
+            if (!string.IsNullOrEmpty(claudeSessionId))
             {
                 // Create an idle session that will resume from the existing Claude session
-                await CreateIdleSessionWithHistoryAsync(worktreeInfo, existingSessionId);
+                await CreateIdleSessionWithHistoryAsync(worktreeInfo, claudeSessionId);
             }
             else
             {
@@ -525,5 +550,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         _sessionService.SessionCreated -= OnSessionCreated;
         _sessionService.SessionEnded -= OnSessionEnded;
+        _sessionService.ClaudeSessionIdReceived -= OnClaudeSessionIdReceived;
     }
 }

@@ -220,7 +220,8 @@ public sealed class WorktreeService : IWorktreeService
                 CreatedAt = metadata.CreatedAt,
                 Status = status,
                 HasUncommittedChanges = hasUncommittedChanges,
-                CommitsAhead = commitsAhead
+                CommitsAhead = commitsAhead,
+                ClaudeSessionId = metadata.ClaudeSessionId
             };
         }
         catch
@@ -405,5 +406,28 @@ public sealed class WorktreeService : IWorktreeService
         public required string TaskDescription { get; init; }
         public required string BaseBranch { get; init; }
         public required DateTime CreatedAt { get; init; }
+        public string? ClaudeSessionId { get; init; }
+    }
+
+    /// <summary>
+    /// Updates the Claude session ID for a worktree.
+    /// </summary>
+    public async Task UpdateClaudeSessionIdAsync(
+        string worktreePath,
+        string claudeSessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { ClaudeSessionId = claudeSessionId };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }
 }

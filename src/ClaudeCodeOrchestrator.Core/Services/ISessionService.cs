@@ -83,6 +83,11 @@ public interface ISessionService
     /// Raised when a session ends.
     /// </summary>
     event EventHandler<SessionEndedEventArgs>? SessionEnded;
+
+    /// <summary>
+    /// Raised when a Claude session ID is received (from init message).
+    /// </summary>
+    event EventHandler<ClaudeSessionIdReceivedEventArgs>? ClaudeSessionIdReceived;
 }
 
 /// <summary>
@@ -118,4 +123,14 @@ public sealed class SessionEndedEventArgs : EventArgs
 {
     public required string SessionId { get; init; }
     public required SessionState FinalState { get; init; }
+}
+
+/// <summary>
+/// Event args for Claude session ID received.
+/// </summary>
+public sealed class ClaudeSessionIdReceivedEventArgs : EventArgs
+{
+    public required string SessionId { get; init; }
+    public required string WorktreeId { get; init; }
+    public required string ClaudeSessionId { get; init; }
 }

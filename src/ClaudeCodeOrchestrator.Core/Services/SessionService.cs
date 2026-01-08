@@ -19,6 +19,7 @@ public sealed class SessionService : ISessionService, IDisposable
     public event EventHandler<SessionMessageEventArgs>? MessageReceived;
     public event EventHandler<SessionStateChangedEventArgs>? SessionStateChanged;
     public event EventHandler<SessionEndedEventArgs>? SessionEnded;
+    public event EventHandler<ClaudeSessionIdReceivedEventArgs>? ClaudeSessionIdReceived;
 
     public async Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
@@ -224,6 +225,17 @@ public sealed class SessionService : ISessionService, IDisposable
                         Session = context.Session,
                         PreviousState = previousState
                     });
+
+                    // Notify that we have a Claude session ID (for persisting to worktree metadata)
+                    if (!string.IsNullOrEmpty(initMsg.SessionId))
+                    {
+                        ClaudeSessionIdReceived?.Invoke(this, new ClaudeSessionIdReceivedEventArgs
+                        {
+                            SessionId = context.Session.Id,
+                            WorktreeId = context.Session.WorktreeId,
+                            ClaudeSessionId = initMsg.SessionId
+                        });
+                    }
                 }
 
                 // Handle result message
