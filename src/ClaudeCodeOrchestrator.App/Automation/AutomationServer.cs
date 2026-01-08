@@ -31,7 +31,7 @@ public class AutomationServer : IDisposable
         {
             try
             {
-                await using var server = new NamedPipeServerStream(
+                var server = new NamedPipeServerStream(
                     PipeName,
                     PipeDirection.InOut,
                     NamedPipeServerStream.MaxAllowedServerInstances,
@@ -40,8 +40,8 @@ public class AutomationServer : IDisposable
 
                 await server.WaitForConnectionAsync(_cts.Token);
 
-                // Handle client in background, start accepting next connection
-                _ = HandleClientAsync(server);
+                // Handle client synchronously to avoid pipe disposal issues
+                await HandleClientAsync(server);
             }
             catch (OperationCanceledException)
             {
@@ -59,25 +59,28 @@ public class AutomationServer : IDisposable
     {
         try
         {
-            using var reader = new StreamReader(server, Encoding.UTF8);
-            await using var writer = new StreamWriter(server, Encoding.UTF8) { AutoFlush = true };
-
-            var line = await reader.ReadLineAsync();
-            if (string.IsNullOrEmpty(line))
+            await using (server)
             {
-                await writer.WriteLineAsync(AutomationResponse.Fail("Empty command").ToJson());
-                return;
-            }
+                using var reader = new StreamReader(server, Encoding.UTF8, leaveOpen: true);
+                await using var writer = new StreamWriter(server, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
 
-            var command = AutomationCommand.Parse(line);
-            if (command is null)
-            {
-                await writer.WriteLineAsync(AutomationResponse.Fail("Invalid command JSON").ToJson());
-                return;
-            }
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line))
+                {
+                    await writer.WriteLineAsync(AutomationResponse.Fail("Empty command").ToJson());
+                    return;
+                }
 
-            var response = await _executor.ExecuteAsync(command);
-            await writer.WriteLineAsync(response.ToJson());
+                var command = AutomationCommand.Parse(line);
+                if (command is null)
+                {
+                    await writer.WriteLineAsync(AutomationResponse.Fail("Invalid command JSON").ToJson());
+                    return;
+                }
+
+                var response = await _executor.ExecuteAsync(command);
+                await writer.WriteLineAsync(response.ToJson());
+            }
         }
         catch (Exception ex)
         {

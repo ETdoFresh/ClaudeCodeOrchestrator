@@ -28,7 +28,7 @@ public abstract class AutomationCommand
         }
     }
 
-    public string ToJson() => JsonSerializer.Serialize(this, GetType(), JsonOptions);
+    public string ToJson() => JsonSerializer.Serialize<AutomationCommand>(this, JsonOptions);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
