@@ -18,6 +18,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IGitService _gitService;
     private readonly IWorktreeService _worktreeService;
     private readonly ISessionService _sessionService;
+    private readonly ISettingsService _settingsService;
     private readonly IDispatcher _dispatcher;
 
     private object? _layout;
@@ -38,6 +39,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _gitService = ServiceLocator.GetRequiredService<IGitService>();
         _worktreeService = ServiceLocator.GetRequiredService<IWorktreeService>();
         _sessionService = ServiceLocator.GetRequiredService<ISessionService>();
+        _settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
         _dispatcher = ServiceLocator.GetRequiredService<IDispatcher>();
 
         // Subscribe to session events
@@ -77,6 +79,39 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
+    /// <summary>
+    /// Initializes the view model, restoring last opened repository if valid.
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        var lastPath = _settingsService.LastRepositoryPath;
+        if (string.IsNullOrEmpty(lastPath)) return;
+
+        // Check if path still exists and is a git repository
+        if (!Directory.Exists(lastPath))
+        {
+            // Path no longer exists, clear it
+            _settingsService.SetLastRepositoryPath(null);
+            return;
+        }
+
+        try
+        {
+            // Validate it's still a git repository
+            await _gitService.OpenRepositoryAsync(lastPath);
+
+            // Restore the repository
+            SetRepository(lastPath);
+            await RefreshWorktreesAsync();
+            Factory?.UpdateFileBrowser(lastPath);
+        }
+        catch
+        {
+            // Not a valid git repository anymore, clear it
+            _settingsService.SetLastRepositoryPath(null);
+        }
+    }
+
     [RelayCommand]
     private async Task OpenRepositoryAsync()
     {
@@ -86,9 +121,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (string.IsNullOrEmpty(path)) return;
 
             // Validate it's a git repository
-            var repoInfo = await _gitService.OpenRepositoryAsync(path);
+            await _gitService.OpenRepositoryAsync(path);
 
             SetRepository(path);
+
+            // Save as last opened repository
+            _settingsService.SetLastRepositoryPath(path);
 
             // Load worktrees
             await RefreshWorktreesAsync();
@@ -147,6 +185,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
+
+        // Clear saved repository path
+        _settingsService.SetLastRepositoryPath(null);
     }
 
     public void SetRepository(string path)

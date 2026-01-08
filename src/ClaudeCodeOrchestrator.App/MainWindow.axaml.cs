@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using ClaudeCodeOrchestrator.App.ViewModels;
 using ClaudeCodeOrchestrator.App.Views.Docking;
 
@@ -27,6 +28,18 @@ public partial class MainWindow : Window
 
         // Handle window closing for cleanup
         Closing += OnWindowClosing;
+
+        // Initialize after window is loaded (restore last repository)
+        Loaded += OnWindowLoaded;
+    }
+
+    private void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // Fire and forget - restore last repository asynchronously
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await (_viewModel?.InitializeAsync() ?? Task.CompletedTask);
+        });
     }
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)

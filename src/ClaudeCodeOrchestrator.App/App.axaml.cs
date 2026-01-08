@@ -46,6 +46,14 @@ public partial class App : Application
         // UI dispatcher for thread-safe updates
         services.AddSingleton<IDispatcher, AvaloniaDispatcher>();
 
+        // Settings service (load immediately)
+        services.AddSingleton<ISettingsService>(sp =>
+        {
+            var settings = new SettingsService();
+            settings.Load();
+            return settings;
+        });
+
         // Dialog service
         services.AddSingleton<IDialogService, DialogService>();
 
