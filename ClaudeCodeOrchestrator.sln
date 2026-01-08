@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{778D4134-ED89-461E-A7A1-76048A779214}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCodeOrchestrator.SDK", "src\ClaudeCodeOrchestrator.SDK\ClaudeCodeOrchestrator.SDK.csproj", "{50A9E801-B477-4893-BC5C-CBD3F8DFC694}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCodeOrchestrator.Core", "src\ClaudeCodeOrchestrator.Core\ClaudeCodeOrchestrator.Core.csproj", "{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCodeOrchestrator.Git", "src\ClaudeCodeOrchestrator.Git\ClaudeCodeOrchestrator.Git.csproj", "{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCodeOrchestrator.App", "src\ClaudeCodeOrchestrator.App\ClaudeCodeOrchestrator.App.csproj", "{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{50A9E801-B477-4893-BC5C-CBD3F8DFC694}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50A9E801-B477-4893-BC5C-CBD3F8DFC694}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50A9E801-B477-4893-BC5C-CBD3F8DFC694}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50A9E801-B477-4893-BC5C-CBD3F8DFC694}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{50A9E801-B477-4893-BC5C-CBD3F8DFC694} = {778D4134-ED89-461E-A7A1-76048A779214}
+		{DD905ED7-9F3E-4FEA-8B3C-67F1FDE36563} = {778D4134-ED89-461E-A7A1-76048A779214}
+		{28AF7C4F-3BCB-448D-AE2F-FE8AC3174EDF} = {778D4134-ED89-461E-A7A1-76048A779214}
+		{FE1A719C-E148-4B47-BB53-ABCDC5EF2E47} = {778D4134-ED89-461E-A7A1-76048A779214}
+	EndGlobalSection
+EndGlobal

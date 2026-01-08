@@ -1,0 +1,128 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- VS Code Dark Theme Colors -->
+    <Style>
+        <Style.Resources>
+            <!-- Background colors -->
+            <Color x:Key="EditorBackground">#1E1E1E</Color>
+            <Color x:Key="SidebarBackground">#252526</Color>
+            <Color x:Key="ActivityBarBackground">#333333</Color>
+            <Color x:Key="TabBarBackground">#2D2D2D</Color>
+            <Color x:Key="PanelBackground">#1E1E1E</Color>
+            <Color x:Key="TitleBarBackground">#3C3C3C</Color>
+
+            <!-- Text colors -->
+            <Color x:Key="ForegroundColor">#CCCCCC</Color>
+            <Color x:Key="ForegroundDimmed">#858585</Color>
+            <Color x:Key="ForegroundAccent">#569CD6</Color>
+
+            <!-- Border colors -->
+            <Color x:Key="BorderColor">#474747</Color>
+            <Color x:Key="BorderColorLight">#3C3C3C</Color>
+
+            <!-- Accent colors -->
+            <Color x:Key="AccentColor">#007ACC</Color>
+            <Color x:Key="AccentColorHover">#1177BB</Color>
+            <Color x:Key="SuccessColor">#4EC9B0</Color>
+            <Color x:Key="ErrorColor">#F44747</Color>
+            <Color x:Key="WarningColor">#CCA700</Color>
+
+            <!-- Tab colors -->
+            <Color x:Key="TabActiveBackground">#1E1E1E</Color>
+            <Color x:Key="TabInactiveBackground">#2D2D2D</Color>
+            <Color x:Key="TabBorder">#007ACC</Color>
+
+            <!-- Brushes -->
+            <SolidColorBrush x:Key="EditorBackgroundBrush" Color="{StaticResource EditorBackground}" />
+            <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource SidebarBackground}" />
+            <SolidColorBrush x:Key="PanelBackgroundBrush" Color="{StaticResource PanelBackground}" />
+            <SolidColorBrush x:Key="ForegroundBrush" Color="{StaticResource ForegroundColor}" />
+            <SolidColorBrush x:Key="ForegroundDimmedBrush" Color="{StaticResource ForegroundDimmed}" />
+            <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+            <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+        </Style.Resources>
+    </Style>
+
+    <!-- Window styling -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="#1E1E1E" />
+        <Setter Property="Foreground" Value="#CCCCCC" />
+    </Style>
+
+    <!-- TextBlock default -->
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="#CCCCCC" />
+    </Style>
+
+    <!-- Button styling -->
+    <Style Selector="Button">
+        <Setter Property="Background" Value="#0E639C" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="CornerRadius" Value="2" />
+    </Style>
+
+    <Style Selector="Button:pointerover">
+        <Setter Property="Background" Value="#1177BB" />
+    </Style>
+
+    <Style Selector="Button:pressed">
+        <Setter Property="Background" Value="#094771" />
+    </Style>
+
+    <!-- TextBox styling -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="#3C3C3C" />
+        <Setter Property="Foreground" Value="#CCCCCC" />
+        <Setter Property="BorderBrush" Value="#474747" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Padding" Value="8,4" />
+    </Style>
+
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="#007ACC" />
+    </Style>
+
+    <!-- TreeView styling -->
+    <Style Selector="TreeView">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="TreeViewItem">
+        <Setter Property="Foreground" Value="#CCCCCC" />
+    </Style>
+
+    <!-- ListBox styling -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="ListBoxItem">
+        <Setter Property="Foreground" Value="#CCCCCC" />
+        <Setter Property="Padding" Value="8,4" />
+    </Style>
+
+    <Style Selector="ListBoxItem:selected">
+        <Setter Property="Background" Value="#094771" />
+    </Style>
+
+    <Style Selector="ListBoxItem:pointerover">
+        <Setter Property="Background" Value="#2A2D2E" />
+    </Style>
+
+    <!-- ScrollBar styling -->
+    <Style Selector="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- Border default -->
+    <Style Selector="Border.panel">
+        <Setter Property="Background" Value="#252526" />
+        <Setter Property="BorderBrush" Value="#474747" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+</Styles>

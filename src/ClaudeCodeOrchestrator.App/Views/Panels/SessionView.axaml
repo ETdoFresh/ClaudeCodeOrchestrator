@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             xmlns:vmBase="using:ClaudeCodeOrchestrator.App.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.SessionView"
+             x:DataType="vm:SessionDocumentViewModel"
+             Background="#1E1E1E">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header with branch info -->
+        <Border Grid.Row="0" Padding="12,8" Background="#252526" BorderBrush="#474747" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="🌿" FontSize="14" />
+                <TextBlock Text="{Binding WorktreeBranch}" FontSize="13" Foreground="#569CD6" />
+                <TextBlock Text="•" Foreground="#666666" />
+                <TextBlock FontSize="13" Foreground="#858585">
+                    <Run Text="Cost: $" />
+                    <Run Text="{Binding TotalCost, StringFormat=N4}" />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Messages area -->
+        <ScrollViewer Grid.Row="1" Padding="16">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vmBase:MessageViewModel}">
+                        <ContentControl Content="{Binding}">
+                            <ContentControl.DataTemplates>
+                                <!-- User message -->
+                                <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
+                                    <Border Margin="0,8" Padding="12" Background="#2D2D30" CornerRadius="4">
+                                        <StackPanel>
+                                            <TextBlock Text="You" FontWeight="SemiBold" Foreground="#569CD6" Margin="0,0,0,6" />
+                                            <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="#CCCCCC" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+
+                                <!-- Assistant message -->
+                                <DataTemplate DataType="{x:Type vmBase:AssistantMessageViewModel}">
+                                    <Border Margin="0,8" Padding="12" Background="#1E1E1E" BorderBrush="#3C3C3C" BorderThickness="1" CornerRadius="4">
+                                        <StackPanel>
+                                            <TextBlock Text="Claude" FontWeight="SemiBold" Foreground="#4EC9B0" Margin="0,0,0,6" />
+                                            <TextBlock Text="{Binding TextContent}" TextWrapping="Wrap" Foreground="#CCCCCC" />
+
+                                            <!-- Tool uses -->
+                                            <ItemsControl ItemsSource="{Binding ToolUses}" Margin="0,8,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vmBase:ToolUseViewModel}">
+                                                        <Border Margin="0,4" Padding="8" Background="#252526" CornerRadius="2">
+                                                            <StackPanel>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <TextBlock Text="🔧" FontSize="12" />
+                                                                    <TextBlock Text="{Binding ToolName}" FontWeight="SemiBold" Foreground="#DCDCAA" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ContentControl.DataTemplates>
+                        </ContentControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Input area -->
+        <Border Grid.Row="2" Padding="12" Background="#252526" BorderBrush="#474747" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0"
+                         Text="{Binding InputText}"
+                         Watermark="Type a message..."
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         MaxHeight="150"
+                         Background="#3C3C3C"
+                         BorderBrush="#474747"
+                         Foreground="#CCCCCC" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
+                    <Button Command="{Binding SendMessageCommand}"
+                            Content="Send"
+                            IsVisible="{Binding !IsProcessing}" />
+                    <Button Command="{Binding InterruptCommand}"
+                            Content="Stop"
+                            Background="#6C2022"
+                            IsVisible="{Binding IsProcessing}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

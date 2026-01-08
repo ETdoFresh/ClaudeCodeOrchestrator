@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="400"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.FileBrowserView"
+             x:DataType="vm:FileBrowserViewModel"
+             Background="#252526">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" Padding="8,6" Background="#333333">
+            <TextBlock Text="EXPLORER" FontSize="11" FontWeight="SemiBold"
+                       Foreground="#BBBBBB" />
+        </Border>
+
+        <!-- Tree View -->
+        <TreeView Grid.Row="1"
+                  ItemsSource="{Binding Items}"
+                  SelectedItem="{Binding SelectedItem}"
+                  Background="Transparent"
+                  Margin="0,4">
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Icon}" FontSize="12" />
+                        <TextBlock Text="{Binding Name}" FontSize="13" />
+                    </StackPanel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+</UserControl>

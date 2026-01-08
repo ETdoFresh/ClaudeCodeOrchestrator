@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dock="using:Dock.Avalonia.Controls"
+        xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels"
+        xmlns:dockVm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+        xmlns:panels="using:ClaudeCodeOrchestrator.App.Views.Panels"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="ClaudeCodeOrchestrator.App.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding WindowTitle}"
+        Width="1200" Height="800"
+        MinWidth="800" MinHeight="600"
+        Background="#1E1E1E">
+
+    <Window.DataTemplates>
+        <!-- File Browser -->
+        <DataTemplate DataType="{x:Type dockVm:FileBrowserViewModel}">
+            <panels:FileBrowserView />
+        </DataTemplate>
+
+        <!-- Session Document -->
+        <DataTemplate DataType="{x:Type dockVm:SessionDocumentViewModel}">
+            <panels:SessionView />
+        </DataTemplate>
+
+        <!-- Worktrees -->
+        <DataTemplate DataType="{x:Type dockVm:WorktreesViewModel}">
+            <panels:WorktreesView />
+        </DataTemplate>
+
+        <!-- Output -->
+        <DataTemplate DataType="{x:Type dockVm:OutputViewModel}">
+            <panels:OutputView />
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Menu Bar -->
+        <Menu Grid.Row="0" Background="#333333">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}" />
+                <Separator />
+                <MenuItem Header="_Close Repository" Command="{Binding CloseRepositoryCommand}" IsEnabled="{Binding IsRepositoryOpen}" />
+                <Separator />
+                <MenuItem Header="E_xit" />
+            </MenuItem>
+            <MenuItem Header="_Task">
+                <MenuItem Header="_New Task..." Command="{Binding CreateTaskCommand}" IsEnabled="{Binding IsRepositoryOpen}" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Explorer" />
+                <MenuItem Header="_Output" />
+                <MenuItem Header="_Worktrees" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Dock Control -->
+        <dock:DockControl Grid.Row="1"
+                          Layout="{Binding Layout}"
+                          InitializeLayout="True" />
+    </Grid>
+</Window>
