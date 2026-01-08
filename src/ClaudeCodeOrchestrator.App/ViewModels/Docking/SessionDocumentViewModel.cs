@@ -17,6 +17,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool _disposed;
 
     private string _sessionId = string.Empty;
+    private string _worktreeId = string.Empty;
     private SessionState _state = SessionState.Starting;
     private string _inputText = string.Empty;
     private bool _isProcessing;
@@ -27,6 +28,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     {
         get => _sessionId;
         set => SetProperty(ref _sessionId, value);
+    }
+
+    public string WorktreeId
+    {
+        get => _worktreeId;
+        set => SetProperty(ref _worktreeId, value);
     }
 
     public SessionState State
@@ -88,9 +95,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// <summary>
     /// Constructor for session-backed documents.
     /// </summary>
-    public SessionDocumentViewModel(string sessionId, string title, string worktreeBranch)
+    public SessionDocumentViewModel(string sessionId, string title, string worktreeBranch, string worktreeId)
     {
         SessionId = sessionId;
+        WorktreeId = worktreeId;
         Id = sessionId;
         Title = title.Length > 30 ? title[..27] + "..." : title;
         WorktreeBranch = worktreeBranch;

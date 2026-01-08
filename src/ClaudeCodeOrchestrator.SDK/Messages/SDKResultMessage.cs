@@ -11,25 +11,25 @@ public sealed record SDKResultMessage : ISDKMessage
     public string Type => "result";
 
     [JsonPropertyName("subtype")]
-    public required string Subtype { get; init; }
+    public string Subtype { get; init; } = "success";
 
     [JsonPropertyName("uuid")]
-    public required string Uuid { get; init; }
+    public string Uuid { get; init; } = string.Empty;
 
     [JsonPropertyName("session_id")]
-    public required string SessionId { get; init; }
+    public string SessionId { get; init; } = string.Empty;
 
     [JsonPropertyName("duration_ms")]
-    public required long DurationMs { get; init; }
+    public long DurationMs { get; init; }
 
     [JsonPropertyName("duration_api_ms")]
-    public required long DurationApiMs { get; init; }
+    public long DurationApiMs { get; init; }
 
     [JsonPropertyName("is_error")]
-    public required bool IsError { get; init; }
+    public bool IsError { get; init; }
 
     [JsonPropertyName("num_turns")]
-    public required int NumTurns { get; init; }
+    public int NumTurns { get; init; }
 
     [JsonPropertyName("result")]
     public string? Result { get; init; }
@@ -38,13 +38,13 @@ public sealed record SDKResultMessage : ISDKMessage
     public IReadOnlyList<string>? Errors { get; init; }
 
     [JsonPropertyName("total_cost_usd")]
-    public required decimal TotalCostUsd { get; init; }
+    public decimal TotalCostUsd { get; init; }
 
     [JsonPropertyName("usage")]
-    public required TokenUsage Usage { get; init; }
+    public TokenUsage? Usage { get; init; }
 
-    [JsonPropertyName("model_usage")]
-    public required IReadOnlyDictionary<string, ModelUsage> ModelUsage { get; init; }
+    [JsonPropertyName("modelUsage")]
+    public IReadOnlyDictionary<string, ModelUsage>? ModelUsage { get; init; }
 
     [JsonPropertyName("permission_denials")]
     public IReadOnlyList<PermissionDenial>? PermissionDenials { get; init; }
@@ -58,20 +58,26 @@ public sealed record SDKResultMessage : ISDKMessage
 /// </summary>
 public sealed record ModelUsage
 {
-    [JsonPropertyName("input_tokens")]
-    public required int InputTokens { get; init; }
+    [JsonPropertyName("inputTokens")]
+    public int InputTokens { get; init; }
 
-    [JsonPropertyName("output_tokens")]
-    public required int OutputTokens { get; init; }
+    [JsonPropertyName("outputTokens")]
+    public int OutputTokens { get; init; }
 
-    [JsonPropertyName("cache_creation_input_tokens")]
+    [JsonPropertyName("cacheCreationInputTokens")]
     public int? CacheCreationInputTokens { get; init; }
 
-    [JsonPropertyName("cache_read_input_tokens")]
+    [JsonPropertyName("cacheReadInputTokens")]
     public int? CacheReadInputTokens { get; init; }
 
-    [JsonPropertyName("cost_usd")]
+    [JsonPropertyName("costUSD")]
     public decimal? CostUsd { get; init; }
+
+    [JsonPropertyName("contextWindow")]
+    public int? ContextWindow { get; init; }
+
+    [JsonPropertyName("webSearchRequests")]
+    public int? WebSearchRequests { get; init; }
 }
 
 /// <summary>
@@ -80,10 +86,16 @@ public sealed record ModelUsage
 public sealed record PermissionDenial
 {
     [JsonPropertyName("tool")]
-    public required string Tool { get; init; }
+    public string? Tool { get; init; }
 
     [JsonPropertyName("reason")]
     public string? Reason { get; init; }
+
+    [JsonPropertyName("tool_name")]
+    public string? ToolName { get; init; }
+
+    [JsonPropertyName("file_path")]
+    public string? FilePath { get; init; }
 }
 
 /// <summary>

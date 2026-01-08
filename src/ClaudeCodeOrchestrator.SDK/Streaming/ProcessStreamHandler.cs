@@ -29,6 +29,8 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
 
     /// <summary>
     /// Starts a new Claude Code process with the given prompt and options.
+    /// For single-shot queries, stdin is closed immediately to signal that no more input will be sent.
+    /// This is required because claude buffers output until stdin is closed.
     /// </summary>
     public static ProcessStreamHandler Start(
         string prompt,
@@ -61,15 +63,26 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
 
         var process = new Process { StartInfo = startInfo };
 
+        Console.Error.WriteLine($"[SDK] Starting: {claudePath} {args}");
+        Console.Error.WriteLine($"[SDK] Cwd: {startInfo.WorkingDirectory}");
+
         try
         {
             if (!process.Start())
             {
                 throw new InvalidOperationException("Failed to start Claude Code process");
             }
+            Console.Error.WriteLine($"[SDK] Process started, PID: {process.Id}");
+
+            // Close stdin immediately for single-shot queries.
+            // Claude buffers output until stdin is closed, so we must close it
+            // to receive any output. This works on both macOS and Windows.
+            process.StandardInput.Close();
+            Console.Error.WriteLine("[SDK] Closed stdin for single-shot query");
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"[SDK] Failed to start: {ex.Message}");
             process.Dispose();
             throw new InvalidOperationException($"Failed to start Claude Code: {ex.Message}", ex);
         }
@@ -142,11 +155,13 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
     public async IAsyncEnumerable<ISDKMessage> ReadMessagesAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        Console.Error.WriteLine("[SDK] Starting to read messages...");
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token);
         var token = linkedCts.Token;
 
         while (!_process.HasExited && !token.IsCancellationRequested)
         {
+            Console.Error.WriteLine("[SDK] Waiting for line...");
             string? line;
             try
             {
@@ -154,12 +169,15 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
             }
             catch (OperationCanceledException)
             {
+                Console.Error.WriteLine("[SDK] Cancelled while reading");
                 yield break;
             }
 
+            Console.Error.WriteLine($"[SDK] Got line: {(line == null ? "null" : line[..Math.Min(80, line.Length)])}...");
+
             if (line == null)
             {
-                // End of stream
+                Console.Error.WriteLine("[SDK] End of stream");
                 break;
             }
 
@@ -176,10 +194,12 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
                 // Stop reading after result message
                 if (message is SDKResultMessage)
                 {
+                    Console.Error.WriteLine("[SDK] Got result message, stopping");
                     break;
                 }
             }
         }
+        Console.Error.WriteLine($"[SDK] Loop ended. HasExited={_process.HasExited}, Cancelled={token.IsCancellationRequested}");
     }
 
     /// <summary>
@@ -259,23 +279,30 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
 
             if (!root.TryGetProperty("type", out var typeElement))
             {
+                Console.Error.WriteLine($"[SDK] No 'type' in: {json[..Math.Min(100, json.Length)]}...");
                 return null;
             }
 
             var type = typeElement.GetString();
-            return type switch
+            Console.Error.WriteLine($"[SDK] Parsing message type: {type}");
+
+            ISDKMessage? result = type switch
             {
                 "assistant" => JsonSerializer.Deserialize<SDKAssistantMessage>(json, _jsonOptions),
                 "user" => JsonSerializer.Deserialize<SDKUserMessage>(json, _jsonOptions),
                 "result" => JsonSerializer.Deserialize<SDKResultMessage>(json, _jsonOptions),
                 "system" => JsonSerializer.Deserialize<SDKSystemMessage>(json, _jsonOptions),
                 "stream_event" => JsonSerializer.Deserialize<SDKStreamEvent>(json, _jsonOptions),
-                _ => null // Unknown message type
+                _ => null
             };
+
+            Console.Error.WriteLine($"[SDK] Parsed: {result?.GetType().Name ?? "null"}");
+            return result;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Failed to parse, skip this message
+            Console.Error.WriteLine($"[SDK] JSON error: {ex.Message}");
+            Console.Error.WriteLine($"[SDK] JSON: {json[..Math.Min(200, json.Length)]}...");
             return null;
         }
     }

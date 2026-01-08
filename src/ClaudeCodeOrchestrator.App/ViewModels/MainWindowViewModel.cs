@@ -319,6 +319,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 worktree.Id,
                 force: true);
 
+            // Close any open session documents for this worktree
+            Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
+
             Worktrees.Remove(worktree);
 
             // Sync to dock panel
@@ -361,7 +364,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var document = new SessionDocumentViewModel(
                 e.Session.Id,
                 e.Session.Title,
-                branch);
+                branch,
+                e.Session.WorktreeId);
 
             // Add to document dock via factory
             Factory?.AddSessionDocument(document);

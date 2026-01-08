@@ -161,7 +161,7 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Removes a session document from the dock.
+    /// Removes a session document from the dock by session ID.
     /// </summary>
     public void RemoveSessionDocument(string sessionId)
     {
@@ -172,6 +172,28 @@ public class DockFactory : Factory
             .FirstOrDefault(d => d.SessionId == sessionId);
 
         if (doc != null)
+        {
+            _documentDock.VisibleDockables.Remove(doc);
+
+            // Dispose the document
+            if (doc is IDisposable disposable)
+                disposable.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Removes all session documents associated with a worktree.
+    /// </summary>
+    public void RemoveSessionDocumentsByWorktree(string worktreeId)
+    {
+        if (_documentDock?.VisibleDockables is null) return;
+
+        var docsToRemove = _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .Where(d => d.WorktreeId == worktreeId)
+            .ToList();
+
+        foreach (var doc in docsToRemove)
         {
             _documentDock.VisibleDockables.Remove(doc);
 
