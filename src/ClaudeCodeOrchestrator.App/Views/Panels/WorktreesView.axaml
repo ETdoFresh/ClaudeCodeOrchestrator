@@ -58,6 +58,11 @@
 
                                 <Button Command="{Binding OpenSessionCommand}" Content="▶"
                                         Padding="6,4" FontSize="10" ToolTip.Tip="Open Session" />
+                                <Button Command="{Binding MergeCommand}" Content="↗"
+                                        Padding="6,4" FontSize="10" ToolTip.Tip="Merge to base branch" />
+                                <Button Command="{Binding DeleteCommand}" Content="✕"
+                                        Padding="6,4" FontSize="10" ToolTip.Tip="Delete worktree"
+                                        Foreground="#F44336" />
                             </StackPanel>
                         </Grid>
                     </Border>

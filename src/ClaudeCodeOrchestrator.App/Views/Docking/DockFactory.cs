@@ -193,6 +193,36 @@ public class DockFactory : Factory
     }
 
     /// <summary>
+    /// Updates the worktrees panel with a new collection of worktrees.
+    /// </summary>
+    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees)
+    {
+        if (_worktreesViewModel is null) return;
+
+        _worktreesViewModel.Worktrees.Clear();
+        foreach (var wt in worktrees)
+        {
+            _worktreesViewModel.Worktrees.Add(wt);
+        }
+    }
+
+    /// <summary>
+    /// Adds a worktree to the panel.
+    /// </summary>
+    public void AddWorktree(ViewModels.WorktreeViewModel worktree)
+    {
+        _worktreesViewModel?.Worktrees.Insert(0, worktree);
+    }
+
+    /// <summary>
+    /// Removes a worktree from the panel.
+    /// </summary>
+    public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
+    {
+        _worktreesViewModel?.Worktrees.Remove(worktree);
+    }
+
+    /// <summary>
     /// Gets the worktrees view model for external updates.
     /// </summary>
     public WorktreesViewModel? GetWorktreesViewModel() => _worktreesViewModel;

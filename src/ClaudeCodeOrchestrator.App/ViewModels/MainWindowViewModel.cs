@@ -166,6 +166,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SetupWorktreeCallbacks(vm);
             Worktrees.Insert(0, vm);
 
+            // Sync to dock panel
+            Factory?.AddWorktree(vm);
+
             // Create session for the worktree
             await CreateSessionForWorktreeAsync(worktree, taskDescription);
         }
@@ -185,6 +188,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
+        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>());
 
         // Clear saved repository path
         _settingsService.SetLastRepositoryPath(null);
@@ -214,6 +218,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     SetupWorktreeCallbacks(vm);
                     Worktrees.Add(vm);
                 }
+
+                // Sync to dock panel
+                Factory?.UpdateWorktrees(Worktrees);
             });
         }
         catch (Exception ex)
@@ -313,6 +320,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 force: true);
 
             Worktrees.Remove(worktree);
+
+            // Sync to dock panel
+            Factory?.RemoveWorktree(worktree);
         }
         catch (Exception ex)
         {
