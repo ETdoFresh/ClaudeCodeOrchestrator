@@ -41,35 +41,40 @@ public class AutomationExecutor
     {
         return await Dispatcher.UIThread.InvokeAsync(async () =>
         {
-            var window = GetMainWindow();
-            if (window is null)
-                return AutomationResponse.Fail("Main window not found");
-
             Control? target = null;
+            Window? targetWindow = null;
 
             if (!string.IsNullOrEmpty(cmd.AutomationId))
             {
-                target = FindElementByAutomationId(window, cmd.AutomationId);
+                // Search across all windows (main window + dialogs)
+                (target, targetWindow) = FindElementAcrossWindows(cmd.AutomationId);
                 if (target is null)
                     return AutomationResponse.Fail($"Element not found: {cmd.AutomationId}");
             }
+            else
+            {
+                targetWindow = GetMainWindow();
+            }
+
+            if (targetWindow is null)
+                return AutomationResponse.Fail("No window found");
 
             if (target != null)
             {
                 // Get center of element for visual feedback
                 var bounds = target.Bounds;
-                var screenPos = target.TranslatePoint(new Point(bounds.Width / 2, bounds.Height / 2), window);
+                var screenPos = target.TranslatePoint(new Point(bounds.Width / 2, bounds.Height / 2), targetWindow);
 
                 // Even if TranslatePoint fails (element not in visual tree), still simulate the click
                 // This handles menu items that exist logically but aren't rendered yet
-                await SimulateClickAsync(window, target, screenPos ?? new Point(0, 0), cmd.DoubleClick);
+                await SimulateClickAsync(targetWindow, target, screenPos ?? new Point(0, 0), cmd.DoubleClick);
                 return AutomationResponse.Ok();
             }
             else if (cmd.X.HasValue && cmd.Y.HasValue)
             {
                 var point = new Point(cmd.X.Value, cmd.Y.Value);
-                var hit = window.InputHitTest(point) as Control;
-                await SimulateClickAsync(window, hit, point, cmd.DoubleClick);
+                var hit = targetWindow.InputHitTest(point) as Control;
+                await SimulateClickAsync(targetWindow, hit, point, cmd.DoubleClick);
                 return AutomationResponse.Ok();
             }
 
@@ -85,10 +90,18 @@ public class AutomationExecutor
             inputElement.Focus();
         }
 
-        // For buttons, invoke the command directly
-        if (target is Button button && button.Command?.CanExecute(button.CommandParameter) == true)
+        // For buttons, invoke the command directly or raise the Click event
+        if (target is Button button)
         {
-            button.Command.Execute(button.CommandParameter);
+            if (button.Command?.CanExecute(button.CommandParameter) == true)
+            {
+                button.Command.Execute(button.CommandParameter);
+                return;
+            }
+
+            // For buttons without commands, raise the Click routed event
+            var clickEventArgs = new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent, button);
+            button.RaiseEvent(clickEventArgs);
             return;
         }
 
@@ -124,18 +137,22 @@ public class AutomationExecutor
     {
         return await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var window = GetMainWindow();
-            if (window is null)
-                return AutomationResponse.Fail("Main window not found");
-
             Control? target = null;
+            Window? targetWindow = null;
 
             if (!string.IsNullOrEmpty(cmd.AutomationId))
             {
-                target = FindElementByAutomationId(window, cmd.AutomationId);
+                (target, targetWindow) = FindElementAcrossWindows(cmd.AutomationId);
                 if (target is null)
                     return AutomationResponse.Fail($"Element not found: {cmd.AutomationId}");
             }
+            else
+            {
+                targetWindow = GetActiveWindow() ?? GetMainWindow();
+            }
+
+            if (targetWindow is null)
+                return AutomationResponse.Fail("No window found");
 
             // Focus target or use currently focused element
             if (target is InputElement ie)
@@ -151,7 +168,7 @@ public class AutomationExecutor
             }
 
             // Try to find the currently focused element
-            var focusedElement = TopLevel.GetTopLevel(window)?.FocusManager?.GetFocusedElement();
+            var focusedElement = TopLevel.GetTopLevel(targetWindow)?.FocusManager?.GetFocusedElement();
             if (focusedElement is TextBox textBox)
             {
                 textBox.Text = (textBox.Text ?? "") + cmd.Text;
@@ -255,12 +272,20 @@ public class AutomationExecutor
     {
         return await Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var window = GetMainWindow();
-            if (window is null)
-                return AutomationResponse.Fail("Main window not found");
-
             var elements = new List<ElementInfo>();
-            CollectElements(window, elements, cmd.TypeFilter, cmd.IncludeUnnamed);
+
+            // Collect elements from all open windows
+            foreach (var window in GetAllWindows())
+            {
+                CollectElements(window, elements, cmd.TypeFilter, cmd.IncludeUnnamed);
+            }
+
+            if (elements.Count == 0)
+            {
+                var mainWindow = GetMainWindow();
+                if (mainWindow is null)
+                    return AutomationResponse.Fail("No windows found");
+            }
 
             var json = JsonSerializer.Serialize(elements, new JsonSerializerOptions
             {
@@ -324,16 +349,15 @@ public class AutomationExecutor
     {
         if (!string.IsNullOrEmpty(cmd.ForElement))
         {
-            // Wait for element to appear
+            // Wait for element to appear (searching all windows)
             var deadline = DateTime.UtcNow.AddMilliseconds(cmd.Timeout);
 
             while (DateTime.UtcNow < deadline)
             {
                 var found = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    var window = GetMainWindow();
-                    if (window is null) return false;
-                    return FindElementByAutomationId(window, cmd.ForElement) != null;
+                    var (element, _) = FindElementAcrossWindows(cmd.ForElement);
+                    return element != null;
                 });
 
                 if (found)
@@ -388,6 +412,36 @@ public class AutomationExecutor
             return desktop.MainWindow;
         }
         return null;
+    }
+
+    private IEnumerable<Window> GetAllWindows()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return desktop.Windows;
+        }
+        return [];
+    }
+
+    private Window? GetActiveWindow()
+    {
+        // Return the topmost/focused window, or main window as fallback
+        var windows = GetAllWindows().ToList();
+        return windows.FirstOrDefault(w => w.IsActive) ?? GetMainWindow();
+    }
+
+    /// <summary>
+    /// Finds an element by automation ID across all open windows.
+    /// </summary>
+    private (Control? Element, Window? Window) FindElementAcrossWindows(string automationId)
+    {
+        foreach (var window in GetAllWindows())
+        {
+            var element = FindElementByAutomationId(window, automationId);
+            if (element != null)
+                return (element, window);
+        }
+        return (null, null);
     }
 
     private Control? FindElementByAutomationId(Control root, string automationId)

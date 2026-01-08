@@ -30,6 +30,12 @@ public class DockFactory : Factory
         _worktreesViewModel = new WorktreesViewModel();
         _outputViewModel = new OutputViewModel();
 
+        // Wire up callbacks if context is MainWindowViewModel
+        if (_context is ViewModels.MainWindowViewModel mainVm)
+        {
+            _worktreesViewModel.OnCreateTaskRequested = () => mainVm.CreateTaskCommand.ExecuteAsync(null);
+        }
+
         // Create welcome document
         var welcomeDoc = new SessionDocumentViewModel
         {

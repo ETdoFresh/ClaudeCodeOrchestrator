@@ -14,6 +14,18 @@ public partial class WorktreesViewModel : ToolViewModelBase
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
+    /// <summary>
+    /// Callback to invoke when the user requests to create a new task.
+    /// This is wired up by the DockFactory to call MainWindowViewModel.CreateTaskAsync.
+    /// </summary>
+    public Func<Task>? OnCreateTaskRequested { get; set; }
+
+    /// <summary>
+    /// Callback to invoke when the user requests to refresh worktrees.
+    /// This is wired up by the DockFactory to call MainWindowViewModel.RefreshWorktreesAsync.
+    /// </summary>
+    public Func<Task>? OnRefreshRequested { get; set; }
+
     public WorktreesViewModel()
     {
         Id = "Worktrees";
@@ -23,12 +35,14 @@ public partial class WorktreesViewModel : ToolViewModelBase
     [RelayCommand]
     private async Task CreateTaskAsync()
     {
-        // TODO: Show new task dialog
+        if (OnCreateTaskRequested != null)
+            await OnCreateTaskRequested();
     }
 
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        // TODO: Refresh worktrees from git
+        if (OnRefreshRequested != null)
+            await OnRefreshRequested();
     }
 }
