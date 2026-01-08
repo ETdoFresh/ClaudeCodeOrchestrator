@@ -56,14 +56,14 @@ public class AutomationExecutor
 
             if (target != null)
             {
-                // Get center of element
+                // Get center of element for visual feedback
                 var bounds = target.Bounds;
                 var screenPos = target.TranslatePoint(new Point(bounds.Width / 2, bounds.Height / 2), window);
-                if (screenPos.HasValue)
-                {
-                    await SimulateClickAsync(window, target, screenPos.Value, cmd.DoubleClick);
-                    return AutomationResponse.Ok();
-                }
+
+                // Even if TranslatePoint fails (element not in visual tree), still simulate the click
+                // This handles menu items that exist logically but aren't rendered yet
+                await SimulateClickAsync(window, target, screenPos ?? new Point(0, 0), cmd.DoubleClick);
+                return AutomationResponse.Ok();
             }
             else if (cmd.X.HasValue && cmd.Y.HasValue)
             {
@@ -89,6 +89,25 @@ public class AutomationExecutor
         if (target is Button button && button.Command?.CanExecute(button.CommandParameter) == true)
         {
             button.Command.Execute(button.CommandParameter);
+            return;
+        }
+
+        // For menu items, invoke the command or search children for command
+        if (target is MenuItem menuItem)
+        {
+            if (menuItem.Command?.CanExecute(menuItem.CommandParameter) == true)
+            {
+                menuItem.Command.Execute(menuItem.CommandParameter);
+                return;
+            }
+
+            // If this is a parent menu, try to find and execute child commands by automation ID
+            // This handles the case where sub-menu items aren't in the visual tree yet
+            if (menuItem.HasSubMenu && menuItem.ItemCount > 0)
+            {
+                // Open the menu visually
+                menuItem.IsSubMenuOpen = true;
+            }
             return;
         }
 
@@ -377,11 +396,34 @@ public class AutomationExecutor
         if (id == automationId)
             return root;
 
+        // Search visual children
         foreach (var child in root.GetVisualChildren().OfType<Control>())
         {
             var found = FindElementByAutomationId(child, automationId);
             if (found != null)
                 return found;
+        }
+
+        // For MenuItems, also search logical children (sub-items not yet in visual tree)
+        if (root is MenuItem menuItem)
+        {
+            foreach (var item in menuItem.Items.OfType<Control>())
+            {
+                var found = FindElementByAutomationId(item, automationId);
+                if (found != null)
+                    return found;
+            }
+        }
+
+        // For ItemsControls like Menu, search items
+        if (root is ItemsControl itemsControl)
+        {
+            foreach (var item in itemsControl.Items.OfType<Control>())
+            {
+                var found = FindElementByAutomationId(item, automationId);
+                if (found != null)
+                    return found;
+            }
         }
 
         return null;

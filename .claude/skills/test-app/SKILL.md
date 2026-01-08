@@ -1,6 +1,6 @@
 ---
 name: test-app
-description: Run integration tests on the Claude Code Orchestrator app. Use this skill to interact with the running app - click buttons, type text, take screenshots, and verify UI state.
+description: Run integration tests on the Claude Code Orchestrator app. Use this skill to interact with the running app - click buttons, type text, take screenshots, and verify UI state. (project)
 ---
 
 # Test App Skill
