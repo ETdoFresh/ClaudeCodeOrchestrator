@@ -83,16 +83,19 @@
                          MaxHeight="150"
                          Background="#3C3C3C"
                          BorderBrush="#474747"
-                         Foreground="#CCCCCC" />
+                         Foreground="#CCCCCC"
+                         AutomationProperties.AutomationId="MessageInput" />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
                     <Button Command="{Binding SendMessageCommand}"
                             Content="Send"
-                            IsVisible="{Binding !IsProcessing}" />
+                            IsVisible="{Binding !IsProcessing}"
+                            AutomationProperties.AutomationId="SendMessageButton" />
                     <Button Command="{Binding InterruptCommand}"
                             Content="Stop"
                             Background="#6C2022"
-                            IsVisible="{Binding IsProcessing}" />
+                            IsVisible="{Binding IsProcessing}"
+                            AutomationProperties.AutomationId="StopButton" />
                 </StackPanel>
             </Grid>
         </Border>

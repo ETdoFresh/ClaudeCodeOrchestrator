@@ -30,12 +30,55 @@ public sealed class SessionHistoryService
     }
 
     /// <summary>
-    /// Gets the most recent session ID for a worktree.
+    /// Gets the most recent session ID for a worktree that has actual messages.
     /// </summary>
     public string? GetMostRecentSession(string worktreePath)
     {
-        var sessions = GetSessionsForWorktree(worktreePath);
-        return sessions.FirstOrDefault();
+        var projectDir = GetProjectDirectory(worktreePath);
+        if (!Directory.Exists(projectDir))
+            return null;
+
+        // Get sessions ordered by modification time, then find first with actual messages
+        var sessions = Directory.GetFiles(projectDir, "*.jsonl")
+            .Where(f => !Path.GetFileName(f).StartsWith("agent-"))
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .ToList();
+
+        foreach (var sessionFile in sessions)
+        {
+            if (HasUserOrAssistantMessages(sessionFile))
+            {
+                return Path.GetFileNameWithoutExtension(sessionFile);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a session file contains any user or assistant messages.
+    /// </summary>
+    private static bool HasUserOrAssistantMessages(string sessionFilePath)
+    {
+        try
+        {
+            foreach (var line in File.ReadLines(sessionFilePath))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                // Quick check for message types without full parsing
+                if (line.Contains("\"type\":\"user\"") || line.Contains("\"type\":\"assistant\""))
+                {
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore read errors
+        }
+
+        return false;
     }
 
     /// <summary>

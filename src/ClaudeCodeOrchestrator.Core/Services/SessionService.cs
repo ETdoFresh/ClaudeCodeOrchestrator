@@ -171,6 +171,12 @@ public sealed class SessionService : ISessionService, IDisposable
             PreviousState = previousState
         });
 
+        // Start message processing if this is the first message (idle session)
+        if (previousState == SessionState.WaitingForInput)
+        {
+            _ = ProcessMessagesAsync(context, cancellationToken);
+        }
+
         await context.Query.SendMessageAsync(message, cancellationToken);
     }
 

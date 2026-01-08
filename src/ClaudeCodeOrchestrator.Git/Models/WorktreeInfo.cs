@@ -49,6 +49,12 @@ public sealed record WorktreeInfo
     /// Number of commits ahead of base branch.
     /// </summary>
     public int CommitsAhead { get; init; }
+
+    /// <summary>
+    /// The Claude session ID associated with this worktree.
+    /// One session per worktree for consistent history.
+    /// </summary>
+    public string? ClaudeSessionId { get; set; }
 }
 
 /// <summary>

@@ -38,13 +38,6 @@ public class DockFactory : Factory
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }
 
-        // Create welcome document
-        var welcomeDoc = new SessionDocumentViewModel
-        {
-            Id = "Welcome",
-            Title = "Welcome"
-        };
-
         // Left tool dock (worktrees as first tab, file browser as second)
         _leftDock = new ToolDock
         {
@@ -57,12 +50,13 @@ public class DockFactory : Factory
         };
 
         // Document dock (sessions and file contents) - store reference for dynamic document creation
+        // Start with no documents - user can open sessions from worktrees panel
         _documentDock = new DocumentDock
         {
             Id = "DocumentDock",
             Title = "Documents",
-            ActiveDockable = welcomeDoc,
-            VisibleDockables = CreateList<IDockable>(welcomeDoc),
+            IsCollapsable = false, // Keep document area visible even when empty
+            VisibleDockables = CreateList<IDockable>(),
             CanCreateDocument = false // We handle document creation ourselves
         };
 
@@ -398,8 +392,7 @@ public class DockFactory : Factory
             ["DocumentDock"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
-            ["Worktrees"] = () => _context,
-            ["Welcome"] = () => _context
+            ["Worktrees"] = () => _context
         };
 
         DockableLocator = new Dictionary<string, Func<IDockable?>>
