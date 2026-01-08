@@ -16,6 +16,7 @@ public class DockFactory : Factory
     private IDocumentDock? _documentDock;
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
+    private bool _isAddingDocument;
 
     public DockFactory(object context)
     {
@@ -63,6 +64,12 @@ public class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(welcomeDoc),
             CanCreateDocument = false // We handle document creation ourselves
         };
+
+        // Subscribe to active dockable changes to close preview when user clicks on persistent tabs
+        if (_documentDock is System.ComponentModel.INotifyPropertyChanged notifyPropertyChanged)
+        {
+            notifyPropertyChanged.PropertyChanged += OnDocumentDockPropertyChanged;
+        }
 
         // Root proportional dock (sidebar + documents)
         var rootProportional = new ProportionalDock
@@ -129,6 +136,8 @@ public class DockFactory : Factory
 
         if (doc != null)
         {
+            // Close preview when switching to a session
+            ClosePreviewDocument();
             _documentDock.ActiveDockable = doc;
         }
     }
@@ -237,49 +246,93 @@ public class DockFactory : Factory
     {
         if (_documentDock is null) return;
 
-        // Register context for new document
-        if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+        _isAddingDocument = true;
+        try
         {
-            contextDict[document.Id] = () => _context;
-        }
-
-        _documentDock.VisibleDockables ??= CreateList<IDockable>();
-
-        if (isPreview)
-        {
-            // Remove existing preview document if any
-            var existingPreview = _documentDock.VisibleDockables
-                .OfType<FileDocumentViewModel>()
-                .FirstOrDefault(d => d.IsPreview);
-
-            if (existingPreview != null)
+            // Register context for new document
+            if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
             {
-                _documentDock.VisibleDockables.Remove(existingPreview);
+                contextDict[document.Id] = () => _context;
             }
 
-            document.IsPreview = true;
+            _documentDock.VisibleDockables ??= CreateList<IDockable>();
+
+            // Check if this file is already open (non-preview)
+            var existingDoc = _documentDock.VisibleDockables
+                .OfType<FileDocumentViewModel>()
+                .FirstOrDefault(d => d.FilePath == document.FilePath && !d.IsPreview);
+
+            if (existingDoc != null)
+            {
+                // Close any existing preview since we're switching to a persistent tab
+                ClosePreviewDocument();
+
+                // Just activate the existing document
+                _documentDock.ActiveDockable = existingDoc;
+                return;
+            }
+
+            if (isPreview)
+            {
+                // Remove existing preview document if any
+                ClosePreviewDocument();
+                document.IsPreview = true;
+            }
+            else
+            {
+                // Opening a new persistent document - close the preview
+                ClosePreviewDocument();
+            }
+
+            // Add to visible dockables
+            _documentDock.VisibleDockables.Add(document);
+
+            // Make it active
+            _documentDock.ActiveDockable = document;
+
+            // Initialize the document
+            InitDockable(document, _documentDock);
         }
-
-        // Check if this file is already open (non-preview)
-        var existingDoc = _documentDock.VisibleDockables
-            .OfType<FileDocumentViewModel>()
-            .FirstOrDefault(d => d.FilePath == document.FilePath && !d.IsPreview);
-
-        if (existingDoc != null)
+        finally
         {
-            // Just activate the existing document
-            _documentDock.ActiveDockable = existingDoc;
-            return;
+            _isAddingDocument = false;
         }
+    }
 
-        // Add to visible dockables
-        _documentDock.VisibleDockables.Add(document);
+    /// <summary>
+    /// Closes the current preview document if one exists.
+    /// </summary>
+    public void ClosePreviewDocument()
+    {
+        if (_documentDock?.VisibleDockables is null) return;
 
-        // Make it active
-        _documentDock.ActiveDockable = document;
+        var existingPreview = _documentDock.VisibleDockables
+            .OfType<FileDocumentViewModel>()
+            .FirstOrDefault(d => d.IsPreview);
 
-        // Initialize the document
-        InitDockable(document, _documentDock);
+        if (existingPreview != null)
+        {
+            _documentDock.VisibleDockables.Remove(existingPreview);
+        }
+    }
+
+    private void OnDocumentDockPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // Only handle when user clicks on a tab (not when we're programmatically adding documents)
+        if (_isAddingDocument) return;
+        if (e.PropertyName != nameof(IDocumentDock.ActiveDockable)) return;
+        if (_documentDock?.ActiveDockable is null) return;
+
+        // If user clicked on a persistent file document, close the preview
+        if (_documentDock.ActiveDockable is FileDocumentViewModel fileDoc && !fileDoc.IsPreview)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(ClosePreviewDocument);
+        }
+        // If user clicked on a session document, close the preview
+        else if (_documentDock.ActiveDockable is SessionDocumentViewModel)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(ClosePreviewDocument);
+        }
     }
 
     /// <summary>
