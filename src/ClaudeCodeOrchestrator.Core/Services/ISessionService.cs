@@ -20,6 +20,14 @@ public interface ISessionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates a new idle session that waits for user input without sending a prompt.
+    /// </summary>
+    Task<Session> CreateIdleSessionAsync(
+        WorktreeInfo worktree,
+        ClaudeAgentOptions? options = null,
+        IReadOnlyList<ISDKMessage>? historyMessages = null);
+
+    /// <summary>
     /// Resumes an existing session.
     /// </summary>
     Task<Session> ResumeSessionAsync(

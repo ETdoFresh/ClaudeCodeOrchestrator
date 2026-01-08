@@ -61,12 +61,15 @@
                                 </Border>
 
                                 <Button Command="{Binding OpenSessionCommand}" Content="▶"
-                                        Padding="6,4" FontSize="10" ToolTip.Tip="Open Session" />
+                                        Padding="6,4" FontSize="10" ToolTip.Tip="Open Session"
+                                        AutomationProperties.AutomationId="{Binding Id, StringFormat='OpenSession_{0}'}" />
                                 <Button Command="{Binding MergeCommand}" Content="↗"
-                                        Padding="6,4" FontSize="10" ToolTip.Tip="Merge to base branch" />
+                                        Padding="6,4" FontSize="10" ToolTip.Tip="Merge to base branch"
+                                        AutomationProperties.AutomationId="{Binding Id, StringFormat='MergeWorktree_{0}'}" />
                                 <Button Command="{Binding DeleteCommand}" Content="✕"
                                         Padding="6,4" FontSize="10" ToolTip.Tip="Delete worktree"
-                                        Foreground="#F44336" />
+                                        Foreground="#F44336"
+                                        AutomationProperties.AutomationId="{Binding Id, StringFormat='DeleteWorktree_{0}'}" />
                             </StackPanel>
                         </Grid>
                     </Border>

@@ -240,6 +240,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
     {
+        // Use the same logic as OpenWorktreeSessionAsync to load history
+        await OpenWorktreeSessionAsync(worktree);
+    }
+
+    private async Task OnOpenSessionRequestedAsync_Legacy(WorktreeViewModel worktree)
+    {
         if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
 
         try
@@ -368,6 +374,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 branch,
                 e.Session.WorktreeId);
 
+            // Load any existing messages from the session (for resumed sessions)
+            document.LoadMessagesFromSession(e.Session);
+
             // Add to document dock via factory
             Factory?.AddSessionDocument(document);
         });
@@ -403,7 +412,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // Check if session already exists for this worktree
+            // Check if session already exists for this worktree in memory
             if (worktree.HasActiveSession && !string.IsNullOrEmpty(worktree.ActiveSessionId))
             {
                 // Activate existing session document
@@ -411,20 +420,81 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            // Get the WorktreeInfo to create a session
+            // Get the WorktreeInfo
             var worktreeInfo = await _worktreeService.GetWorktreeAsync(
                 CurrentRepositoryPath, worktree.Id);
 
             if (worktreeInfo is null) return;
 
-            // Create new session with continuation prompt
-            await CreateSessionForWorktreeAsync(worktreeInfo, "Continue working on this task.");
+            // Check for existing Claude session history on disk
+            var historyService = new SessionHistoryService();
+            var existingSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
+
+            if (!string.IsNullOrEmpty(existingSessionId))
+            {
+                // Create an idle session that will resume from the existing Claude session
+                await CreateIdleSessionWithHistoryAsync(worktreeInfo, existingSessionId);
+            }
+            else
+            {
+                // No existing session - create an idle session waiting for user input
+                await _sessionService.CreateIdleSessionAsync(worktreeInfo);
+            }
         }
         catch (Exception ex)
         {
             await _dialogService.ShowErrorAsync("Error Opening Session",
                 $"Failed to open session: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Creates an idle session and loads history from an existing Claude session.
+    /// </summary>
+    private async Task CreateIdleSessionWithHistoryAsync(WorktreeInfo worktree, string claudeSessionId)
+    {
+        // Load the history FIRST before creating the session
+        var historyService = new SessionHistoryService();
+        var history = await historyService.ReadSessionHistoryAsync(worktree.Path, claudeSessionId);
+
+        // Convert history to SDK messages
+        var historyMessages = new List<SDK.Messages.ISDKMessage>();
+        foreach (var msg in history)
+        {
+            if (msg.Role == "user")
+            {
+                historyMessages.Add(SDK.Messages.SDKUserMessage.CreateText(msg.Content, claudeSessionId));
+            }
+            else if (msg.Role == "assistant")
+            {
+                historyMessages.Add(new SDK.Messages.SDKAssistantMessage
+                {
+                    Uuid = msg.Uuid ?? Guid.NewGuid().ToString(),
+                    SessionId = claudeSessionId,
+                    Message = new SDK.Messages.AssistantMessageContent
+                    {
+                        Id = msg.Uuid ?? Guid.NewGuid().ToString(),
+                        Model = "claude-opus-4-5-20251101",
+                        Content = new List<SDK.Messages.ContentBlock>
+                        {
+                            new SDK.Messages.TextContentBlock { Text = msg.Content }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Create options to resume the existing session when user sends a message
+        var options = new SDK.Options.ClaudeAgentOptions
+        {
+            Resume = claudeSessionId
+        };
+
+        // Create session with history messages already populated
+        var session = await _sessionService.CreateIdleSessionAsync(worktree, options, historyMessages);
+
+        // Store the Claude session ID for resumption
+        session.ClaudeSessionId = claudeSessionId;
     }
 
     /// <summary>

@@ -247,6 +247,43 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
     private bool CanInterrupt() => IsProcessing;
 
+    /// <summary>
+    /// Loads existing messages from a session (for resumed sessions with history).
+    /// </summary>
+    public void LoadMessagesFromSession(Session session)
+    {
+        if (session.Messages.Count == 0) return;
+
+        State = session.State;
+        TotalCost = session.TotalCostUsd;
+
+        foreach (var message in session.Messages)
+        {
+            switch (message)
+            {
+                case SDKUserMessage userMsg:
+                    Messages.Add(new UserMessageViewModel
+                    {
+                        Uuid = userMsg.Uuid,
+                        Content = userMsg.Message?.Content?.GetText() ?? string.Empty
+                    });
+                    break;
+
+                case SDKAssistantMessage assistantMsg:
+                    var vm = new AssistantMessageViewModel { Uuid = assistantMsg.Uuid };
+                    foreach (var block in assistantMsg.Message.Content)
+                    {
+                        if (block is TextContentBlock textBlock)
+                        {
+                            vm.TextContent += textBlock.Text;
+                        }
+                    }
+                    Messages.Add(vm);
+                    break;
+            }
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

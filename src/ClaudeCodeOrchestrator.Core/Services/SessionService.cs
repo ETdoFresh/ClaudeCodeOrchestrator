@@ -54,6 +54,46 @@ public sealed class SessionService : ISessionService, IDisposable
         return session;
     }
 
+    public Task<Session> CreateIdleSessionAsync(
+        WorktreeInfo worktree,
+        ClaudeAgentOptions? options = null,
+        IReadOnlyList<ISDKMessage>? historyMessages = null)
+    {
+        options ??= new ClaudeAgentOptions();
+        options = options with
+        {
+            Cwd = worktree.Path
+        };
+
+        var session = new Session
+        {
+            Id = Guid.NewGuid().ToString(),
+            WorktreeId = worktree.Id,
+            CreatedAt = DateTime.UtcNow,
+            State = SessionState.WaitingForInput
+        };
+
+        // Add history messages before firing the event
+        if (historyMessages != null)
+        {
+            foreach (var msg in historyMessages)
+            {
+                session.Messages.Add(msg);
+            }
+        }
+
+        // Create a streaming query that will be used when the user sends a message
+        var query = ClaudeAgent.CreateStreamingQuery(options);
+        var cts = new CancellationTokenSource();
+        var context = new SessionContext(session, query, cts);
+
+        _sessions[session.Id] = context;
+
+        SessionCreated?.Invoke(this, new SessionCreatedEventArgs { Session = session });
+
+        return Task.FromResult(session);
+    }
+
     public async Task<Session> ResumeSessionAsync(
         string sessionId,
         CancellationToken cancellationToken = default)

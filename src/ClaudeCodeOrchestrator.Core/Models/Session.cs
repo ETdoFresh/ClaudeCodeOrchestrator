@@ -48,16 +48,16 @@ public sealed class Session
     public List<ISDKMessage> Messages { get; } = new();
 
     /// <summary>
-    /// The initial prompt that started this session.
+    /// The initial prompt that started this session (null for resumed sessions).
     /// </summary>
-    public required string InitialPrompt { get; init; }
+    public string? InitialPrompt { get; init; }
 
     /// <summary>
-    /// Title for display (derived from initial prompt).
+    /// Title for display (derived from initial prompt or default).
     /// </summary>
-    public string Title => InitialPrompt.Length > 50
-        ? InitialPrompt[..47] + "..."
-        : InitialPrompt;
+    public string Title => string.IsNullOrEmpty(InitialPrompt)
+        ? "Session"
+        : (InitialPrompt.Length > 50 ? InitialPrompt[..47] + "..." : InitialPrompt);
 }
 
 /// <summary>
