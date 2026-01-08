@@ -30,6 +30,7 @@
 
         <!-- Worktree list -->
         <ListBox Grid.Row="1"
+                 x:Name="WorktreesList"
                  ItemsSource="{Binding Worktrees}"
                  SelectedItem="{Binding SelectedWorktree}"
                  Background="Transparent">

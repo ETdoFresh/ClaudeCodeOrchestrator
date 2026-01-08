@@ -26,6 +26,12 @@ public partial class WorktreesViewModel : ToolViewModelBase
     /// </summary>
     public Func<Task>? OnRefreshRequested { get; set; }
 
+    /// <summary>
+    /// Callback to invoke when a worktree is selected (clicked).
+    /// This opens the session for the worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnWorktreeSelected { get; set; }
+
     public WorktreesViewModel()
     {
         Id = "Worktrees";
@@ -44,5 +50,13 @@ public partial class WorktreesViewModel : ToolViewModelBase
     {
         if (OnRefreshRequested != null)
             await OnRefreshRequested();
+    }
+
+    [RelayCommand]
+    private async Task SelectWorktreeAsync(WorktreeViewModel worktree)
+    {
+        SelectedWorktree = worktree;
+        if (OnWorktreeSelected != null)
+            await OnWorktreeSelected(worktree);
     }
 }

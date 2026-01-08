@@ -1,8 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Data.Converters;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
+using ClaudeCodeOrchestrator.App.ViewModels;
+using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.Git.Models;
-using System.Globalization;
 
 namespace ClaudeCodeOrchestrator.App.Views.Panels;
 
@@ -22,5 +25,29 @@ public partial class WorktreesView : UserControl
     public WorktreesView()
     {
         InitializeComponent();
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+
+        // Subscribe to double-click to open session
+        WorktreesList.DoubleTapped += OnDoubleTapped;
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        base.OnUnloaded(e);
+        WorktreesList.DoubleTapped -= OnDoubleTapped;
+    }
+
+    private void OnDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not WorktreesViewModel vm) return;
+
+        if (vm.SelectedWorktree is WorktreeViewModel worktree)
+        {
+            vm.SelectWorktreeCommand.Execute(worktree);
+        }
     }
 }

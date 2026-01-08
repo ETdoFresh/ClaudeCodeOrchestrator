@@ -17,10 +17,42 @@ public partial class FileBrowserViewModel : ToolViewModelBase
 
     public ObservableCollection<FileItemViewModel> Items { get; } = new();
 
+    /// <summary>
+    /// Callback to invoke when a file is selected.
+    /// First parameter is the file path, second parameter is whether it's a preview (single-click).
+    /// </summary>
+    public Func<string, bool, Task>? OnFileSelected { get; set; }
+
     public FileBrowserViewModel()
     {
         Id = "FileBrowser";
         Title = "Explorer";
+    }
+
+    /// <summary>
+    /// Called when a file item is single-clicked (preview).
+    /// </summary>
+    [RelayCommand]
+    private async Task SelectFileAsync(FileItemViewModel item)
+    {
+        if (item.IsDirectory) return;
+        if (OnFileSelected != null)
+        {
+            await OnFileSelected(item.FullPath, true);
+        }
+    }
+
+    /// <summary>
+    /// Called when a file item is double-clicked (open persistent).
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenFileAsync(FileItemViewModel item)
+    {
+        if (item.IsDirectory) return;
+        if (OnFileSelected != null)
+        {
+            await OnFileSelected(item.FullPath, false);
+        }
     }
 
     /// <summary>

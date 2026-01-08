@@ -30,9 +30,9 @@
             <panels:WorktreesView />
         </DataTemplate>
 
-        <!-- Output -->
-        <DataTemplate DataType="{x:Type dockVm:OutputViewModel}">
-            <panels:OutputView />
+        <!-- File Document -->
+        <DataTemplate DataType="{x:Type dockVm:FileDocumentViewModel}">
+            <panels:FileView />
         </DataTemplate>
     </Window.DataTemplates>
 
@@ -55,9 +55,8 @@
                           AutomationProperties.AutomationId="NewTaskMenuItem" />
             </MenuItem>
             <MenuItem Header="_View" AutomationProperties.AutomationId="ViewMenu">
-                <MenuItem Header="_Explorer" AutomationProperties.AutomationId="ExplorerMenuItem" />
-                <MenuItem Header="_Output" AutomationProperties.AutomationId="OutputMenuItem" />
                 <MenuItem Header="_Worktrees" AutomationProperties.AutomationId="WorktreesMenuItem" />
+                <MenuItem Header="_Explorer" AutomationProperties.AutomationId="ExplorerMenuItem" />
             </MenuItem>
             <MenuItem Header="_Help" AutomationProperties.AutomationId="HelpMenu">
                 <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />

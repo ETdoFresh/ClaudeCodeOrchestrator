@@ -6,6 +6,7 @@ using ClaudeCodeOrchestrator.App.Views.Docking;
 using ClaudeCodeOrchestrator.Core.Services;
 using ClaudeCodeOrchestrator.Git.Models;
 using ClaudeCodeOrchestrator.Git.Services;
+using System.Collections.Concurrent;
 
 namespace ClaudeCodeOrchestrator.App.ViewModels;
 
@@ -391,6 +392,60 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string GetWorktreeBranch(string worktreeId)
     {
         return Worktrees.FirstOrDefault(w => w.Id == worktreeId)?.BranchName ?? "unknown";
+    }
+
+    /// <summary>
+    /// Opens a session for a worktree when clicked in the worktrees panel.
+    /// </summary>
+    public async Task OpenWorktreeSessionAsync(WorktreeViewModel worktree)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            // Check if session already exists for this worktree
+            if (worktree.HasActiveSession && !string.IsNullOrEmpty(worktree.ActiveSessionId))
+            {
+                // Activate existing session document
+                Factory?.ActivateSessionDocument(worktree.ActiveSessionId);
+                return;
+            }
+
+            // Get the WorktreeInfo to create a session
+            var worktreeInfo = await _worktreeService.GetWorktreeAsync(
+                CurrentRepositoryPath, worktree.Id);
+
+            if (worktreeInfo is null) return;
+
+            // Create new session with continuation prompt
+            await CreateSessionForWorktreeAsync(worktreeInfo, "Continue working on this task.");
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Session",
+                $"Failed to open session: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Opens a file document when clicked in the file browser.
+    /// </summary>
+    /// <param name="filePath">The path to the file to open.</param>
+    /// <param name="isPreview">If true, opens as a preview tab (replaced on next single-click).</param>
+    public Task OpenFileDocumentAsync(string filePath, bool isPreview)
+    {
+        try
+        {
+            var document = new FileDocumentViewModel(filePath);
+            Factory?.AddFileDocument(document, isPreview);
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowErrorAsync("Error Opening File",
+                $"Failed to open file: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
     public void Dispose()

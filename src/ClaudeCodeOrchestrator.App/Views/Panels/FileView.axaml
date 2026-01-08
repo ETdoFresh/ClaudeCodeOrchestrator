@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.FileView"
+             x:DataType="vm:FileDocumentViewModel"
+             Background="#1E1E1E">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with file path and preview indicator -->
+        <Border Grid.Row="0" Padding="12,8" Background="#252526" BorderBrush="#474747" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding FilePath}"
+                           FontSize="12"
+                           Foreground="#858585"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="(Preview)"
+                           FontSize="12"
+                           Foreground="#569CD6"
+                           FontStyle="Italic"
+                           IsVisible="{Binding IsPreview}" />
+            </StackPanel>
+        </Border>
+
+        <!-- File content -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <TextBox Text="{Binding Content}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     AcceptsTab="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="Consolas, Menlo, Monaco, monospace"
+                     FontSize="13"
+                     Background="#1E1E1E"
+                     Foreground="#D4D4D4"
+                     BorderThickness="0"
+                     Padding="16,8" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

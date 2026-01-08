@@ -16,7 +16,6 @@ public class DockFactory : Factory
     private IDocumentDock? _documentDock;
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
-    private OutputViewModel? _outputViewModel;
 
     public DockFactory(object context)
     {
@@ -26,14 +25,15 @@ public class DockFactory : Factory
     public override IRootDock CreateLayout()
     {
         // Create tool view models
-        _fileBrowser = new FileBrowserViewModel();
         _worktreesViewModel = new WorktreesViewModel();
-        _outputViewModel = new OutputViewModel();
+        _fileBrowser = new FileBrowserViewModel();
 
         // Wire up callbacks if context is MainWindowViewModel
         if (_context is ViewModels.MainWindowViewModel mainVm)
         {
             _worktreesViewModel.OnCreateTaskRequested = () => mainVm.CreateTaskCommand.ExecuteAsync(null);
+            _worktreesViewModel.OnWorktreeSelected = worktree => mainVm.OpenWorktreeSessionAsync(worktree);
+            _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }
 
         // Create welcome document
@@ -43,29 +43,18 @@ public class DockFactory : Factory
             Title = "Welcome"
         };
 
-        // Left tool dock (file browser)
+        // Left tool dock (worktrees as first tab, file browser as second)
         var leftDock = new ToolDock
         {
             Id = "LeftDock",
             Title = "Explorer",
-            ActiveDockable = _fileBrowser,
-            VisibleDockables = CreateList<IDockable>(_fileBrowser),
+            ActiveDockable = _worktreesViewModel,
+            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible
         };
 
-        // Bottom tool dock (worktrees, output)
-        var bottomDock = new ToolDock
-        {
-            Id = "BottomDock",
-            Title = "Panel",
-            ActiveDockable = _worktreesViewModel,
-            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _outputViewModel),
-            Alignment = Alignment.Bottom,
-            GripMode = GripMode.Visible
-        };
-
-        // Document dock (sessions) - store reference for dynamic document creation
+        // Document dock (sessions and file contents) - store reference for dynamic document creation
         _documentDock = new DocumentDock
         {
             Id = "DocumentDock",
@@ -75,38 +64,22 @@ public class DockFactory : Factory
             CanCreateDocument = false // We handle document creation ourselves
         };
 
-        // Main content proportional dock (documents + bottom panel)
-        var mainContent = new ProportionalDock
-        {
-            Id = "MainContent",
-            Orientation = Orientation.Vertical,
-            ActiveDockable = _documentDock,
-            VisibleDockables = CreateList<IDockable>(
-                _documentDock,
-                new ProportionalDockSplitter { Id = "MainSplitter" },
-                bottomDock
-            ),
-            Proportion = 0.7
-        };
-
-        // Root proportional dock (sidebar + main content)
+        // Root proportional dock (sidebar + documents)
         var rootProportional = new ProportionalDock
         {
             Id = "RootProportional",
             Orientation = Orientation.Horizontal,
-            ActiveDockable = mainContent,
+            ActiveDockable = _documentDock,
             VisibleDockables = CreateList<IDockable>(
                 leftDock,
                 new ProportionalDockSplitter { Id = "LeftSplitter" },
-                mainContent
+                _documentDock
             )
         };
 
         // Set proportions
-        leftDock.Proportion = 0.2;
-        mainContent.Proportion = 0.8;
-        _documentDock.Proportion = 0.7;
-        bottomDock.Proportion = 0.3;
+        leftDock.Proportion = 0.25;
+        _documentDock.Proportion = 0.75;
 
         // Root dock
         var rootDock = CreateRootDock();
@@ -256,9 +229,75 @@ public class DockFactory : Factory
     public WorktreesViewModel? GetWorktreesViewModel() => _worktreesViewModel;
 
     /// <summary>
-    /// Gets the output view model for logging.
+    /// Adds a file document to the document dock.
     /// </summary>
-    public OutputViewModel? GetOutputViewModel() => _outputViewModel;
+    /// <param name="document">The file document to add.</param>
+    /// <param name="isPreview">If true, replaces any existing preview document.</param>
+    public void AddFileDocument(FileDocumentViewModel document, bool isPreview)
+    {
+        if (_documentDock is null) return;
+
+        // Register context for new document
+        if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+        {
+            contextDict[document.Id] = () => _context;
+        }
+
+        _documentDock.VisibleDockables ??= CreateList<IDockable>();
+
+        if (isPreview)
+        {
+            // Remove existing preview document if any
+            var existingPreview = _documentDock.VisibleDockables
+                .OfType<FileDocumentViewModel>()
+                .FirstOrDefault(d => d.IsPreview);
+
+            if (existingPreview != null)
+            {
+                _documentDock.VisibleDockables.Remove(existingPreview);
+            }
+
+            document.IsPreview = true;
+        }
+
+        // Check if this file is already open (non-preview)
+        var existingDoc = _documentDock.VisibleDockables
+            .OfType<FileDocumentViewModel>()
+            .FirstOrDefault(d => d.FilePath == document.FilePath && !d.IsPreview);
+
+        if (existingDoc != null)
+        {
+            // Just activate the existing document
+            _documentDock.ActiveDockable = existingDoc;
+            return;
+        }
+
+        // Add to visible dockables
+        _documentDock.VisibleDockables.Add(document);
+
+        // Make it active
+        _documentDock.ActiveDockable = document;
+
+        // Initialize the document
+        InitDockable(document, _documentDock);
+    }
+
+    /// <summary>
+    /// Promotes a preview document to a persistent document.
+    /// </summary>
+    public void PromotePreviewDocument(string filePath)
+    {
+        if (_documentDock?.VisibleDockables is null) return;
+
+        var previewDoc = _documentDock.VisibleDockables
+            .OfType<FileDocumentViewModel>()
+            .FirstOrDefault(d => d.FilePath == filePath && d.IsPreview);
+
+        if (previewDoc != null)
+        {
+            previewDoc.IsPreview = false;
+        }
+    }
 
     public override void InitLayout(IDockable layout)
     {
@@ -266,13 +305,10 @@ public class DockFactory : Factory
         {
             ["Root"] = () => _context,
             ["LeftDock"] = () => _context,
-            ["BottomDock"] = () => _context,
             ["DocumentDock"] = () => _context,
-            ["MainContent"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
             ["Worktrees"] = () => _context,
-            ["Output"] = () => _context,
             ["Welcome"] = () => _context
         };
 

@@ -17,13 +17,15 @@
 
         <!-- Tree View -->
         <TreeView Grid.Row="1"
+                  x:Name="FileTree"
                   ItemsSource="{Binding Items}"
                   SelectedItem="{Binding SelectedItem}"
                   Background="Transparent"
                   Margin="0,4">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                Background="Transparent">
                         <TextBlock Text="{Binding Icon}" FontSize="12" />
                         <TextBlock Text="{Binding Name}" FontSize="13" />
                     </StackPanel>
