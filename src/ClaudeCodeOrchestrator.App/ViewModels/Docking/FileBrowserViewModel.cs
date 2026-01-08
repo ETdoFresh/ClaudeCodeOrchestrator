@@ -140,6 +140,55 @@ public partial class FileBrowserViewModel : ToolViewModelBase
             LoadChildren(item);
         }
     }
+
+    /// <summary>
+    /// Selects a file in the tree by its full path, expanding parent directories as needed.
+    /// </summary>
+    /// <param name="filePath">The full path of the file to select.</param>
+    /// <param name="suppressCallback">If true, won't trigger OnFileSelected callback.</param>
+    public void SelectFileByPath(string filePath, bool suppressCallback = true)
+    {
+        if (string.IsNullOrEmpty(filePath) || Items.Count == 0) return;
+
+        var item = FindItemByPath(Items[0], filePath);
+        if (item != null)
+        {
+            // Temporarily disable callback if requested
+            var originalCallback = suppressCallback ? OnFileSelected : null;
+            if (suppressCallback) OnFileSelected = null;
+
+            SelectedItem = item;
+
+            if (suppressCallback) OnFileSelected = originalCallback;
+        }
+    }
+
+    private FileItemViewModel? FindItemByPath(FileItemViewModel parent, string targetPath)
+    {
+        if (parent.FullPath == targetPath)
+            return parent;
+
+        // Check if target is under this parent
+        if (!targetPath.StartsWith(parent.FullPath + Path.DirectorySeparatorChar) &&
+            !targetPath.StartsWith(parent.FullPath + "/"))
+            return null;
+
+        // Expand and load children if needed
+        if (parent.IsDirectory && parent.Children.Count == 0)
+        {
+            LoadChildren(parent);
+        }
+        parent.IsExpanded = true;
+
+        foreach (var child in parent.Children)
+        {
+            var found = FindItemByPath(child, targetPath);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>

@@ -22,6 +22,12 @@
                   SelectedItem="{Binding SelectedItem}"
                   Background="Transparent"
                   Margin="0,4">
+            <TreeView.ItemContainerTheme>
+                <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}"
+                              x:DataType="vm:FileItemViewModel">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </ControlTheme>
+            </TreeView.ItemContainerTheme>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal" Spacing="6"

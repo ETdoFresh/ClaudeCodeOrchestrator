@@ -14,6 +14,7 @@ public class DockFactory : Factory
 {
     private readonly object _context;
     private IDocumentDock? _documentDock;
+    private IToolDock? _leftDock;
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
     private bool _isAddingDocument;
@@ -45,7 +46,7 @@ public class DockFactory : Factory
         };
 
         // Left tool dock (worktrees as first tab, file browser as second)
-        var leftDock = new ToolDock
+        _leftDock = new ToolDock
         {
             Id = "LeftDock",
             Title = "Explorer",
@@ -78,14 +79,14 @@ public class DockFactory : Factory
             Orientation = Orientation.Horizontal,
             ActiveDockable = _documentDock,
             VisibleDockables = CreateList<IDockable>(
-                leftDock,
+                _leftDock,
                 new ProportionalDockSplitter { Id = "LeftSplitter" },
                 _documentDock
             )
         };
 
         // Set proportions
-        leftDock.Proportion = 0.25;
+        _leftDock.Proportion = 0.25;
         _documentDock.Proportion = 0.75;
 
         // Root dock
@@ -323,15 +324,51 @@ public class DockFactory : Factory
         if (e.PropertyName != nameof(IDocumentDock.ActiveDockable)) return;
         if (_documentDock?.ActiveDockable is null) return;
 
-        // If user clicked on a persistent file document, close the preview
+        // If user clicked on a persistent file document, close the preview and highlight in explorer
         if (_documentDock.ActiveDockable is FileDocumentViewModel fileDoc && !fileDoc.IsPreview)
         {
             Avalonia.Threading.Dispatcher.UIThread.Post(ClosePreviewDocument);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => HighlightFileInExplorer(fileDoc.FilePath));
         }
-        // If user clicked on a session document, close the preview
-        else if (_documentDock.ActiveDockable is SessionDocumentViewModel)
+        // If user clicked on a session document, close the preview and highlight worktree
+        else if (_documentDock.ActiveDockable is SessionDocumentViewModel sessionDoc)
         {
             Avalonia.Threading.Dispatcher.UIThread.Post(ClosePreviewDocument);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => HighlightWorktreeInList(sessionDoc.WorktreeId));
+        }
+    }
+
+    /// <summary>
+    /// Highlights a file in the file browser by selecting it and switches to the Explorer tab.
+    /// </summary>
+    private void HighlightFileInExplorer(string filePath)
+    {
+        // Switch to Explorer tab in the sidebar
+        if (_leftDock != null && _fileBrowser != null)
+        {
+            _leftDock.ActiveDockable = _fileBrowser;
+        }
+
+        _fileBrowser?.SelectFileByPath(filePath, suppressCallback: true);
+    }
+
+    /// <summary>
+    /// Highlights a worktree in the worktrees list by selecting it and switches to the Worktrees tab.
+    /// </summary>
+    private void HighlightWorktreeInList(string worktreeId)
+    {
+        if (_worktreesViewModel is null || string.IsNullOrEmpty(worktreeId)) return;
+
+        // Switch to Worktrees tab in the sidebar
+        if (_leftDock != null)
+        {
+            _leftDock.ActiveDockable = _worktreesViewModel;
+        }
+
+        var worktree = _worktreesViewModel.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            _worktreesViewModel.SelectedWorktree = worktree;
         }
     }
 
