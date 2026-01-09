@@ -99,49 +99,58 @@ public partial class NewTaskInputControl : UserControl
 
             // Check for various image formats (different platforms use different names)
             // Include macOS UTI formats (public.png, public.jpeg, etc.)
-            // Include Windows clipboard formats (DeviceIndependentBitmap, Bitmap)
+            // Include Windows clipboard formats (DeviceIndependentBitmap, Bitmap, CF_DIB, CF_DIBV5)
+            // IMPORTANT: Order matters - prefer standard formats first, then Windows DIB formats last
+            // because some apps report multiple formats but only DIB has actual data
             string[] imageFormats = {
                 "image/png", "PNG", "public.png",
                 "image/jpeg", "JPEG", "public.jpeg",
-                "image/bmp", "BMP", "public.bmp", "DeviceIndependentBitmap", "Bitmap",
                 "image/gif", "GIF", "public.gif",
-                "image/tiff", "TIFF", "public.tiff"
+                "image/tiff", "TIFF", "public.tiff",
+                "image/bmp", "BMP", "public.bmp",
+                // Windows DIB formats - try these last as they need conversion
+                "DeviceIndependentBitmap", "Bitmap", "CF_DIB", "CF_DIBV5", "DIB"
             };
 
+            // First pass: collect all available formats and their data
+            // This is needed because some formats report as available but return no data
             foreach (var format in imageFormats)
             {
                 if (!formats.Contains(format)) continue;
 
                 var data = await clipboard.GetDataAsync(format);
-                Debug.WriteLine($"[ImagePaste] Got data for format {format}: {data?.GetType().Name ?? "null"}");
+                Debug.WriteLine($"[ImagePaste] Got data for format {format}: {data?.GetType().Name ?? "null"}, Length={(data as byte[])?.Length ?? -1}");
 
-                if (data is byte[] imageBytes && imageBytes.Length > 0)
+                byte[]? imageBytes = null;
+
+                if (data is byte[] bytes && bytes.Length > 0)
                 {
-                    // For Windows DIB format, we need to add BITMAPFILEHEADER to make it a valid BMP
-                    var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(imageBytes) : imageBytes;
-                    if (processedBytes.Length > 0)
-                    {
-                        var mediaType = GetMediaTypeForFormat(format);
-                        AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
-                        return true;
-                    }
+                    imageBytes = bytes;
                 }
-
-                if (data is Stream stream)
+                else if (data is Stream stream)
                 {
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
-                    var bytes = ms.ToArray();
-                    if (bytes.Length > 0)
+                    if (ms.Length > 0)
                     {
-                        var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(bytes) : bytes;
-                        if (processedBytes.Length > 0)
-                        {
-                            var mediaType = GetMediaTypeForFormat(format);
-                            AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
-                            return true;
-                        }
+                        imageBytes = ms.ToArray();
                     }
+                }
+
+                if (imageBytes == null || imageBytes.Length == 0)
+                {
+                    Debug.WriteLine($"[ImagePaste] Format {format} reported available but returned no data, trying next format");
+                    continue;
+                }
+
+                // For Windows DIB format, we need to add BITMAPFILEHEADER to make it a valid BMP
+                var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(imageBytes) : imageBytes;
+                if (processedBytes.Length > 0)
+                {
+                    var mediaType = GetMediaTypeForFormat(format);
+                    AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                    Debug.WriteLine($"[ImagePaste] Successfully added image from format {format}");
+                    return true;
                 }
             }
 
@@ -181,7 +190,10 @@ public partial class NewTaskInputControl : UserControl
     private static bool IsDibFormat(string format)
     {
         return format.Equals("DeviceIndependentBitmap", StringComparison.OrdinalIgnoreCase) ||
-               format.Equals("Bitmap", StringComparison.OrdinalIgnoreCase);
+               format.Equals("Bitmap", StringComparison.OrdinalIgnoreCase) ||
+               format.Equals("CF_DIB", StringComparison.OrdinalIgnoreCase) ||
+               format.Equals("CF_DIBV5", StringComparison.OrdinalIgnoreCase) ||
+               format.Equals("DIB", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -256,7 +268,7 @@ public partial class NewTaskInputControl : UserControl
             "image/png" or "png" or "public.png" => "image/png",
             "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "image/jpeg",
             "image/gif" or "gif" or "public.gif" => "image/gif",
-            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" => "image/bmp",
+            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" or "cf_dib" or "cf_dibv5" or "dib" => "image/bmp",
             "image/tiff" or "tiff" or "public.tiff" => "image/tiff",
             "image/webp" or "webp" or "public.webp" => "image/webp",
             _ when format.StartsWith("image/") => format,
@@ -271,7 +283,7 @@ public partial class NewTaskInputControl : UserControl
             "image/png" or "png" or "public.png" => "png",
             "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "jpg",
             "image/gif" or "gif" or "public.gif" => "gif",
-            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" => "bmp",
+            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" or "cf_dib" or "cf_dibv5" or "dib" => "bmp",
             "image/tiff" or "tiff" or "public.tiff" => "tiff",
             "image/webp" or "webp" or "public.webp" => "webp",
             _ => "png"
