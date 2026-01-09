@@ -192,6 +192,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
 
             if (!string.IsNullOrEmpty(responseContent))
             {
+                Console.Error.WriteLine($"[TitleGenerator] Claude SDK response: {responseContent[..Math.Min(200, responseContent.Length)]}...");
                 var parsed = ParseJsonResponse(responseContent);
                 if (parsed != null)
                 {
@@ -202,12 +203,18 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                         Source = "claude"
                     };
                 }
+                Console.Error.WriteLine("[TitleGenerator] Failed to parse JSON from Claude response");
+            }
+            else
+            {
+                Console.Error.WriteLine("[TitleGenerator] Claude SDK returned empty response");
             }
 
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[TitleGenerator] Claude SDK failed: {ex.Message}");
             return null;
         }
     }
