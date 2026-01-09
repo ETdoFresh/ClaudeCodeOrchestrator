@@ -377,13 +377,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         string sessionId;
         if (existingSession != null)
         {
-            // Send message to existing session - will resume if completed, queue if processing
-            await _sessionService.SendMessageAsync(existingSession.Id, conflictPrompt);
             sessionId = existingSession.Id;
+
+            // Add user message to UI before sending
+            var sessionDoc = Factory?.GetSessionDocument(sessionId);
+            sessionDoc?.AddExternalUserMessage(conflictPrompt);
+
+            // Send message to existing session - will resume if completed, queue if processing
+            await _sessionService.SendMessageAsync(sessionId, conflictPrompt);
 
             // Update UI to show session is active again
             worktree.HasActiveSession = true;
             worktree.ActiveSessionId = sessionId;
+
+            // Activate the session document so user can watch the merge
+            Factory?.ActivateSessionDocument(sessionId);
         }
         else
         {
@@ -395,6 +403,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update worktree with active session
             worktree.HasActiveSession = true;
             worktree.ActiveSessionId = sessionId;
+            // New session - document will be created and activated by OnSessionCreated
         }
 
         // Store the worktree info for retry after session completes
@@ -415,6 +424,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await _dialogService.ShowErrorAsync("Merge Failed",
                 "Claude could not resolve the merge conflicts. Please resolve them manually.");
+            // Refresh worktrees to show updated status
+            await RefreshWorktreesAsync();
             return;
         }
 
@@ -427,6 +438,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (result.Success)
         {
             await CompleteMergeAsync(worktree);
+            // Refresh worktrees after successful merge
+            await RefreshWorktreesAsync();
         }
         else
         {
@@ -435,6 +448,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 : result.ErrorMessage ?? "Unknown error";
 
             await _dialogService.ShowErrorAsync("Merge Failed", message);
+            // Refresh worktrees to show updated status
+            await RefreshWorktreesAsync();
         }
     }
 

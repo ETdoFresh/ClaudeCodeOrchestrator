@@ -330,6 +330,18 @@ public sealed class WorktreeService : IWorktreeService
         // This ensures the repo is in a clean state before we start
         await AbortMergeAsync(repoPath, cancellationToken);
 
+        // Check for uncommitted changes that would block checkout
+        var hasUncommittedChanges = await HasUncommittedChangesAsync(repoPath, cancellationToken);
+        if (hasUncommittedChanges)
+        {
+            return new MergeResultModel
+            {
+                Success = false,
+                Status = MergeStatusModel.Failed,
+                ErrorMessage = "Cannot merge: you have uncommitted changes. Please commit or stash them first."
+            };
+        }
+
         // Checkout target branch
         var checkoutPsi = new System.Diagnostics.ProcessStartInfo
         {
@@ -437,6 +449,30 @@ public sealed class WorktreeService : IWorktreeService
         {
             await abortProcess.WaitForExitAsync(cancellationToken);
         }
+    }
+
+    private static async Task<bool> HasUncommittedChangesAsync(string repoPath, CancellationToken cancellationToken)
+    {
+        var statusPsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "status --porcelain",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var statusProcess = System.Diagnostics.Process.Start(statusPsi);
+        if (statusProcess != null)
+        {
+            await statusProcess.WaitForExitAsync(cancellationToken);
+            var output = await statusProcess.StandardOutput.ReadToEndAsync(cancellationToken);
+            // If output is not empty, there are uncommitted changes
+            return !string.IsNullOrWhiteSpace(output);
+        }
+        return false;
     }
 
     private static List<string> ParseConflictingFiles(string output)
