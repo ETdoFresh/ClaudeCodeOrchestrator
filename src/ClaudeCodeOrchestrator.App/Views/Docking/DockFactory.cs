@@ -514,6 +514,203 @@ public class DockFactory : Factory
     }
 
     /// <summary>
+    /// Called when a dockable is removed from a dock.
+    /// Handles recalculating proportions when a split tab is closed.
+    /// </summary>
+    public override void OnDockableRemoved(IDockable? dockable)
+    {
+        base.OnDockableRemoved(dockable);
+
+        // Only handle document removals when we have a split layout
+        if (dockable is not DocumentViewModelBase)
+            return;
+
+        if (!CanCollapseSplitDocuments)
+            return;
+
+        // Schedule the cleanup on the UI thread to ensure layout is updated
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            CleanupEmptySplitPanes();
+        });
+    }
+
+    /// <summary>
+    /// Cleans up empty document docks in a split layout and recalculates proportions.
+    /// </summary>
+    private void CleanupEmptySplitPanes()
+    {
+        if (_rootProportional?.VisibleDockables is null)
+            return;
+
+        // Find the split container
+        IProportionalDock? splitContainer = null;
+        int splitIndex = -1;
+        for (int i = 0; i < _rootProportional.VisibleDockables.Count; i++)
+        {
+            if (_rootProportional.VisibleDockables[i] is IProportionalDock propDock &&
+                propDock.Id != "RootProportional")
+            {
+                splitContainer = propDock;
+                splitIndex = i;
+                break;
+            }
+        }
+
+        if (splitContainer is null)
+            return;
+
+        // Clean up empty panes and recalculate proportions
+        CleanupEmptyPanesRecursive(splitContainer);
+
+        // Count remaining document docks
+        var remainingDocDocks = CountDocumentDocks(splitContainer);
+
+        // If only one document dock remains, collapse back to single pane
+        if (remainingDocDocks <= 1)
+        {
+            CollapseSplitDocuments();
+        }
+        else
+        {
+            // Recalculate proportions for remaining panes
+            RecalculateProportions(splitContainer);
+        }
+    }
+
+    /// <summary>
+    /// Recursively cleans up empty document docks and their associated splitters.
+    /// </summary>
+    private void CleanupEmptyPanesRecursive(IDock dock)
+    {
+        if (dock.VisibleDockables is null)
+            return;
+
+        // First, recurse into child proportional docks
+        foreach (var child in dock.VisibleDockables.ToList())
+        {
+            if (child is IProportionalDock childProp)
+            {
+                CleanupEmptyPanesRecursive(childProp);
+            }
+        }
+
+        // Find and remove empty document docks and their adjacent splitters
+        var toRemove = new List<IDockable>();
+        for (int i = 0; i < dock.VisibleDockables.Count; i++)
+        {
+            var child = dock.VisibleDockables[i];
+
+            // Check for empty document dock
+            if (child is IDocumentDock docDock &&
+                (docDock.VisibleDockables is null || docDock.VisibleDockables.Count == 0))
+            {
+                toRemove.Add(child);
+
+                // Also mark adjacent splitter for removal
+                // Prefer removing the splitter before the empty dock
+                if (i > 0 && dock.VisibleDockables[i - 1] is ProportionalDockSplitter prevSplitter)
+                {
+                    if (!toRemove.Contains(prevSplitter))
+                        toRemove.Add(prevSplitter);
+                }
+                // Otherwise remove the splitter after
+                else if (i < dock.VisibleDockables.Count - 1 &&
+                         dock.VisibleDockables[i + 1] is ProportionalDockSplitter nextSplitter)
+                {
+                    if (!toRemove.Contains(nextSplitter))
+                        toRemove.Add(nextSplitter);
+                }
+            }
+
+            // Check for empty nested proportional dock (all children removed)
+            if (child is IProportionalDock nestedProp &&
+                (nestedProp.VisibleDockables is null ||
+                 nestedProp.VisibleDockables.All(d => d is ProportionalDockSplitter)))
+            {
+                toRemove.Add(child);
+
+                // Also mark adjacent splitter for removal
+                if (i > 0 && dock.VisibleDockables[i - 1] is ProportionalDockSplitter prevSplitter)
+                {
+                    if (!toRemove.Contains(prevSplitter))
+                        toRemove.Add(prevSplitter);
+                }
+                else if (i < dock.VisibleDockables.Count - 1 &&
+                         dock.VisibleDockables[i + 1] is ProportionalDockSplitter nextSplitter)
+                {
+                    if (!toRemove.Contains(nextSplitter))
+                        toRemove.Add(nextSplitter);
+                }
+            }
+        }
+
+        // Remove marked items
+        foreach (var item in toRemove)
+        {
+            dock.VisibleDockables.Remove(item);
+        }
+    }
+
+    /// <summary>
+    /// Counts the number of document docks in a dock hierarchy.
+    /// </summary>
+    private int CountDocumentDocks(IDock dock)
+    {
+        if (dock.VisibleDockables is null)
+            return 0;
+
+        int count = 0;
+        foreach (var child in dock.VisibleDockables)
+        {
+            if (child is IDocumentDock docDock &&
+                docDock.VisibleDockables != null &&
+                docDock.VisibleDockables.Count > 0)
+            {
+                count++;
+            }
+            else if (child is IDock childDock)
+            {
+                count += CountDocumentDocks(childDock);
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Recalculates proportions for all document docks in a split layout.
+    /// </summary>
+    private void RecalculateProportions(IProportionalDock splitContainer)
+    {
+        if (splitContainer.VisibleDockables is null)
+            return;
+
+        // Get non-splitter children
+        var children = splitContainer.VisibleDockables
+            .Where(d => d is not ProportionalDockSplitter)
+            .ToList();
+
+        if (children.Count == 0)
+            return;
+
+        var newProportion = 1.0 / children.Count;
+
+        foreach (var child in children)
+        {
+            if (child is IDocumentDock docDock)
+            {
+                docDock.Proportion = newProportion;
+            }
+            else if (child is IProportionalDock nestedProp)
+            {
+                nestedProp.Proportion = newProportion;
+                // Recursively recalculate nested proportional docks
+                RecalculateProportions(nestedProp);
+            }
+        }
+    }
+
+    /// <summary>
     /// Splits all open document tabs into separate panes.
     /// </summary>
     /// <param name="layout">The layout orientation for splitting.</param>
