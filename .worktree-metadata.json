@@ -1,9 +1,9 @@
 {
-  "Id": "b23d747f",
-  "TaskDescription": "I don\u0027t see the new title and branch names, can we generate that first before creating worktree and rest of flow?",
-  "Title": null,
+  "Id": "20785c92",
+  "TaskDescription": "I like that the title/branch name works, but, i just want it to automatically happen when i press create, not an extra button/click.",
+  "Title": "Title Branch Name Works Automatically",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:14:14.029703Z",
-  "ClaudeSessionId": "b8aa0e06-4559-4bc0-8923-7560c4596902",
+  "CreatedAt": "2026-01-09T05:44:25.148796Z",
+  "ClaudeSessionId": "ee7b1fa0-33d7-4e7e-b8d2-584681cd348d",
   "SessionWasActive": true
 }
