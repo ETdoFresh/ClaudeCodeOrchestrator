@@ -1,7 +1,7 @@
 {
-  "Id": "ca5695d6",
-  "TaskDescription": "i want worktrees to be on a left side panel, but i want the tabs to be on the top of the left side panel.",
+  "Id": "5bc8792f",
+  "TaskDescription": "Can you add New Task Button  and Refresh Worktrees on top bar",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T04:22:59.774322Z",
-  "ClaudeSessionId": "df4315fe-bbd3-4c8c-ac97-c7bcc13e73bb"
+  "CreatedAt": "2026-01-09T04:35:55.479988Z",
+  "ClaudeSessionId": "1f0ed590-4544-4306-89ee-82a8d11f949c"
 }

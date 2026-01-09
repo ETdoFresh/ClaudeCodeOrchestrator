@@ -14,8 +14,25 @@
     <Grid RowDefinitions="Auto,*">
         <!-- Header -->
         <Border Grid.Row="0" Padding="8,6" Background="#252526">
-            <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
-                       Foreground="#BBBBBB" VerticalAlignment="Center" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
+                           Foreground="#BBBBBB" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <Button Command="{Binding CreateTaskCommand}"
+                            Content="+"
+                            Padding="4,2"
+                            FontSize="12"
+                            FontWeight="Bold"
+                            ToolTip.Tip="New Task"
+                            AutomationProperties.AutomationId="NewTaskButton" />
+                    <Button Command="{Binding RefreshCommand}"
+                            Content="↻"
+                            Padding="4,2"
+                            FontSize="12"
+                            ToolTip.Tip="Refresh Worktrees"
+                            AutomationProperties.AutomationId="RefreshWorktreesButton" />
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Worktree list -->
