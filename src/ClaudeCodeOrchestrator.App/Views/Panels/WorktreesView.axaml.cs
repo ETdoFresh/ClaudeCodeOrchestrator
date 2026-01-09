@@ -22,6 +22,9 @@ public partial class WorktreesView : UserControl
             _ => new SolidColorBrush(Color.Parse("#666666"))
         });
 
+    private DateTime _lastSelectionTime;
+    private const int DoubleClickThresholdMs = 300;
+
     public WorktreesView()
     {
         InitializeComponent();
@@ -45,20 +48,35 @@ public partial class WorktreesView : UserControl
         WorktreesList.DoubleTapped -= OnDoubleTapped;
     }
 
-    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is not WorktreesViewModel vm) return;
         if (e.AddedItems.Count == 0) return;
+        if (e.AddedItems[0] is not WorktreeViewModel worktree) return;
 
-        if (e.AddedItems[0] is WorktreeViewModel worktree)
+        // Record selection time to detect double-clicks
+        _lastSelectionTime = DateTime.UtcNow;
+
+        // Delay briefly to see if this is part of a double-click
+        await Task.Delay(DoubleClickThresholdMs);
+
+        // Check if a double-click happened in the meantime (time would be updated)
+        var elapsed = (DateTime.UtcNow - _lastSelectionTime).TotalMilliseconds;
+        if (elapsed < DoubleClickThresholdMs)
         {
-            vm.SelectWorktreeCommand.Execute(worktree);
+            // A double-click is occurring, skip the preview action
+            return;
         }
+
+        vm.SelectWorktreeCommand.Execute(worktree);
     }
 
     private void OnDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not WorktreesViewModel vm) return;
+
+        // Update time to prevent the delayed selection handler from running
+        _lastSelectionTime = DateTime.UtcNow;
 
         if (vm.SelectedWorktree is WorktreeViewModel worktree)
         {

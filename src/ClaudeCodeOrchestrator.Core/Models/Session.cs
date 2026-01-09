@@ -58,11 +58,27 @@ public sealed class Session
     public string? InitialPrompt { get; init; }
 
     /// <summary>
-    /// Title for display (derived from initial prompt or default).
+    /// The task description from the worktree (used for display when no initial prompt).
     /// </summary>
-    public string Title => string.IsNullOrEmpty(InitialPrompt)
-        ? "Session"
-        : (InitialPrompt.Length > 50 ? InitialPrompt[..47] + "..." : InitialPrompt);
+    public string? TaskDescription { get; init; }
+
+    /// <summary>
+    /// Title for display (derived from initial prompt, task description, or default).
+    /// </summary>
+    public string Title
+    {
+        get
+        {
+            var displayText = !string.IsNullOrEmpty(InitialPrompt)
+                ? InitialPrompt
+                : TaskDescription;
+
+            if (string.IsNullOrEmpty(displayText))
+                return "Session";
+
+            return displayText.Length > 50 ? displayText[..47] + "..." : displayText;
+        }
+    }
 }
 
 /// <summary>

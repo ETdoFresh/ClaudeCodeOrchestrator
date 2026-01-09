@@ -107,7 +107,8 @@ public sealed class SessionService : ISessionService, IDisposable
             WorktreeId = worktree.Id,
             WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
-            State = SessionState.WaitingForInput
+            State = SessionState.WaitingForInput,
+            TaskDescription = worktree.TaskDescription
         };
 
         // Add history messages before firing the event
