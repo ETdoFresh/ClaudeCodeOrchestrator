@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Services;
@@ -390,11 +391,48 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             switch (message)
             {
                 case SDKUserMessage userMsg:
-                    Messages.Add(new UserMessageViewModel
+                    var userVm = new UserMessageViewModel
                     {
                         Uuid = userMsg.Uuid,
                         Content = userMsg.Message?.Content?.GetText() ?? string.Empty
-                    });
+                    };
+
+                    // Extract images from content blocks
+                    if (userMsg.Message?.Content?.Blocks != null)
+                    {
+                        foreach (var block in userMsg.Message.Content.Blocks)
+                        {
+                            if (block.Type == "image" && block.Content != null)
+                            {
+                                try
+                                {
+                                    // Content is an anonymous object, serialize and deserialize to extract properties
+                                    var contentJson = JsonSerializer.Serialize(block.Content);
+                                    using var doc = JsonDocument.Parse(contentJson);
+                                    var root = doc.RootElement;
+
+                                    if (root.TryGetProperty("data", out var dataElement) &&
+                                        root.TryGetProperty("media_type", out var mediaTypeElement))
+                                    {
+                                        var base64Data = dataElement.GetString();
+                                        var mediaType = mediaTypeElement.GetString();
+
+                                        if (!string.IsNullOrEmpty(base64Data) && !string.IsNullOrEmpty(mediaType))
+                                        {
+                                            var imageAttachment = ImageAttachment.FromBase64(base64Data, mediaType);
+                                            userVm.Images.Add(imageAttachment);
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    // Skip invalid image blocks
+                                }
+                            }
+                        }
+                    }
+
+                    Messages.Add(userVm);
                     break;
 
                 case SDKAssistantMessage assistantMsg:

@@ -15,6 +15,7 @@
         <conv:MarkdownToHtmlConverter x:Key="MarkdownToHtml" />
         <conv:DiffToHtmlConverter x:Key="DiffToHtml" />
         <conv:CodePreviewConverter x:Key="CodePreview" />
+        <conv:ImageAttachmentToBitmapConverter x:Key="ImageToBitmap" />
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -57,7 +58,34 @@
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
                                     <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6">
                                         <Grid>
-                                            <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}" />
+                                            <StackPanel>
+                                                <!-- Image attachments -->
+                                                <ItemsControl ItemsSource="{Binding Images}"
+                                                              IsVisible="{Binding HasImages}"
+                                                              Margin="0,0,0,8">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="#1E1E1E"
+                                                                    CornerRadius="4"
+                                                                    Padding="2"
+                                                                    Margin="0,0,8,8">
+                                                                <Image MaxWidth="200"
+                                                                       MaxHeight="200"
+                                                                       Stretch="Uniform"
+                                                                       Source="{Binding Converter={StaticResource ImageToBitmap}}"
+                                                                       ToolTip.Tip="{Binding FileName}" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <!-- Text content -->
+                                                <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}" />
+                                            </StackPanel>
                                             <Button x:Name="CopyButton"
                                                     Command="{Binding CopyCommand}"
                                                     Content="📋"

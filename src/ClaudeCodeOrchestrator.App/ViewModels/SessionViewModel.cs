@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.Core.Models;
 
 namespace ClaudeCodeOrchestrator.App.ViewModels;
@@ -85,6 +86,16 @@ public partial class UserMessageViewModel : MessageViewModel
 {
     [ObservableProperty]
     private string _content = string.Empty;
+
+    /// <summary>
+    /// Image attachments included with this message.
+    /// </summary>
+    public ObservableCollection<ImageAttachment> Images { get; } = new();
+
+    /// <summary>
+    /// Whether this message has any image attachments.
+    /// </summary>
+    public bool HasImages => Images.Count > 0;
 
     [RelayCommand]
     private async Task CopyAsync()

@@ -73,6 +73,10 @@ public sealed class SessionService : ISessionService, IDisposable
             ImageContentBlock.FromBase64(img.Base64Data, img.MediaType)).ToList()
             ?? new List<ImageContentBlock>();
 
+        // Add the initial user message to session.Messages so it can be displayed in the UI
+        var initialUserMessage = SDKUserMessage.CreateWithImages(prompt, imageBlocks, session.Id);
+        session.Messages.Add(initialUserMessage);
+
         var query = ClaudeAgent.CreateQuery(prompt, imageBlocks, options);
         var cts = new CancellationTokenSource();
         var context = new SessionContext(session, query, cts);

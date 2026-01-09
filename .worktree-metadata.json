@@ -1,9 +1,9 @@
 {
-  "Id": "8cedab81",
-  "TaskDescription": "Can we wrap text that is too long in chat session.",
-  "Title": "Wrap Text Long Chat Session",
+  "Id": "3d46709b",
+  "TaskDescription": "can we show preview in chat session after we start a new session with this image? I\u0027m not sure why it doesn\u0027t work right now",
+  "Title": "Show Preview Chat Session Start",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T06:42:10.42412Z",
-  "ClaudeSessionId": "49401ce0-5267-4f01-ab60-566e1241bdbb",
+  "CreatedAt": "2026-01-09T07:20:14.024408Z",
+  "ClaudeSessionId": "e6a189e7-007d-404a-8f63-cb3a6ddf7e48",
   "SessionWasActive": true
 }
