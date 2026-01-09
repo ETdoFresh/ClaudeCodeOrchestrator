@@ -184,6 +184,52 @@ public sealed class SessionService : ISessionService, IDisposable
         }
 
         var previousState = context.Session.State;
+
+        // If session has completed, we need to resume it first
+        if (previousState is SessionState.Completed or SessionState.Error or SessionState.Cancelled)
+        {
+            if (string.IsNullOrEmpty(context.Session.ClaudeSessionId))
+            {
+                throw new InvalidOperationException("Session has no Claude session ID to resume");
+            }
+
+            // Dispose the old query
+            await context.Query.DisposeAsync();
+
+            // Create a new streaming query that resumes the session
+            // Note: Cwd is not needed for resume - Claude Code restores it from session state
+            var options = new ClaudeAgentOptions
+            {
+                Resume = context.Session.ClaudeSessionId,
+                PermissionMode = PermissionMode.AcceptAll,
+                SystemPrompt = new SystemPromptConfig
+                {
+                    Append = AdditionalSystemPrompt
+                }
+            };
+
+            var query = ClaudeAgent.CreateStreamingQuery(options);
+            var cts = new CancellationTokenSource();
+            var newContext = new SessionContext(context.Session, query, cts);
+            _sessions[sessionId] = newContext;
+            context = newContext;
+
+            context.Session.State = SessionState.Processing;
+
+            SessionStateChanged?.Invoke(this, new SessionStateChangedEventArgs
+            {
+                Session = context.Session,
+                PreviousState = previousState
+            });
+
+            // Start message processing for the resumed session
+            _ = ProcessMessagesAsync(context, cancellationToken);
+
+            // Send the message to the new streaming query
+            await context.Query.SendMessageAsync(message, cancellationToken);
+            return;
+        }
+
         context.Session.State = SessionState.Processing;
 
         SessionStateChanged?.Invoke(this, new SessionStateChangedEventArgs
@@ -206,6 +252,16 @@ public sealed class SessionService : ISessionService, IDisposable
         if (_sessions.TryGetValue(sessionId, out var context))
         {
             await context.Query.InterruptAsync();
+
+            // Update state to reflect interruption
+            var previousState = context.Session.State;
+            context.Session.State = SessionState.Cancelled;
+
+            SessionStateChanged?.Invoke(this, new SessionStateChangedEventArgs
+            {
+                Session = context.Session,
+                PreviousState = previousState
+            });
         }
     }
 

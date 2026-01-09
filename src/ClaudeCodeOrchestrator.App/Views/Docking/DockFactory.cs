@@ -102,6 +102,12 @@ public class DockFactory : Factory
     {
         if (_documentDock is null) return;
 
+        // Wire up the session completed callback to refresh worktrees
+        if (_context is ViewModels.MainWindowViewModel mainVm)
+        {
+            document.OnSessionCompleted = () => mainVm.RefreshWorktreesAsync();
+        }
+
         // Register context for new document
         if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
         {

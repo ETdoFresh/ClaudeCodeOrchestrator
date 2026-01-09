@@ -213,14 +213,27 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sends an interrupt signal to Claude Code.
+    /// Sends an interrupt signal to Claude Code by killing the process.
     /// </summary>
-    public async Task SendInterruptAsync(CancellationToken cancellationToken = default)
+    public Task SendInterruptAsync(CancellationToken cancellationToken = default)
     {
-        var interrupt = new { type = "interrupt" };
-        var json = JsonSerializer.Serialize(interrupt, _jsonOptions);
-        await _stdin.WriteLineAsync(json.AsMemory(), cancellationToken);
-        await _stdin.FlushAsync(cancellationToken);
+        try
+        {
+            // Cancel any pending operations
+            _cts.Cancel();
+
+            // Kill the process to stop Claude Code immediately
+            if (!_process.HasExited)
+            {
+                _process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
