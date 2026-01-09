@@ -75,4 +75,14 @@ public sealed class DialogService : IDialogService
         var dialog = new ConfirmDialog(title, message);
         return await dialog.ShowDialog<bool>(window);
     }
+
+    /// <inheritdoc />
+    public async Task ShowAboutAsync()
+    {
+        var window = GetMainWindow();
+        if (window is null) return;
+
+        var dialog = new AboutDialog();
+        await dialog.ShowDialog(window);
+    }
 }

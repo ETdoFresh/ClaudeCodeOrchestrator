@@ -311,6 +311,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Factory?.ResetToDefaultView();
     }
 
+    [RelayCommand]
+    private async Task ShowAboutAsync()
+    {
+        await _dialogService.ShowAboutAsync();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
