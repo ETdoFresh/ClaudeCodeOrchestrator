@@ -176,18 +176,32 @@
         <Setter Property="Stretch" Value="Uniform" />
     </Style>
 
-    <!-- Hide ToolTabStrip (title bar/tabs) on the left panel ToolDock -->
-    <!-- This targets the ToolControl's tab strip area to collapse it -->
-    <Style Selector="dock|ToolControl dock|ToolTabStrip">
-        <Setter Property="IsVisible" Value="False" />
-    </Style>
-
-    <!-- Alternative selectors to ensure the tool tab strip is hidden -->
+    <!-- ToolTabStrip styling for left panel tabs (Worktrees/Explorer) -->
     <Style Selector="dock|ToolTabStrip">
-        <Setter Property="IsVisible" Value="False" />
+        <Setter Property="Background" Value="#252526" />
+        <Setter Property="Height" Value="35" />
     </Style>
 
-    <!-- Hide the grip/title area of ToolControl -->
+    <!-- Tool tab item styling -->
+    <Style Selector="dock|ToolTabStripItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="#858585" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+
+    <Style Selector="dock|ToolTabStripItem:pointerover">
+        <Setter Property="Foreground" Value="#CCCCCC" />
+    </Style>
+
+    <Style Selector="dock|ToolTabStripItem:selected">
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="#007ACC" />
+    </Style>
+
+    <!-- Hide the grip/title area of ToolControl (keep tabs, hide grip) -->
     <Style Selector="dock|ToolControl /template/ Border#PART_Grip">
         <Setter Property="IsVisible" Value="False" />
     </Style>
