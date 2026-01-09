@@ -116,10 +116,13 @@ public partial class NewTaskInputControl : UserControl
             // This is needed because some formats report as available but return no data
             foreach (var format in imageFormats)
             {
-                if (!formats.Contains(format)) continue;
+                // Use case-insensitive matching since Windows clipboard format names can vary in case
+                // Also get the actual format name from clipboard to use for GetDataAsync
+                var actualFormat = formats.FirstOrDefault(f => f.Equals(format, StringComparison.OrdinalIgnoreCase));
+                if (actualFormat == null) continue;
 
-                var data = await clipboard.GetDataAsync(format);
-                Debug.WriteLine($"[ImagePaste] Got data for format {format}: {data?.GetType().Name ?? "null"}, Length={(data as byte[])?.Length ?? -1}");
+                var data = await clipboard.GetDataAsync(actualFormat);
+                Debug.WriteLine($"[ImagePaste] Got data for format {actualFormat}: {data?.GetType().Name ?? "null"}, Length={(data as byte[])?.Length ?? -1}");
 
                 byte[]? imageBytes = null;
 
@@ -139,17 +142,17 @@ public partial class NewTaskInputControl : UserControl
 
                 if (imageBytes == null || imageBytes.Length == 0)
                 {
-                    Debug.WriteLine($"[ImagePaste] Format {format} reported available but returned no data, trying next format");
+                    Debug.WriteLine($"[ImagePaste] Format {actualFormat} reported available but returned no data, trying next format");
                     continue;
                 }
 
                 // For Windows DIB format, we need to add BITMAPFILEHEADER to make it a valid BMP
-                var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(imageBytes) : imageBytes;
+                var processedBytes = IsDibFormat(actualFormat) ? ConvertDibToBmp(imageBytes) : imageBytes;
                 if (processedBytes.Length > 0)
                 {
-                    var mediaType = GetMediaTypeForFormat(format);
-                    AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
-                    Debug.WriteLine($"[ImagePaste] Successfully added image from format {format}");
+                    var mediaType = GetMediaTypeForFormat(actualFormat);
+                    AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(actualFormat)}");
+                    Debug.WriteLine($"[ImagePaste] Successfully added image from format {actualFormat}");
                     return true;
                 }
             }
