@@ -156,10 +156,15 @@ public partial class SessionView : UserControl
 
                 if (data is byte[] imageBytes && imageBytes.Length > 0)
                 {
-                    var mediaType = GetMediaTypeForFormat(format);
-                    AddImageAttachment(imageBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
-                    ShowStatus($"✓ Image attached ({imageBytes.Length / 1024}KB)", isError: false);
-                    return true;
+                    // For Windows DIB format, we need to add BITMAPFILEHEADER to make it a valid BMP
+                    var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(imageBytes) : imageBytes;
+                    if (processedBytes.Length > 0)
+                    {
+                        var mediaType = GetMediaTypeForFormat(format);
+                        AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                        ShowStatus($"✓ Image attached ({processedBytes.Length / 1024}KB)", isError: false);
+                        return true;
+                    }
                 }
 
                 // Some platforms return a stream instead of bytes
@@ -170,10 +175,14 @@ public partial class SessionView : UserControl
                     var bytes = ms.ToArray();
                     if (bytes.Length > 0)
                     {
-                        var mediaType = GetMediaTypeForFormat(format);
-                        AddImageAttachment(bytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
-                        ShowStatus($"✓ Image attached ({bytes.Length / 1024}KB)", isError: false);
-                        return true;
+                        var processedBytes = IsDibFormat(format) ? ConvertDibToBmp(bytes) : bytes;
+                        if (processedBytes.Length > 0)
+                        {
+                            var mediaType = GetMediaTypeForFormat(format);
+                            AddImageAttachment(processedBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                            ShowStatus($"✓ Image attached ({processedBytes.Length / 1024}KB)", isError: false);
+                            return true;
+                        }
                     }
                 }
             }
@@ -212,6 +221,80 @@ public partial class SessionView : UserControl
         }
     }
 
+    /// <summary>
+    /// Checks if the clipboard format is a Windows DIB format that needs conversion.
+    /// </summary>
+    private static bool IsDibFormat(string format)
+    {
+        return format.Equals("DeviceIndependentBitmap", StringComparison.OrdinalIgnoreCase) ||
+               format.Equals("Bitmap", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Converts Windows DIB (Device Independent Bitmap) data to a proper BMP file by adding BITMAPFILEHEADER.
+    /// DIB data from the clipboard is missing the 14-byte file header that BMP files require.
+    /// </summary>
+    private static byte[] ConvertDibToBmp(byte[] dibData)
+    {
+        try
+        {
+            if (dibData.Length < 40) // Minimum BITMAPINFOHEADER size
+            {
+                Debug.WriteLine($"[ImagePaste] DIB data too small: {dibData.Length} bytes");
+                return dibData;
+            }
+
+            // Read BITMAPINFOHEADER to calculate offsets
+            // biSize is at offset 0 (4 bytes) - size of the header
+            var biSize = BitConverter.ToInt32(dibData, 0);
+            // biBitCount is at offset 14 (2 bytes) - bits per pixel
+            var biBitCount = BitConverter.ToInt16(dibData, 14);
+            // biClrUsed is at offset 32 (4 bytes) - number of colors in palette (0 means default)
+            var biClrUsed = BitConverter.ToInt32(dibData, 32);
+
+            Debug.WriteLine($"[ImagePaste] DIB header: biSize={biSize}, biBitCount={biBitCount}, biClrUsed={biClrUsed}");
+
+            // Calculate color table size
+            // For <= 8 bit images, there's a color table
+            var colorTableSize = 0;
+            if (biBitCount <= 8)
+            {
+                colorTableSize = (biClrUsed == 0 ? (1 << biBitCount) : biClrUsed) * 4;
+            }
+
+            // BITMAPFILEHEADER is 14 bytes
+            const int fileHeaderSize = 14;
+            var pixelDataOffset = fileHeaderSize + biSize + colorTableSize;
+            var totalSize = fileHeaderSize + dibData.Length;
+
+            Debug.WriteLine($"[ImagePaste] Creating BMP: fileHeaderSize={fileHeaderSize}, pixelDataOffset={pixelDataOffset}, totalSize={totalSize}");
+
+            // Create the complete BMP file
+            var bmpData = new byte[totalSize];
+
+            // Write BITMAPFILEHEADER (14 bytes)
+            // bfType: "BM" signature (2 bytes)
+            bmpData[0] = 0x42; // 'B'
+            bmpData[1] = 0x4D; // 'M'
+            // bfSize: total file size (4 bytes)
+            BitConverter.GetBytes(totalSize).CopyTo(bmpData, 2);
+            // bfReserved1: 0 (2 bytes) - already zero
+            // bfReserved2: 0 (2 bytes) - already zero
+            // bfOffBits: offset to pixel data (4 bytes)
+            BitConverter.GetBytes(pixelDataOffset).CopyTo(bmpData, 10);
+
+            // Copy DIB data after the file header
+            Array.Copy(dibData, 0, bmpData, fileHeaderSize, dibData.Length);
+
+            return bmpData;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ImagePaste] DIB conversion failed: {ex.Message}");
+            return dibData; // Return original if conversion fails
+        }
+    }
+
     private static string GetMediaTypeForFormat(string format)
     {
         return format.ToLowerInvariant() switch
@@ -231,11 +314,12 @@ public partial class SessionView : UserControl
     {
         return format.ToLowerInvariant() switch
         {
-            "image/png" or "png" => "png",
-            "image/jpeg" or "jpeg" or "jpg" => "jpg",
-            "image/gif" or "gif" => "gif",
-            "image/bmp" or "bmp" or "deviceindependentbitmap" or "bitmap" => "bmp",
-            "image/webp" or "webp" => "webp",
+            "image/png" or "png" or "public.png" => "png",
+            "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "jpg",
+            "image/gif" or "gif" or "public.gif" => "gif",
+            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" => "bmp",
+            "image/tiff" or "tiff" or "public.tiff" => "tiff",
+            "image/webp" or "webp" or "public.webp" => "webp",
             _ => "png"
         };
     }
