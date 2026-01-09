@@ -12,20 +12,10 @@
              Background="#1E1E1E">
 
     <Grid RowDefinitions="Auto,*">
-        <!-- Header with actions -->
+        <!-- Header -->
         <Border Grid.Row="0" Padding="8,6" Background="#252526">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
-                           Foreground="#BBBBBB" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                    <Button Command="{Binding CreateTaskCommand}" Content="+ New Task"
-                            Padding="8,4" FontSize="12"
-                            AutomationProperties.AutomationId="NewTaskButton" />
-                    <Button Command="{Binding RefreshCommand}" Content="↻"
-                            Padding="8,4" FontSize="12" Background="Transparent"
-                            AutomationProperties.AutomationId="RefreshWorktreesButton" />
-                </StackPanel>
-            </Grid>
+            <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
+                       Foreground="#BBBBBB" VerticalAlignment="Center" />
         </Border>
 
         <!-- Worktree list -->
@@ -54,6 +44,16 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <!-- Active session spinner -->
+                                <Panel Classes="arc-spinner"
+                                       IsVisible="{Binding HasActiveSession}"
+                                       ToolTip.Tip="Session is active">
+                                    <Arc Stroke="#007ACC"
+                                         StrokeThickness="2"
+                                         StartAngle="0"
+                                         SweepAngle="270" />
+                                </Panel>
+
                                 <!-- Status badge -->
                                 <Border Padding="6,2" CornerRadius="2"
                                         Background="{Binding Status, Converter={x:Static local:WorktreesView.StatusToBrushConverter}}">

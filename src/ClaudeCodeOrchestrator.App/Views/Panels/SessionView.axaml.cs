@@ -24,15 +24,45 @@ public partial class SessionView : UserControl
 
         // Set up event handlers
         AttachButton.Click += AttachButton_Click;
-        MessageInput.KeyDown += OnKeyDown;
     }
 
-    private async void OnKeyDown(object? sender, KeyEventArgs e)
+    private async void MessageInput_KeyDown(object? sender, KeyEventArgs e)
     {
         // Handle Ctrl+V for paste
         if (e.Key == Key.V && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             await TryPasteImageFromClipboard();
+            return;
+        }
+
+        // Only handle Enter key without modifiers (Shift+Enter should still add newlines)
+        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None)
+            return;
+
+        if (sender is not TextBox textBox)
+            return;
+
+        // Check if cursor is at the end of the text
+        var text = textBox.Text ?? string.Empty;
+        var caretIndex = textBox.CaretIndex;
+
+        if (caretIndex != text.Length)
+            return;
+
+        // Get the view model and execute the appropriate command
+        if (DataContext is not SessionDocumentViewModel viewModel)
+            return;
+
+        // Determine which command to execute based on state
+        if (viewModel.SendMessageCommand.CanExecute(null))
+        {
+            viewModel.SendMessageCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (viewModel.QueueMessageCommand.CanExecute(null))
+        {
+            viewModel.QueueMessageCommand.Execute(null);
+            e.Handled = true;
         }
     }
 

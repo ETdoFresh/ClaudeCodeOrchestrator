@@ -359,6 +359,19 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool CanInterrupt() => IsProcessing;
 
     /// <summary>
+    /// Adds a user message to the UI from an external source (e.g., conflict resolution).
+    /// </summary>
+    public void AddExternalUserMessage(string content)
+    {
+        Messages.Add(new UserMessageViewModel
+        {
+            Uuid = Guid.NewGuid().ToString(),
+            Content = content
+        });
+        IsProcessing = true;
+    }
+
+    /// <summary>
     /// Loads existing messages from a session (for resumed sessions with history).
     /// </summary>
     public void LoadMessagesFromSession(Session session)

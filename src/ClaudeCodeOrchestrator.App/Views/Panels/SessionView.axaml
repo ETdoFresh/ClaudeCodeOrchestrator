@@ -28,7 +28,16 @@
                            Foreground="#569CD6"
                            FontStyle="Italic"
                            IsVisible="{Binding IsPreview}" />
-                <TextBlock Text="&#x2022;" Foreground="#666666" />
+                <!-- Processing spinner -->
+                <Panel Classes="arc-spinner"
+                       IsVisible="{Binding IsProcessing}"
+                       ToolTip.Tip="Processing...">
+                    <Arc Stroke="#007ACC"
+                         StrokeThickness="2"
+                         StartAngle="0"
+                         SweepAngle="270" />
+                </Panel>
+                <TextBlock Text="•" Foreground="#666666" />
                 <TextBlock FontSize="13" Foreground="#858585">
                     <Run Text="Cost: $" />
                     <Run Text="{Binding TotalCost, StringFormat=N4}" />
@@ -161,6 +170,7 @@
                              Background="#3C3C3C"
                              BorderBrush="#474747"
                              Foreground="#CCCCCC"
+                             KeyDown="MessageInput_KeyDown"
                              AutomationProperties.AutomationId="MessageInput" />
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
