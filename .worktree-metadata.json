@@ -1,7 +1,17 @@
 {
+<<<<<<< Updated upstream
   "Id": "6ef02c0a",
   "TaskDescription": "Can you improve title and branch name using one-off requst similar to: https://raw.githubusercontent.com/webedt/monorepo/e7fa34aa97b9faf2a73b621071b7c4180f6bdec6/shared/src/claudeWeb/titleGenerator.ts",
   "BaseBranch": "main",
   "CreatedAt": "2026-01-09T04:36:48.948333Z",
   "ClaudeSessionId": "14c075ff-6ca9-4529-b909-e246298786f6"
 }
+=======
+  "Id": "ed089872",
+  "TaskDescription": "fix these warnings?\n\n/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.Core/Services/SessionService.cs(42,32): warning CS1998: This async method lacks \u0027await\u0027 operators and will run synchronously. Consider using the \u0027await\u0027 operator to await non-blocking API calls, or \u0027await Task.Run(...)\u0027 to do CPU-bound work on a background thread. [/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.Core/ClaudeCodeOrchestrator.Core.csproj]\n/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.Core/Services/SessionService.cs(134,32): warning CS1998: This async method lacks \u0027await\u0027 operators and will run synchronously. Consider using the \u0027await\u0027 operator to await non-blocking API calls, or \u0027await Task.Run(...)\u0027 to do CPU-bound work on a background thread. [/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.Core/ClaudeCodeOrchestrator.Core.csproj]\n/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/ViewModels/SessionViewModel.cs(44,24): warning CS1998: This async method lacks \u0027await\u0027 operators and will run synchronously. Consider using the \u0027await\u0027 operator to await non-blocking API calls, or \u0027await Task.Run(...)\u0027 to do CPU-bound work on a background thread. [/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/ClaudeCodeOrchestrator.App.csproj]\n/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/ViewModels/SessionViewModel.cs(59,24): warning CS1998: This async method lacks \u0027await\u0027 operators and will run synchronously. Consider using the \u0027await\u0027 operator to await non-blocking API calls, or \u0027await Task.Run(...)\u0027 to do CPU-bound work on a background thread. [/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/ClaudeCodeOrchestrator.App.csproj]\n/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/Automation/AutomationExecutor.cs(230,63): warning CS1998: This async method lacks \u0027await\u0027 operators and will run synchronously. Consider using the \u0027await\u0027 operator to await non-blocking API calls, or \u0027await Task.Run(...)\u0027 to do CPU-bound work on a background thread. [/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/ClaudeCodeOrchestrator.App.csproj]",
+  "BaseBranch": "main",
+  "CreatedAt": "2026-01-09T04:48:14.033657Z",
+  "ClaudeSessionId": "dc7432f3-a8ae-487d-8eee-4023fe4ff119",
+  "SessionWasActive": true
+}
+>>>>>>> Stashed changes
