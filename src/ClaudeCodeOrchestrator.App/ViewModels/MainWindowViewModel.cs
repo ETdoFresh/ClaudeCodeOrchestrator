@@ -305,6 +305,42 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Factory?.CollapseSplitDocuments();
     }
 
+    [RelayCommand]
+    private void AutoSplitVertical()
+    {
+        Factory?.EnableAutoSplit(Views.Docking.SplitLayout.Vertical);
+    }
+
+    [RelayCommand]
+    private void AutoSplitHorizontal()
+    {
+        Factory?.EnableAutoSplit(Views.Docking.SplitLayout.Horizontal);
+    }
+
+    [RelayCommand]
+    private void AutoSplitGrid()
+    {
+        Factory?.EnableAutoSplit(Views.Docking.SplitLayout.Grid);
+    }
+
+    [RelayCommand]
+    private void DisableAutoSplit()
+    {
+        Factory?.DisableAutoSplit();
+    }
+
+    [RelayCommand]
+    private void ResetView()
+    {
+        Factory?.ResetToDefaultView();
+    }
+
+    [RelayCommand]
+    private async Task ShowAboutAsync()
+    {
+        await _dialogService.ShowAboutAsync();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
