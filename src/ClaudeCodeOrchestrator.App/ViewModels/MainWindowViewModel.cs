@@ -576,6 +576,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Store the worktree info for retry after session completes
         _pendingMergeRetries[sessionId] = worktree;
+
+        // Disable the merge button while Claude is resolving conflicts
+        worktree.IsMergePending = true;
     }
 
     // Track pending merge retries by session ID
@@ -585,11 +588,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (!_pendingMergeRetries.TryRemove(sessionId, out var worktree)) return;
 
-        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            // Re-enable merge button even if we can't proceed
+            worktree.IsMergePending = false;
+            return;
+        }
 
         // Only retry if session completed successfully
         if (finalState != Core.Models.SessionState.Completed)
         {
+            // Re-enable merge button so user can try again
+            worktree.IsMergePending = false;
             await _dialogService.ShowErrorAsync("Merge Failed",
                 "Claude could not resolve the merge conflicts. Please resolve them manually.");
             // Refresh worktrees to show updated status
@@ -611,6 +621,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         else
         {
+            // Re-enable merge button so user can try again
+            worktree.IsMergePending = false;
             var message = result.ConflictingFiles?.Count > 0
                 ? $"Merge still has conflicts in: {string.Join(", ", result.ConflictingFiles)}"
                 : result.ErrorMessage ?? "Unknown error";
