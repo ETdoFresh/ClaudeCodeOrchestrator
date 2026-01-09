@@ -163,6 +163,7 @@ public sealed class SessionEndedEventArgs : EventArgs
 {
     public required string SessionId { get; init; }
     public required SessionState FinalState { get; init; }
+    public required DateTime EndedAt { get; init; }
 }
 
 /// <summary>

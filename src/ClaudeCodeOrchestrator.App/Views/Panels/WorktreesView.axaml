@@ -44,6 +44,14 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <!-- Session duration -->
+                                <TextBlock Text="{Binding SessionDurationText}"
+                                           FontSize="10"
+                                           Foreground="#858585"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding SessionDurationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           ToolTip.Tip="Session duration" />
+
                                 <!-- Active session spinner -->
                                 <Panel Classes="arc-spinner"
                                        IsVisible="{Binding HasActiveSession}"

@@ -185,7 +185,8 @@ public sealed class SessionService : ISessionService, IDisposable
             SessionEnded?.Invoke(this, new SessionEndedEventArgs
             {
                 SessionId = sessionId,
-                FinalState = context.Session.State
+                FinalState = context.Session.State,
+                EndedAt = context.Session.EndedAt.Value
             });
         }
     }
@@ -397,7 +398,8 @@ public sealed class SessionService : ISessionService, IDisposable
             SessionEnded?.Invoke(this, new SessionEndedEventArgs
             {
                 SessionId = context.Session.Id,
-                FinalState = context.Session.State
+                FinalState = context.Session.State,
+                EndedAt = context.Session.EndedAt.Value
             });
         }
     }

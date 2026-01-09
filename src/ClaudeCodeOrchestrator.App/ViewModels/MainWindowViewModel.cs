@@ -535,6 +535,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             // Add to document dock via factory
             Factory?.AddSessionDocument(document, isPreview);
+
+            // Start session timer for the worktree
+            var worktree = Worktrees.FirstOrDefault(w => w.Id == e.Session.WorktreeId);
+            worktree?.StartSessionTimer(e.Session.CreatedAt);
         });
     }
 
@@ -550,6 +554,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 worktree.HasActiveSession = false;
                 worktree.ActiveSessionId = null;
+
+                // Stop the session timer and record the end time
+                worktree.StopSessionTimer(e.EndedAt);
             }
 
             // Check if this session has a pending merge retry
