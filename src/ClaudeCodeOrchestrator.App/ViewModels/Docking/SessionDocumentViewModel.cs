@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using CommunityToolkit.Mvvm.Input;
 using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.Core.Models;
@@ -336,6 +337,46 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     private bool CanInterrupt() => IsProcessing;
+
+    /// <summary>
+    /// Callback to copy text to clipboard (set by the view).
+    /// </summary>
+    public Func<string, Task>? CopyToClipboard { get; set; }
+
+    [RelayCommand(CanExecute = nameof(CanCopyConversation))]
+    private async Task CopyConversationAsync()
+    {
+        if (CopyToClipboard is null) return;
+
+        var sb = new StringBuilder();
+
+        foreach (var message in Messages)
+        {
+            switch (message)
+            {
+                case UserMessageViewModel userMsg:
+                    sb.AppendLine("## User");
+                    sb.AppendLine();
+                    sb.AppendLine(userMsg.Content);
+                    sb.AppendLine();
+                    break;
+
+                case AssistantMessageViewModel assistantMsg:
+                    sb.AppendLine("## Assistant");
+                    sb.AppendLine();
+                    if (!string.IsNullOrEmpty(assistantMsg.TextContent))
+                    {
+                        sb.AppendLine(assistantMsg.TextContent);
+                        sb.AppendLine();
+                    }
+                    break;
+            }
+        }
+
+        await CopyToClipboard(sb.ToString().TrimEnd());
+    }
+
+    private bool CanCopyConversation() => Messages.Count > 0;
 
     /// <summary>
     /// Adds a user message to the UI from an external source (e.g., conflict resolution).

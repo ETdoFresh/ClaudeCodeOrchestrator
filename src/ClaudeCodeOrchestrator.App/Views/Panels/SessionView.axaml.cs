@@ -9,6 +9,24 @@ public partial class SessionView : UserControl
     public SessionView()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is SessionDocumentViewModel viewModel)
+        {
+            viewModel.CopyToClipboard = CopyToClipboardAsync;
+        }
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (clipboard != null)
+        {
+            await clipboard.SetTextAsync(text);
+        }
     }
 
     private void MessageInputTextBox_KeyDown(object? sender, KeyEventArgs e)
