@@ -33,4 +33,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Worktrees
 .worktrees/
+.worktree-metadata.json
