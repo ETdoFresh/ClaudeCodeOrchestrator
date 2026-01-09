@@ -23,6 +23,11 @@ public sealed class Session
     public required string WorktreeId { get; init; }
 
     /// <summary>
+    /// Path to the worktree directory.
+    /// </summary>
+    public required string WorktreePath { get; init; }
+
+    /// <summary>
     /// Current state of the session.
     /// </summary>
     public SessionState State { get; set; } = SessionState.Starting;

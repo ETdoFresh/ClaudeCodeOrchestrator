@@ -29,8 +29,7 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
 
     /// <summary>
     /// Starts a new Claude Code process with the given prompt and options.
-    /// For single-shot queries, stdin is closed immediately to signal that no more input will be sent.
-    /// This is required because claude buffers output until stdin is closed.
+    /// Uses streaming input mode to allow follow-up messages during execution.
     /// </summary>
     public static ProcessStreamHandler Start(
         string prompt,
@@ -38,7 +37,8 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
     {
         options ??= new ClaudeAgentOptions();
         var claudePath = FindClaudeExecutable(options);
-        var args = BuildArguments(prompt, options);
+        // Use streaming arguments (with --input-format stream-json) to allow follow-up messages
+        var args = BuildStreamingArguments(options);
 
         var startInfo = new ProcessStartInfo
         {
@@ -74,11 +74,22 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
             }
             Console.Error.WriteLine($"[SDK] Process started, PID: {process.Id}");
 
-            // Close stdin immediately for single-shot queries.
-            // Claude buffers output until stdin is closed, so we must close it
-            // to receive any output. This works on both macOS and Windows.
-            process.StandardInput.Close();
-            Console.Error.WriteLine("[SDK] Closed stdin for single-shot query");
+            // Send the initial prompt via stdin as a user message
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                PropertyNameCaseInsensitive = true
+            };
+            var handler = new ProcessStreamHandler(process, jsonOptions);
+
+            // Send initial prompt
+            var userMessage = SDKUserMessage.CreateText(prompt, "");
+            var json = JsonSerializer.Serialize(userMessage, jsonOptions);
+            process.StandardInput.WriteLine(json);
+            process.StandardInput.Flush();
+            Console.Error.WriteLine($"[SDK] Sent initial prompt via stdin: {prompt[..Math.Min(50, prompt.Length)]}...");
+
+            return handler;
         }
         catch (Exception ex)
         {
@@ -86,14 +97,6 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
             process.Dispose();
             throw new InvalidOperationException($"Failed to start Claude Code: {ex.Message}", ex);
         }
-
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            PropertyNameCaseInsensitive = true
-        };
-
-        return new ProcessStreamHandler(process, jsonOptions);
     }
 
     /// <summary>
@@ -350,20 +353,6 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
 
         // Default to just 'claude' and hope it's in PATH
         return "claude";
-    }
-
-    private static string BuildArguments(string prompt, ClaudeAgentOptions options)
-    {
-        var args = new List<string>
-        {
-            "--output-format", "stream-json",
-            "--verbose",
-            "-p", EscapeArgument(prompt)
-        };
-
-        AddCommonArguments(args, options);
-
-        return string.Join(" ", args);
     }
 
     private static string BuildStreamingArguments(ClaudeAgentOptions options)

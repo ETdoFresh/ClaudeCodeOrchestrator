@@ -24,7 +24,6 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private decimal _totalCost;
     private string _worktreeBranch = string.Empty;
     private bool _isPreview;
-    private string _queuedMessage = string.Empty;
 
     /// <summary>
     /// Callback to refresh worktrees when session completes.
@@ -234,39 +233,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
         State = msg.IsError ? SessionState.Error : SessionState.Completed;
 
-        // Check if there's a queued message to send
-        if (!string.IsNullOrWhiteSpace(_queuedMessage))
+        // Session completed, refresh worktrees to show updated status
+        if (OnSessionCompleted != null)
         {
-            var queuedText = _queuedMessage;
-            _queuedMessage = string.Empty;
-
-            // Add user message to UI
-            Messages.Add(new UserMessageViewModel
-            {
-                Uuid = Guid.NewGuid().ToString(),
-                Content = queuedText
-            });
-            IsProcessing = true;
-
-            try
-            {
-                if (_sessionService != null)
-                {
-                    await _sessionService.SendMessageAsync(SessionId, queuedText);
-                }
-            }
-            catch
-            {
-                IsProcessing = false;
-            }
-        }
-        else
-        {
-            // Session completed, refresh worktrees to show updated status
-            if (OnSessionCompleted != null)
-            {
-                await OnSessionCompleted();
-            }
+            await OnSessionCompleted();
         }
     }
 
@@ -322,19 +292,30 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool CanSendMessage() => !IsProcessing && !string.IsNullOrWhiteSpace(InputText);
 
     [RelayCommand(CanExecute = nameof(CanQueueMessage))]
-    private void QueueMessage()
+    private async Task QueueMessageAsync()
     {
         if (string.IsNullOrWhiteSpace(InputText)) return;
+        if (_sessionService is null) return;
 
-        _queuedMessage = InputText;
+        var text = InputText;
         InputText = string.Empty;
 
-        // Show the queued message in the UI as a pending user message
+        // Add user message to UI immediately (message will be injected at next tool boundary)
         Messages.Add(new UserMessageViewModel
         {
             Uuid = Guid.NewGuid().ToString(),
-            Content = $"[Queued] {_queuedMessage}"
+            Content = text
         });
+
+        try
+        {
+            // Send the message immediately - SDK will inject it at next tool boundary
+            await _sessionService.SendMessageAsync(SessionId, text);
+        }
+        catch
+        {
+            // Error will be handled via state change events
+        }
     }
 
     private bool CanQueueMessage() => IsProcessing && !string.IsNullOrWhiteSpace(InputText);

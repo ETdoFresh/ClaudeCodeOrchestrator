@@ -51,6 +51,7 @@ public sealed class SessionService : ISessionService, IDisposable
         {
             Id = Guid.NewGuid().ToString(),
             WorktreeId = worktree.Id,
+            WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
             InitialPrompt = prompt
         };
@@ -89,6 +90,7 @@ public sealed class SessionService : ISessionService, IDisposable
         {
             Id = Guid.NewGuid().ToString(),
             WorktreeId = worktree.Id,
+            WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
             State = SessionState.WaitingForInput
         };
@@ -196,11 +198,11 @@ public sealed class SessionService : ISessionService, IDisposable
             // Dispose the old query
             await context.Query.DisposeAsync();
 
-            // Create a new streaming query that resumes the session
-            // Note: Cwd is not needed for resume - Claude Code restores it from session state
+            // Create a new query that resumes the session with the message as the prompt
+            // Using ClaudeAgent.ResumeSession which passes the prompt via -p flag
             var options = new ClaudeAgentOptions
             {
-                Resume = context.Session.ClaudeSessionId,
+                Cwd = context.Session.WorktreePath,
                 PermissionMode = PermissionMode.AcceptAll,
                 SystemPrompt = new SystemPromptConfig
                 {
@@ -208,7 +210,7 @@ public sealed class SessionService : ISessionService, IDisposable
                 }
             };
 
-            var query = ClaudeAgent.CreateStreamingQuery(options);
+            var query = ClaudeAgent.ResumeSession(context.Session.ClaudeSessionId, message, options);
             var cts = new CancellationTokenSource();
             var newContext = new SessionContext(context.Session, query, cts);
             _sessions[sessionId] = newContext;
@@ -225,24 +227,24 @@ public sealed class SessionService : ISessionService, IDisposable
             // Start message processing for the resumed session
             _ = ProcessMessagesAsync(context, cancellationToken);
 
-            // Send the message to the new streaming query
-            await context.Query.SendMessageAsync(message, cancellationToken);
+            // Message was already sent via the prompt, no need to call SendMessageAsync
             return;
         }
-
-        context.Session.State = SessionState.Processing;
-
-        SessionStateChanged?.Invoke(this, new SessionStateChangedEventArgs
-        {
-            Session = context.Session,
-            PreviousState = previousState
-        });
 
         // Start message processing if this is the first message (idle session)
         if (previousState == SessionState.WaitingForInput)
         {
+            context.Session.State = SessionState.Processing;
+
+            SessionStateChanged?.Invoke(this, new SessionStateChangedEventArgs
+            {
+                Session = context.Session,
+                PreviousState = previousState
+            });
+
             _ = ProcessMessagesAsync(context, cancellationToken);
         }
+        // If session is Active or Processing, just send the message - it will be injected at next tool boundary
 
         await context.Query.SendMessageAsync(message, cancellationToken);
     }
