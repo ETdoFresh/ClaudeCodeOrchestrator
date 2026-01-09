@@ -196,9 +196,9 @@ public sealed class WorktreeService : IWorktreeService
                 return null;
             }
 
-            // Check for uncommitted changes
+            // Check for uncommitted changes (excluding our metadata file)
             var changes = await _gitService.GetUncommittedChangesAsync(worktreePath, cancellationToken);
-            var hasUncommittedChanges = changes.Count > 0;
+            var hasUncommittedChanges = changes.Any(c => !c.FilePath.EndsWith(MetadataFileName));
 
             // Get commits ahead
             var commitsAhead = await _gitService.GetCommitsAheadAsync(

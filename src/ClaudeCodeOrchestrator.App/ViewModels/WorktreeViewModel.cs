@@ -25,9 +25,12 @@ public partial class WorktreeViewModel : ViewModelBase
     private string _taskDescription = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
     private WorktreeStatus _status = WorktreeStatus.Active;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
     private bool _hasUncommittedChanges;
 
     [ObservableProperty]
@@ -87,15 +90,20 @@ public partial class WorktreeViewModel : ViewModelBase
             await OnDeleteRequested(this);
     }
 
-    public static WorktreeViewModel FromModel(WorktreeInfo info) => new()
+    public static WorktreeViewModel FromModel(WorktreeInfo info)
     {
-        Id = info.Id,
-        Path = info.Path,
-        BranchName = info.BranchName,
-        BaseBranch = info.BaseBranch,
-        TaskDescription = info.TaskDescription,
-        Status = info.Status,
-        HasUncommittedChanges = info.HasUncommittedChanges,
-        CommitsAhead = info.CommitsAhead
-    };
+        var vm = new WorktreeViewModel
+        {
+            Id = info.Id,
+            Path = info.Path,
+            BranchName = info.BranchName,
+            BaseBranch = info.BaseBranch,
+            TaskDescription = info.TaskDescription,
+            CommitsAhead = info.CommitsAhead
+        };
+        // Set these last to trigger NotifyCanExecuteChangedFor
+        vm.Status = info.Status;
+        vm.HasUncommittedChanges = info.HasUncommittedChanges;
+        return vm;
+    }
 }
