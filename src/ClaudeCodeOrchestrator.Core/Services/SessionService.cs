@@ -63,7 +63,8 @@ public sealed class SessionService : ISessionService, IDisposable
             WorktreeId = worktree.Id,
             WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
-            InitialPrompt = prompt
+            InitialPrompt = prompt,
+            GeneratedTitle = worktree.Title
         };
 
         // Convert images to SDK format
@@ -107,7 +108,8 @@ public sealed class SessionService : ISessionService, IDisposable
             WorktreeId = worktree.Id,
             WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
-            State = SessionState.WaitingForInput
+            State = SessionState.WaitingForInput,
+            GeneratedTitle = worktree.Title
         };
 
         // Add history messages before firing the event

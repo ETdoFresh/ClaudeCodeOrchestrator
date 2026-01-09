@@ -26,9 +26,14 @@ public sealed record WorktreeInfo
     public required string BaseBranch { get; init; }
 
     /// <summary>
-    /// Human-readable task description.
+    /// Human-readable task description (the original prompt).
     /// </summary>
     public required string TaskDescription { get; init; }
+
+    /// <summary>
+    /// Generated title for display (summarizes the task).
+    /// </summary>
+    public string? Title { get; init; }
 
     /// <summary>
     /// When the worktree was created.

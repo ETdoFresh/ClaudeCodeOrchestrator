@@ -66,6 +66,13 @@ public partial class App : Application
         // Dialog service
         services.AddSingleton<IDialogService, DialogService>();
 
+        // HTTP client for API calls
+        services.AddSingleton<HttpClient>();
+
+        // Title generator service
+        services.AddSingleton<ITitleGeneratorService>(sp =>
+            new TitleGeneratorService(sp.GetRequiredService<HttpClient>()));
+
         // Git services
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<BranchNameGenerator>();

@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly ISessionService _sessionService;
     private readonly ISettingsService _settingsService;
     private readonly IDispatcher _dispatcher;
+    private readonly ITitleGeneratorService _titleGeneratorService;
 
     private object? _layout;
     private string? _currentRepositoryPath;
@@ -46,6 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _sessionService = ServiceLocator.GetRequiredService<ISessionService>();
         _settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
         _dispatcher = ServiceLocator.GetRequiredService<IDispatcher>();
+        _titleGeneratorService = ServiceLocator.GetRequiredService<ITitleGeneratorService>();
 
         // Subscribe to session events
         _sessionService.SessionCreated += OnSessionCreated;
@@ -162,10 +164,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var taskInput = await _dialogService.ShowNewTaskDialogAsync();
             if (taskInput is null) return;
 
-            // Create worktree
+            // Generate title and branch name using LLM (with fallback)
+            var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
+
+            // Create worktree with generated title and branch name
             var worktree = await _worktreeService.CreateWorktreeAsync(
                 CurrentRepositoryPath,
-                taskInput.Text);
+                taskInput.Text,
+                title: generated.Title,
+                branchName: generated.BranchName);
 
             // Add to list
             var vm = WorktreeViewModel.FromModel(worktree);

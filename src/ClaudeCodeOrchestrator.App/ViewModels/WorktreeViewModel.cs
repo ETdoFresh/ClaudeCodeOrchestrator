@@ -25,6 +25,9 @@ public partial class WorktreeViewModel : ViewModelBase
     private string _taskDescription = string.Empty;
 
     [ObservableProperty]
+    private string? _title;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     private WorktreeStatus _status = WorktreeStatus.Active;
@@ -90,6 +93,12 @@ public partial class WorktreeViewModel : ViewModelBase
             await OnDeleteRequested(this);
     }
 
+    /// <summary>
+    /// Display title - uses generated title if available, otherwise task description.
+    /// </summary>
+    public string DisplayTitle => !string.IsNullOrEmpty(Title) ? Title
+        : (TaskDescription.Length > 50 ? TaskDescription[..47] + "..." : TaskDescription);
+
     public static WorktreeViewModel FromModel(WorktreeInfo info)
     {
         var vm = new WorktreeViewModel
@@ -99,6 +108,7 @@ public partial class WorktreeViewModel : ViewModelBase
             BranchName = info.BranchName,
             BaseBranch = info.BaseBranch,
             TaskDescription = info.TaskDescription,
+            Title = info.Title,
             CommitsAhead = info.CommitsAhead
         };
         // Set these last to trigger NotifyCanExecuteChangedFor

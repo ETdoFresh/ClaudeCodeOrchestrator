@@ -58,11 +58,18 @@ public sealed class Session
     public string? InitialPrompt { get; init; }
 
     /// <summary>
-    /// Title for display (derived from initial prompt or default).
+    /// Generated title for display (if available).
     /// </summary>
-    public string Title => string.IsNullOrEmpty(InitialPrompt)
-        ? "Session"
-        : (InitialPrompt.Length > 50 ? InitialPrompt[..47] + "..." : InitialPrompt);
+    public string? GeneratedTitle { get; init; }
+
+    /// <summary>
+    /// Title for display. Uses generated title if available, otherwise derives from initial prompt.
+    /// </summary>
+    public string Title => !string.IsNullOrEmpty(GeneratedTitle)
+        ? GeneratedTitle
+        : string.IsNullOrEmpty(InitialPrompt)
+            ? "Session"
+            : (InitialPrompt.Length > 50 ? InitialPrompt[..47] + "..." : InitialPrompt);
 }
 
 /// <summary>
