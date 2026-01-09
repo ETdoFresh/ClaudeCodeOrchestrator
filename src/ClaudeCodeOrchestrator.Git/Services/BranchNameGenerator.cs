@@ -17,11 +17,41 @@ public sealed partial class BranchNameGenerator
     private static partial Regex MultipleHyphensRegex();
 
     /// <summary>
-    /// Generates a branch name from a task description.
+    /// Generates a branch name from a task description (local fallback).
     /// </summary>
     /// <param name="taskDescription">The task description to convert.</param>
-    /// <returns>A valid Git branch name.</returns>
+    /// <returns>A valid Git branch name with timestamp.</returns>
     public string Generate(string taskDescription)
+    {
+        var baseBranch = GenerateBase(taskDescription);
+        return AddTimestamp(baseBranch);
+    }
+
+    /// <summary>
+    /// Adds a timestamp to a branch name for uniqueness.
+    /// </summary>
+    /// <param name="branchName">The base branch name (e.g., "task/fix-auth-bug").</param>
+    /// <returns>Branch name with timestamp (e.g., "task/fix-auth-bug-20260108-123456").</returns>
+    public string AddTimestamp(string branchName)
+    {
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+
+        // If it already has a prefix, just add timestamp
+        if (branchName.StartsWith(BranchPrefix))
+        {
+            var slug = branchName[BranchPrefix.Length..];
+            return $"{BranchPrefix}{slug}-{timestamp}";
+        }
+
+        return $"{BranchPrefix}{branchName}-{timestamp}";
+    }
+
+    /// <summary>
+    /// Generates a base branch name without timestamp.
+    /// </summary>
+    /// <param name="taskDescription">The task description to convert.</param>
+    /// <returns>A valid Git branch name without timestamp.</returns>
+    private string GenerateBase(string taskDescription)
     {
         if (string.IsNullOrWhiteSpace(taskDescription))
         {
@@ -52,10 +82,7 @@ public sealed partial class BranchNameGenerator
             slug = "task";
         }
 
-        // Add timestamp for uniqueness
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-
-        return $"{BranchPrefix}{slug}-{timestamp}";
+        return $"{BranchPrefix}{slug}";
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 {
-  "Id": "ca5695d6",
-  "TaskDescription": "i want worktrees to be on a left side panel, but i want the tabs to be on the top of the left side panel.",
+  "Id": "6ef02c0a",
+  "TaskDescription": "Can you improve title and branch name using one-off requst similar to: https://raw.githubusercontent.com/webedt/monorepo/e7fa34aa97b9faf2a73b621071b7c4180f6bdec6/shared/src/claudeWeb/titleGenerator.ts",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T04:22:59.774322Z",
-  "ClaudeSessionId": "df4315fe-bbd3-4c8c-ac97-c7bcc13e73bb"
+  "CreatedAt": "2026-01-09T04:36:48.948333Z",
+  "ClaudeSessionId": "14c075ff-6ca9-4529-b909-e246298786f6"
 }

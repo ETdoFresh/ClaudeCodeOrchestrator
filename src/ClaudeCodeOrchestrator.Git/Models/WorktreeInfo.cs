@@ -26,9 +26,14 @@ public sealed record WorktreeInfo
     public required string BaseBranch { get; init; }
 
     /// <summary>
-    /// Human-readable task description.
+    /// Human-readable task description (the original prompt).
     /// </summary>
     public required string TaskDescription { get; init; }
+
+    /// <summary>
+    /// Generated title for display (summarizes the task).
+    /// </summary>
+    public string? Title { get; init; }
 
     /// <summary>
     /// When the worktree was created.
@@ -55,6 +60,12 @@ public sealed record WorktreeInfo
     /// One session per worktree for consistent history.
     /// </summary>
     public string? ClaudeSessionId { get; set; }
+
+    /// <summary>
+    /// Whether the session was actively running when the app last closed.
+    /// Used to restore sessions on app restart.
+    /// </summary>
+    public bool SessionWasActive { get; set; }
 }
 
 /// <summary>

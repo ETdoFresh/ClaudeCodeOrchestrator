@@ -26,14 +26,18 @@ public sealed class WorktreeService : IWorktreeService
     public async Task<WorktreeInfo> CreateWorktreeAsync(
         string repoPath,
         string taskDescription,
+        string? title = null,
+        string? branchName = null,
         string? baseBranch = null,
         CancellationToken cancellationToken = default)
     {
         var repoInfo = await _gitService.OpenRepositoryAsync(repoPath, cancellationToken);
         baseBranch ??= repoInfo.DefaultBranch;
 
-        // Generate branch name
-        var branchName = _branchNameGenerator.Generate(taskDescription);
+        // Use provided branch name with timestamp, or generate from task description
+        var finalBranchName = branchName != null
+            ? _branchNameGenerator.AddTimestamp(branchName)
+            : _branchNameGenerator.Generate(taskDescription);
 
         // Ensure worktrees directory exists and is gitignored
         var worktreesDir = Path.Combine(repoPath, WorktreesDirectoryName);
@@ -42,16 +46,17 @@ public sealed class WorktreeService : IWorktreeService
 
         // Create worktree path
         var worktreeId = Guid.NewGuid().ToString("N")[..8];
-        var worktreePath = Path.Combine(worktreesDir, $"{branchName.Replace("task/", "")}-{worktreeId}");
+        var worktreePath = Path.Combine(worktreesDir, $"{finalBranchName.Replace("task/", "")}-{worktreeId}");
 
         // Create worktree using git command (LibGit2Sharp worktree support is limited)
-        await CreateWorktreeViaGitAsync(repoPath, branchName, worktreePath, baseBranch, cancellationToken);
+        await CreateWorktreeViaGitAsync(repoPath, finalBranchName, worktreePath, baseBranch, cancellationToken);
 
         // Save metadata
         var metadata = new WorktreeMetadata
         {
             Id = worktreeId,
             TaskDescription = taskDescription,
+            Title = title,
             BaseBranch = baseBranch,
             CreatedAt = DateTime.UtcNow
         };
@@ -64,9 +69,10 @@ public sealed class WorktreeService : IWorktreeService
         {
             Id = worktreeId,
             Path = worktreePath,
-            BranchName = branchName,
+            BranchName = finalBranchName,
             BaseBranch = baseBranch,
             TaskDescription = taskDescription,
+            Title = title,
             CreatedAt = metadata.CreatedAt,
             Status = WorktreeStatus.Active,
             HasUncommittedChanges = false,
@@ -217,11 +223,13 @@ public sealed class WorktreeService : IWorktreeService
                 BranchName = branchName,
                 BaseBranch = metadata.BaseBranch,
                 TaskDescription = metadata.TaskDescription,
+                Title = metadata.Title,
                 CreatedAt = metadata.CreatedAt,
                 Status = status,
                 HasUncommittedChanges = hasUncommittedChanges,
                 CommitsAhead = commitsAhead,
-                ClaudeSessionId = metadata.ClaudeSessionId
+                ClaudeSessionId = metadata.ClaudeSessionId,
+                SessionWasActive = metadata.SessionWasActive
             };
         }
         catch
@@ -504,9 +512,11 @@ public sealed class WorktreeService : IWorktreeService
     {
         public required string Id { get; init; }
         public required string TaskDescription { get; init; }
+        public string? Title { get; init; }
         public required string BaseBranch { get; init; }
         public required DateTime CreatedAt { get; init; }
         public string? ClaudeSessionId { get; init; }
+        public bool SessionWasActive { get; init; }
     }
 
     /// <summary>
@@ -527,6 +537,28 @@ public sealed class WorktreeService : IWorktreeService
             return;
 
         var updatedMetadata = metadata with { ClaudeSessionId = claudeSessionId };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the SessionWasActive flag for a worktree.
+    /// </summary>
+    public async Task UpdateSessionWasActiveAsync(
+        string worktreePath,
+        bool wasActive,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { SessionWasActive = wasActive };
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }

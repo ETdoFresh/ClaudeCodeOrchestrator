@@ -227,7 +227,7 @@ public class AutomationExecutor
 
     private async Task<AutomationResponse> ExecuteScreenshotAsync(ScreenshotCommand cmd)
     {
-        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        return await Dispatcher.UIThread.InvokeAsync(() =>
         {
             var window = GetMainWindow();
             if (window is null)
