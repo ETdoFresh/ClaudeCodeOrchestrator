@@ -138,20 +138,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // Validate it's still a git repository
-            await _gitService.OpenRepositoryAsync(lastPath);
-
-            // Restore the repository
-            SetRepository(lastPath);
-            await RefreshWorktreesAsync();
-            Factory?.UpdateFileBrowser(lastPath);
+            await OpenRepositoryAtPathAsync(lastPath);
 
             // Reconnect to worktrees that had active sessions when app closed
             await ReconnectActiveSessionsAsync();
         }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
+        {
+            // User declined to initialize git - clear the saved path
+            _settingsService.SetLastRepositoryPath(null);
+        }
         catch
         {
-            // Not a valid git repository anymore, clear it
+            // Other error - clear it
             _settingsService.SetLastRepositoryPath(null);
         }
     }
@@ -198,25 +197,52 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var path = await _dialogService.ShowFolderPickerAsync("Select Git Repository");
             if (string.IsNullOrEmpty(path)) return;
 
-            // Validate it's a git repository
-            await _gitService.OpenRepositoryAsync(path);
-
-            SetRepository(path);
-
-            // Save as last opened repository
-            _settingsService.SetLastRepositoryPath(path);
-
-            // Load worktrees
-            await RefreshWorktreesAsync();
-
-            // Update file browser
-            Factory?.UpdateFileBrowser(path);
+            await OpenRepositoryAtPathAsync(path);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
+        {
+            // Don't show error - it was handled in OpenRepositoryAtPathAsync
         }
         catch (Exception ex)
         {
             await _dialogService.ShowErrorAsync("Error Opening Repository",
                 $"Failed to open repository: {ex.Message}");
         }
+    }
+
+    private async Task OpenRepositoryAtPathAsync(string path)
+    {
+        try
+        {
+            // Validate it's a git repository
+            await _gitService.OpenRepositoryAsync(path);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
+        {
+            // Not a git repository - ask user if they want to initialize one
+            var initialize = await _dialogService.ShowConfirmAsync(
+                "Initialize Git Repository",
+                $"The selected directory is not a Git repository.\n\nWould you like to initialize a new Git repository at:\n{path}");
+
+            if (!initialize)
+            {
+                throw; // Re-throw to prevent further processing
+            }
+
+            // Initialize the repository
+            await _gitService.InitializeRepositoryAsync(path);
+        }
+
+        SetRepository(path);
+
+        // Save as last opened repository
+        _settingsService.SetLastRepositoryPath(path);
+
+        // Load worktrees
+        await RefreshWorktreesAsync();
+
+        // Update file browser
+        Factory?.UpdateFileBrowser(path);
     }
 
     [RelayCommand]
