@@ -442,6 +442,24 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await _dialogService.ShowAboutAsync();
     }
 
+    [RelayCommand]
+    private void OpenUsage()
+    {
+        var url = "https://claude.ai/settings/usage";
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Silently fail if browser can't be opened
+        }
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
