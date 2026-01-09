@@ -96,9 +96,9 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     public string StatusText => Status switch
     {
         WorktreeStatus.Active => "Active",
-        WorktreeStatus.HasChanges => $"Changes ({CommitsAhead} ahead)",
-        WorktreeStatus.ReadyToMerge => $"Ready to merge ({CommitsAhead} commits)",
-        WorktreeStatus.Merged => "Merged",
+        WorktreeStatus.HasChanges => "Active",
+        WorktreeStatus.ReadyToMerge => "Ready",
+        WorktreeStatus.Merged => "Complete",
         WorktreeStatus.Locked => "Locked",
         _ => "Unknown"
     };
