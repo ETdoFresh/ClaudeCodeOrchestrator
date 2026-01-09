@@ -120,16 +120,32 @@
                        FontSize="13"
                        Margin="0,0,100,0" />
 
-            <!-- Auto-Split Indicator -->
-            <TextBlock Grid.Column="2"
-                       Text="{Binding AutoSplitLayoutText}"
-                       IsVisible="{Binding AutoSplitLayoutText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Right"
-                       Foreground="#6CA0DC"
-                       FontSize="12"
-                       Margin="0,0,12,0"
-                       AutomationProperties.AutomationId="AutoSplitIndicator" />
+            <!-- Right Side Items -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0">
+                <!-- Auto-Split Indicator -->
+                <TextBlock Text="{Binding AutoSplitLayoutText}"
+                           IsVisible="{Binding AutoSplitLayoutText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           VerticalAlignment="Center"
+                           Foreground="#6CA0DC"
+                           FontSize="12"
+                           Margin="0,0,12,0"
+                           AutomationProperties.AutomationId="AutoSplitIndicator" />
+                <!-- Usage Link -->
+                <Button Content="Usage"
+                        Command="{Binding OpenUsageCommand}"
+                        Background="Transparent"
+                        Foreground="#6CA0DC"
+                        FontSize="12"
+                        Padding="8,4"
+                        Cursor="Hand"
+                        AutomationProperties.AutomationId="UsageLink">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#8FBAEC" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Dock Control -->
