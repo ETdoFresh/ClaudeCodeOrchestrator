@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -17,24 +15,23 @@ public partial class WorktreesViewModel : ToolViewModelBase
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
     /// <summary>
-    /// Cached badge count to show immediately on startup before data loads.
+    /// Unpushed commits for the main repository (not worktrees).
     /// </summary>
-    private int _cachedBadgeCount;
+    private int _mainRepoUnpushedCommits;
 
     /// <summary>
-    /// Gets the total number of unpushed commits across all worktrees.
-    /// Shows cached value if worktrees haven't loaded yet.
+    /// Gets the number of unpushed commits in the main repository.
+    /// This is what gets displayed in the Push button badge.
     /// </summary>
-    public int TotalCommitsToPush => Worktrees.Count > 0
-        ? Worktrees.Sum(w => w.UnpushedCommits)
-        : _cachedBadgeCount;
+    public int TotalCommitsToPush => _mainRepoUnpushedCommits;
 
     /// <summary>
-    /// Sets the cached badge count for immediate display on startup.
+    /// Sets the unpushed commits count for the main repository.
     /// </summary>
-    public void SetCachedBadgeCount(int count)
+    public void SetMainRepoUnpushedCommits(int count)
     {
-        _cachedBadgeCount = count;
+        if (_mainRepoUnpushedCommits == count) return;
+        _mainRepoUnpushedCommits = count;
         OnPropertyChanged(nameof(TotalCommitsToPush));
     }
 
@@ -66,40 +63,6 @@ public partial class WorktreesViewModel : ToolViewModelBase
     {
         Id = "Worktrees";
         Title = "Worktrees";
-
-        // Subscribe to collection changes to update TotalCommitsToPush
-        Worktrees.CollectionChanged += OnWorktreesCollectionChanged;
-    }
-
-    private void OnWorktreesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        // Unsubscribe from old items
-        if (e.OldItems != null)
-        {
-            foreach (WorktreeViewModel worktree in e.OldItems)
-            {
-                worktree.PropertyChanged -= OnWorktreePropertyChanged;
-            }
-        }
-
-        // Subscribe to new items
-        if (e.NewItems != null)
-        {
-            foreach (WorktreeViewModel worktree in e.NewItems)
-            {
-                worktree.PropertyChanged += OnWorktreePropertyChanged;
-            }
-        }
-
-        OnPropertyChanged(nameof(TotalCommitsToPush));
-    }
-
-    private void OnWorktreePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(WorktreeViewModel.UnpushedCommits))
-        {
-            OnPropertyChanged(nameof(TotalCommitsToPush));
-        }
     }
 
     [RelayCommand]

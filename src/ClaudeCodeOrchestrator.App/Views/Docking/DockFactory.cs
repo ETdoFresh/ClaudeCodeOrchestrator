@@ -75,7 +75,7 @@ public class DockFactory : Factory
     {
         // Create tool view models
         _worktreesViewModel = new WorktreesViewModel();
-        _worktreesViewModel.SetCachedBadgeCount(_settingsService.CachedPushBadgeCount);
+        _worktreesViewModel.SetMainRepoUnpushedCommits(_settingsService.CachedPushBadgeCount);
         _fileBrowser = new FileBrowserViewModel();
         _diffBrowser = new DiffBrowserViewModel();
         _settingsViewModel = new SettingsViewModel(_settingsService);
@@ -436,7 +436,9 @@ public class DockFactory : Factory
     /// <summary>
     /// Updates the worktrees panel with a new collection of worktrees.
     /// </summary>
-    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees)
+    /// <param name="worktrees">The worktrees to display.</param>
+    /// <param name="mainRepoUnpushedCommits">Number of unpushed commits in the main repository.</param>
+    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees, int mainRepoUnpushedCommits)
     {
         if (_worktreesViewModel is null) return;
 
@@ -446,8 +448,11 @@ public class DockFactory : Factory
             _worktreesViewModel.Worktrees.Add(wt);
         }
 
+        // Update the badge with main repo count
+        _worktreesViewModel.SetMainRepoUnpushedCommits(mainRepoUnpushedCommits);
+
         // Cache the badge count for next startup
-        _settingsService.CachedPushBadgeCount = _worktreesViewModel.TotalCommitsToPush;
+        _settingsService.CachedPushBadgeCount = mainRepoUnpushedCommits;
 
         // Also refresh the file browser sources dropdown
         RefreshFileBrowserSources();

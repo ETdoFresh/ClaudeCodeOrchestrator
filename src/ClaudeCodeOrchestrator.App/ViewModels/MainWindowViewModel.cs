@@ -307,7 +307,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
-        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>());
+        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>(), 0);
 
         // Clear saved repository path
         _settingsService.SetLastRepositoryPath(null);
@@ -390,6 +390,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var worktrees = await _worktreeService.GetWorktreesAsync(CurrentRepositoryPath);
 
+            // Get unpushed commits for the main repository (for Push button badge)
+            var mainBranch = await _gitService.GetCurrentBranchAsync(CurrentRepositoryPath);
+            var mainRepoUnpushedCommits = await _gitService.GetCommitsAheadOfRemoteAsync(
+                CurrentRepositoryPath, mainBranch);
+
             await _dispatcher.InvokeAsync(() =>
             {
                 // Preserve active session state from existing worktrees
@@ -417,8 +422,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     Worktrees.Add(vm);
                 }
 
-                // Sync to dock panel
-                Factory?.UpdateWorktrees(Worktrees);
+                // Sync to dock panel with main repo's unpushed count for badge
+                Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits);
             });
         }
         catch (Exception ex)
