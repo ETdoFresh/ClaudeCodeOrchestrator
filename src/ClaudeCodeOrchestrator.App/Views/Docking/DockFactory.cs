@@ -4,6 +4,7 @@ using Dock.Model.Core;
 using Dock.Model.Mvvm;
 using Dock.Model.Mvvm.Controls;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
+using ClaudeCodeOrchestrator.App.Services;
 using CommunityToolkit.Mvvm.Input;
 
 namespace ClaudeCodeOrchestrator.App.Views.Docking;
@@ -27,17 +28,20 @@ public enum SplitLayout
 public class DockFactory : Factory
 {
     private readonly object _context;
+    private readonly ISettingsService _settingsService;
     private IDocumentDock? _documentDock;
     private IToolDock? _leftDock;
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
+    private SettingsViewModel? _settingsViewModel;
     private bool _isAddingDocument;
     private IRootDock? _rootDock;
     private IProportionalDock? _rootProportional;
 
-    public DockFactory(object context)
+    public DockFactory(object context, ISettingsService settingsService)
     {
         _context = context;
+        _settingsService = settingsService;
     }
 
     public override IRootDock CreateLayout()
@@ -45,6 +49,7 @@ public class DockFactory : Factory
         // Create tool view models
         _worktreesViewModel = new WorktreesViewModel();
         _fileBrowser = new FileBrowserViewModel();
+        _settingsViewModel = new SettingsViewModel(_settingsService);
 
         // Wire up callbacks if context is MainWindowViewModel
         if (_context is ViewModels.MainWindowViewModel mainVm)
@@ -56,13 +61,13 @@ public class DockFactory : Factory
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }
 
-        // Left side panel (worktrees as first tab, file browser as second)
+        // Left side panel (worktrees as first tab, file browser as second, settings as third)
         _leftDock = new ToolDock
         {
             Id = "LeftDock",
             Title = "Explorer",
             ActiveDockable = _worktreesViewModel,
-            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser),
+            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser, _settingsViewModel),
             Alignment = Alignment.Left,
             GripMode = GripMode.Hidden
         };
@@ -520,7 +525,8 @@ public class DockFactory : Factory
             ["DocumentDock"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
-            ["Worktrees"] = () => _context
+            ["Worktrees"] = () => _context,
+            ["Settings"] = () => _context
         };
 
         DockableLocator = new Dictionary<string, Func<IDockable?>>

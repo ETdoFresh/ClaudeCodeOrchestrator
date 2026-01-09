@@ -410,10 +410,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var confirmed = await _dialogService.ShowConfirmAsync("Merge Worktree",
-                $"Are you sure you want to merge '{worktree.BranchName}' into '{worktree.BaseBranch}'?");
+            // Check if confirmation is enabled in settings
+            if (_settingsService.ShowMergeConfirmation)
+            {
+                var confirmed = await _dialogService.ShowConfirmAsync("Merge Worktree",
+                    $"Are you sure you want to merge '{worktree.BranchName}' into '{worktree.BaseBranch}'?");
 
-            if (!confirmed) return;
+                if (!confirmed) return;
+            }
 
             var result = await _worktreeService.MergeWorktreeAsync(
                 CurrentRepositoryPath,
@@ -587,10 +591,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var confirmed = await _dialogService.ShowConfirmAsync("Delete Worktree",
-                $"Are you sure you want to delete worktree '{worktree.BranchName}'?\n\nThis action cannot be undone.");
+            // Check if confirmation is enabled in settings
+            if (_settingsService.ShowDeleteConfirmation)
+            {
+                var confirmed = await _dialogService.ShowConfirmAsync("Delete Worktree",
+                    $"Are you sure you want to delete worktree '{worktree.BranchName}'?\n\nThis action cannot be undone.");
 
-            if (!confirmed) return;
+                if (!confirmed) return;
+            }
 
             // Close any open session documents for this worktree
             Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);

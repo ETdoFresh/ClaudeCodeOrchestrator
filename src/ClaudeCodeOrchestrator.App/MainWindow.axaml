@@ -34,6 +34,11 @@
         <DataTemplate DataType="{x:Type dockVm:FileDocumentViewModel}">
             <panels:FileView />
         </DataTemplate>
+
+        <!-- Settings -->
+        <DataTemplate DataType="{x:Type dockVm:SettingsViewModel}">
+            <panels:SettingsView />
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Grid RowDefinitions="Auto,*">

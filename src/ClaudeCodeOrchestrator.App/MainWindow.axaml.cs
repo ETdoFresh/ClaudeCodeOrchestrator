@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
+using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.App.ViewModels;
 using ClaudeCodeOrchestrator.App.Views.Docking;
 
@@ -17,8 +18,11 @@ public partial class MainWindow : Window
         _viewModel = new MainWindowViewModel();
         DataContext = _viewModel;
 
+        // Get settings service
+        var settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
+
         // Create dock factory and layout
-        var factory = new DockFactory(_viewModel);
+        var factory = new DockFactory(_viewModel, settingsService);
         var layout = factory.CreateLayout();
         factory.InitLayout(layout);
 

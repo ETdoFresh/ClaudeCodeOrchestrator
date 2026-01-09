@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="600"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             Background="#252526">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="12">
+        <StackPanel Spacing="16">
+            <!-- Confirmation Dialogs Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Confirmation Dialogs"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <CheckBox IsChecked="{Binding ShowMergeConfirmation}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show merge confirmation"
+                                       FontSize="13"/>
+                            <TextBlock Text="Ask before merging worktrees"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding ShowDeleteConfirmation}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show delete confirmation"
+                                       FontSize="13"/>
+                            <TextBlock Text="Ask before deleting worktrees"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding ShowCloseSessionConfirmation}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show close session confirmation"
+                                       FontSize="13"/>
+                            <TextBlock Text="Ask before closing sessions"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Worktree Behavior Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Worktree Behavior"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <CheckBox IsChecked="{Binding AutoOpenSessionOnWorktreeCreate}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Auto-open session on create"
+                                       FontSize="13"/>
+                            <TextBlock Text="Open a session when creating a new worktree"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding CompactWorktreeList}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Compact worktree list"
+                                       FontSize="13"/>
+                            <TextBlock Text="Use smaller spacing in the worktree list"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+
+                    <CheckBox IsChecked="{Binding ShowWorktreeStatusBadges}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show status badges"
+                                       FontSize="13"/>
+                            <TextBlock Text="Display status indicators on worktrees"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Interface Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Interface"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <CheckBox IsChecked="{Binding ShowOutputPanelByDefault}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show output panel by default"
+                                       FontSize="13"/>
+                            <TextBlock Text="Display the output panel when app starts"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Session Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Sessions"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <CheckBox IsChecked="{Binding AutoSaveSessionHistory}"
+                              Foreground="#D4D4D4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Auto-save session history"
+                                       FontSize="13"/>
+                            <TextBlock Text="Automatically save session conversation history"
+                                       FontSize="11"
+                                       Foreground="#808080"/>
+                        </StackPanel>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Footer -->
+            <TextBlock Text="Settings are saved automatically"
+                       FontSize="11"
+                       Foreground="#606060"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
