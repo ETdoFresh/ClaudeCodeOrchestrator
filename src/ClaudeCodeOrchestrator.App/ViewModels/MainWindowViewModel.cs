@@ -323,11 +323,28 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             await _dispatcher.InvokeAsync(() =>
             {
+                // Preserve active session state from existing worktrees
+                var activeSessionState = Worktrees
+                    .Where(w => w.HasActiveSession)
+                    .ToDictionary(
+                        w => w.Path,
+                        w => (w.ActiveSessionId, w.SessionStartedAt, w.SessionDuration));
+
                 Worktrees.Clear();
                 foreach (var wt in worktrees)
                 {
                     var vm = WorktreeViewModel.FromModel(wt);
                     SetupWorktreeCallbacks(vm);
+
+                    // Restore active session state if this worktree had an active session
+                    if (activeSessionState.TryGetValue(vm.Path, out var sessionState))
+                    {
+                        vm.HasActiveSession = true;
+                        vm.ActiveSessionId = sessionState.ActiveSessionId;
+                        vm.SessionStartedAt = sessionState.SessionStartedAt;
+                        vm.SessionDuration = sessionState.SessionDuration;
+                    }
+
                     Worktrees.Add(vm);
                 }
 
