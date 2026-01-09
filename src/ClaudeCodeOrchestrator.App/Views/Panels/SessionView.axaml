@@ -57,7 +57,7 @@
                             <ContentControl.DataTemplates>
                                 <!-- User message - light grey box style -->
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
-                                    <Border x:Name="UserMessageBorder" Margin="0,6" Padding="12,10" Background="#2D2D30" CornerRadius="6">
+                                    <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6">
                                         <Grid>
                                             <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}" />
                                             <Button x:Name="CopyButton"
@@ -90,7 +90,7 @@
 
                                 <!-- Assistant message -->
                                 <DataTemplate DataType="{x:Type vmBase:AssistantMessageViewModel}">
-                                    <Border x:Name="AssistantMessageBorder" Margin="0,2" Padding="12,2" Background="Transparent" CornerRadius="6">
+                                    <Border x:Name="AssistantMessageBorder" Margin="0,0" Padding="12,0" Background="Transparent" CornerRadius="6">
                                         <Border.Styles>
                                             <Style Selector="Border:pointerover > StackPanel > Grid > Button#CopyButton">
                                                 <Setter Property="Opacity" Value="1" />
@@ -124,7 +124,7 @@
                                             <ItemsControl ItemsSource="{Binding ToolUses}" Margin="0,0,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type vmBase:ToolUseViewModel}">
-                                                        <Border Margin="0,0" Padding="0,1" Background="Transparent" Opacity="0.7">
+                                                        <Border Margin="0,0" Padding="0,0" Background="Transparent" Opacity="0.7">
                                                             <StackPanel>
                                                                 <!-- Tool action header - faded text -->
                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -137,7 +137,7 @@
 
                                                                 <!-- Diff preview for Edit operations -->
                                                                 <Border IsVisible="{Binding HasDiff}"
-                                                                        Margin="16,4,0,0"
+                                                                        Margin="16,2,0,0"
                                                                         Background="#1A1A1A"
                                                                         CornerRadius="4"
                                                                         Padding="0"
@@ -154,7 +154,7 @@
 
                                                                 <!-- Content preview for Write operations -->
                                                                 <Border IsVisible="{Binding HasWriteContent}"
-                                                                        Margin="16,4,0,0"
+                                                                        Margin="16,2,0,0"
                                                                         Background="#1A1A1A"
                                                                         CornerRadius="4"
                                                                         Padding="0"
@@ -177,8 +177,8 @@
 
             <!-- Processing indicator at bottom of chat -->
             <Border IsVisible="{Binding IsProcessing}"
-                    Margin="0,8,0,4"
-                    Padding="12,8"
+                    Margin="0,4,0,2"
+                    Padding="12,4"
                     Background="Transparent">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <Panel Classes="arc-spinner">
