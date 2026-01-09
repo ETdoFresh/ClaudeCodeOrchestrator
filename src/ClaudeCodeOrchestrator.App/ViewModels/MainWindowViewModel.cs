@@ -187,6 +187,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task RefreshWorktrees()
+    {
+        await RefreshWorktreesAsync();
+    }
+
+    [RelayCommand]
     private void CloseRepository()
     {
         CurrentRepositoryPath = null;
