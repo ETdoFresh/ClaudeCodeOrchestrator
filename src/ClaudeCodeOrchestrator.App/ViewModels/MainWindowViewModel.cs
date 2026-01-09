@@ -111,11 +111,48 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SetRepository(lastPath);
             await RefreshWorktreesAsync();
             Factory?.UpdateFileBrowser(lastPath);
+
+            // Reconnect to worktrees that had active sessions when app closed
+            await ReconnectActiveSessionsAsync();
         }
         catch
         {
             // Not a valid git repository anymore, clear it
             _settingsService.SetLastRepositoryPath(null);
+        }
+    }
+
+    /// <summary>
+    /// Reconnects to worktrees that had active sessions when the app was last closed.
+    /// </summary>
+    private async Task ReconnectActiveSessionsAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        var worktreesToReconnect = new List<WorktreeViewModel>();
+
+        // Find worktrees that had active sessions
+        foreach (var worktree in Worktrees)
+        {
+            var worktreeInfo = await _worktreeService.GetWorktreeAsync(CurrentRepositoryPath, worktree.Id);
+            if (worktreeInfo?.SessionWasActive == true && !string.IsNullOrEmpty(worktreeInfo.ClaudeSessionId))
+            {
+                worktreesToReconnect.Add(worktree);
+            }
+        }
+
+        // Reconnect each worktree with an active session
+        foreach (var worktree in worktreesToReconnect)
+        {
+            try
+            {
+                // Open as non-preview since these were active sessions
+                await OpenWorktreeSessionAsync(worktree, isPreview: false);
+            }
+            catch
+            {
+                // Ignore errors reconnecting individual sessions
+            }
         }
     }
 
@@ -545,7 +582,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSessionEnded(object? sender, SessionEndedEventArgs e)
     {
-        _dispatcher.Post(() =>
+        _dispatcher.Post(async () =>
         {
             // Update worktree to show no active session
             var worktree = Worktrees.FirstOrDefault(w =>
@@ -558,6 +595,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
                 // Stop the session timer and record the end time
                 worktree.StopSessionTimer(e.EndedAt);
+
+                // Clear the SessionWasActive flag since session ended normally
+                try
+                {
+                    await _worktreeService.UpdateSessionWasActiveAsync(worktree.Path, false);
+                }
+                catch
+                {
+                    // Ignore errors - this is not critical
+                }
             }
 
             // Check if this session has a pending merge retry
@@ -568,7 +615,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSessionStateChanged(object? sender, SessionStateChangedEventArgs e)
     {
-        _dispatcher.Post(() =>
+        _dispatcher.Post(async () =>
         {
             // When a session transitions to an active state (Processing, Active, Starting),
             // ensure the worktree shows it as having an active session.
@@ -582,6 +629,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 {
                     worktree.HasActiveSession = true;
                     worktree.ActiveSessionId = e.Session.Id;
+                }
+
+                // Persist that session is active so we can restore on app restart
+                if (worktree != null)
+                {
+                    try
+                    {
+                        await _worktreeService.UpdateSessionWasActiveAsync(worktree.Path, true);
+                    }
+                    catch
+                    {
+                        // Ignore errors - this is not critical
+                    }
                 }
             }
         });
