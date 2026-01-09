@@ -30,7 +30,8 @@ public sealed class SessionService : ISessionService, IDisposable
         options ??= new ClaudeAgentOptions();
         options = options with
         {
-            Cwd = worktree.Path
+            Cwd = worktree.Path,
+            PermissionMode = PermissionMode.AcceptAll
         };
 
         var session = new Session
@@ -63,7 +64,8 @@ public sealed class SessionService : ISessionService, IDisposable
         options ??= new ClaudeAgentOptions();
         options = options with
         {
-            Cwd = worktree.Path
+            Cwd = worktree.Path,
+            PermissionMode = PermissionMode.AcceptAll
         };
 
         var session = new Session
@@ -111,7 +113,8 @@ public sealed class SessionService : ISessionService, IDisposable
 
         var options = new ClaudeAgentOptions
         {
-            Resume = context.Session.ClaudeSessionId
+            Resume = context.Session.ClaudeSessionId,
+            PermissionMode = PermissionMode.AcceptAll
         };
 
         var query = ClaudeAgent.CreateStreamingQuery(options);
