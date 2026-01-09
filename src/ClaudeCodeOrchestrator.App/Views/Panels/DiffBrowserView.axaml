@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="400"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.DiffBrowserView"
+             x:DataType="vm:DiffBrowserViewModel"
+             Background="#252526">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Source Dropdown -->
+        <ComboBox Grid.Row="0"
+                  x:Name="SourceDropdown"
+                  ItemsSource="{Binding Sources}"
+                  SelectedItem="{Binding SelectedSource}"
+                  Margin="8,8,8,4"
+                  HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DiffSource">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <!-- Status Message or Loading Indicator -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                Padding="8,4"
+                Background="#2D2D30">
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       Foreground="#858585"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <ProgressBar Grid.Row="1"
+                     IsVisible="{Binding IsLoading}"
+                     IsIndeterminate="True"
+                     Height="2"
+                     Margin="8,4" />
+
+        <!-- Diff Tree View -->
+        <TreeView Grid.Row="2"
+                  x:Name="DiffTree"
+                  ItemsSource="{Binding Items}"
+                  SelectedItem="{Binding SelectedItem}"
+                  Background="Transparent"
+                  Margin="0,4">
+            <TreeView.ItemContainerTheme>
+                <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}"
+                              x:DataType="vm:DiffFileItemViewModel">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </ControlTheme>
+            </TreeView.ItemContainerTheme>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding Icon}" FontSize="12" />
+                            <TextBlock Text="{Binding ChangeIcon}"
+                                       FontSize="10"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding ChangeType, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Name}"
+                                   FontSize="13"
+                                   Margin="6,0,0,0" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding ChangeStats}"
+                                   FontSize="11"
+                                   Foreground="#858585"
+                                   Margin="8,0"
+                                   IsVisible="{Binding ChangeStats, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </Grid>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+</UserControl>
