@@ -329,8 +329,22 @@ public class DockFactory : Factory
         }
         else
         {
-            _fileBrowser.LoadDirectory(path);
+            // Update sources with current worktrees list
+            var worktrees = _worktreesViewModel?.Worktrees;
+            _fileBrowser.UpdateSources(path, worktrees);
         }
+    }
+
+    /// <summary>
+    /// Refreshes the file browser sources dropdown with the current worktrees.
+    /// Call this after worktrees are updated.
+    /// </summary>
+    public void RefreshFileBrowserSources()
+    {
+        if (_fileBrowser?.LocalCopyPath is null) return;
+
+        var worktrees = _worktreesViewModel?.Worktrees;
+        _fileBrowser.UpdateSources(_fileBrowser.LocalCopyPath, worktrees);
     }
 
     /// <summary>
@@ -345,6 +359,9 @@ public class DockFactory : Factory
         {
             _worktreesViewModel.Worktrees.Add(wt);
         }
+
+        // Also refresh the file browser sources dropdown
+        RefreshFileBrowserSources();
     }
 
     /// <summary>
@@ -353,6 +370,7 @@ public class DockFactory : Factory
     public void AddWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Insert(0, worktree);
+        RefreshFileBrowserSources();
     }
 
     /// <summary>
@@ -361,6 +379,7 @@ public class DockFactory : Factory
     public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Remove(worktree);
+        RefreshFileBrowserSources();
     }
 
     /// <summary>
@@ -1146,4 +1165,28 @@ public class DockFactory : Factory
     /// Command to collapse split documents back to a single pane.
     /// </summary>
     public RelayCommand CollapseSplitCommand => new(CollapseSplitDocuments);
+
+    /// <summary>
+    /// Resets the view to default state: collapses split tabs and resets left panel width to 25%.
+    /// </summary>
+    public void ResetToDefaultView()
+    {
+        // Collapse any split document panes
+        if (CanCollapseSplitDocuments)
+        {
+            CollapseSplitDocuments();
+        }
+
+        // Reset left panel proportion to default (25%)
+        if (_leftDock != null)
+        {
+            _leftDock.Proportion = 0.25;
+        }
+
+        // Reset document dock proportion to default (75%)
+        if (_documentDock != null)
+        {
+            _documentDock.Proportion = 0.75;
+        }
+    }
 }

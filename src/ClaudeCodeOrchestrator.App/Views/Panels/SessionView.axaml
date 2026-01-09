@@ -285,19 +285,8 @@
                 </Border>
 
                 <!-- Input row -->
-                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
-                    <!-- Attach button -->
-                    <Button Grid.Column="0"
-                            x:Name="AttachButton"
-                            Content="&#x1F4CE;"
-                            FontSize="14"
-                            Padding="8,6"
-                            Margin="0,0,8,0"
-                            Background="#3C3C3C"
-                            Foreground="#CCCCCC"
-                            ToolTip.Tip="Attach image (or paste with ⌘V / Ctrl+V)" />
-
-                    <TextBox Grid.Column="1"
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0"
                              x:Name="MessageInput"
                              Text="{Binding InputText}"
                              Watermark="Type a message... (⌘V / Ctrl+V to paste image)"
@@ -310,7 +299,15 @@
                              KeyDown="MessageInput_KeyDown"
                              AutomationProperties.AutomationId="MessageInput" />
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
+                        <!-- Attach button -->
+                        <Button x:Name="AttachButton"
+                                Content="&#x1F4CE;"
+                                FontSize="14"
+                                Padding="8,6"
+                                Background="#3C3C3C"
+                                Foreground="#CCCCCC"
+                                ToolTip.Tip="Attach image (or paste with ⌘V / Ctrl+V)" />
                         <!-- Send button - shown when not processing -->
                         <Button Command="{Binding SendMessageCommand}"
                                 Content="Send"

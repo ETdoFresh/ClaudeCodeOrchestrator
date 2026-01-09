@@ -329,6 +329,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Factory?.DisableAutoSplit();
     }
 
+    [RelayCommand]
+    private void ResetView()
+    {
+        Factory?.ResetToDefaultView();
+    }
+
+    [RelayCommand]
+    private async Task ShowAboutAsync()
+    {
+        await _dialogService.ShowAboutAsync();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
