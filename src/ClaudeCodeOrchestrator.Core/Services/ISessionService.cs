@@ -6,6 +6,22 @@ using ClaudeCodeOrchestrator.SDK.Options;
 namespace ClaudeCodeOrchestrator.Core.Services;
 
 /// <summary>
+/// Represents image data for sending to Claude.
+/// </summary>
+public interface IImageData
+{
+    /// <summary>
+    /// MIME type (e.g., "image/png", "image/jpeg").
+    /// </summary>
+    string MediaType { get; }
+
+    /// <summary>
+    /// Base64-encoded image data.
+    /// </summary>
+    string Base64Data { get; }
+}
+
+/// <summary>
 /// Service for managing Claude Code sessions.
 /// </summary>
 public interface ISessionService
@@ -16,6 +32,16 @@ public interface ISessionService
     Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
         string prompt,
+        ClaudeAgentOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new session in a worktree with images.
+    /// </summary>
+    Task<Session> CreateSessionAsync(
+        WorktreeInfo worktree,
+        string prompt,
+        IReadOnlyList<IImageData>? images,
         ClaudeAgentOptions? options = null,
         CancellationToken cancellationToken = default);
 
@@ -47,6 +73,15 @@ public interface ISessionService
     Task SendMessageAsync(
         string sessionId,
         string message,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a message with images to a session.
+    /// </summary>
+    Task SendMessageAsync(
+        string sessionId,
+        string message,
+        IReadOnlyList<IImageData>? images,
         CancellationToken cancellationToken = default);
 
     /// <summary>

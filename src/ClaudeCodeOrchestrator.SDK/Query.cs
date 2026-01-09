@@ -71,6 +71,17 @@ public sealed class Query : IAsyncEnumerable<ISDKMessage>, IAsyncDisposable
     }
 
     /// <summary>
+    /// Sends a follow-up message with images to Claude Code (for streaming input mode).
+    /// </summary>
+    public async Task SendMessageAsync(string text, IReadOnlyList<ImageContentBlock> images, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var message = SDKUserMessage.CreateWithImages(text, images, _sessionId ?? "");
+        await _handler.SendMessageAsync(message, cancellationToken);
+    }
+
+    /// <summary>
     /// Sends an interrupt signal to stop the current operation.
     /// </summary>
     public async Task InterruptAsync(CancellationToken cancellationToken = default)

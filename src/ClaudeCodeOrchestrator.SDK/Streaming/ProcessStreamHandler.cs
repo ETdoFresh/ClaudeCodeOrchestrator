@@ -35,6 +35,18 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
         string prompt,
         ClaudeAgentOptions? options = null)
     {
+        return Start(prompt, new List<ImageContentBlock>(), options);
+    }
+
+    /// <summary>
+    /// Starts a new Claude Code process with the given prompt, images, and options.
+    /// Uses streaming input mode to allow follow-up messages during execution.
+    /// </summary>
+    public static ProcessStreamHandler Start(
+        string prompt,
+        IReadOnlyList<ImageContentBlock> images,
+        ClaudeAgentOptions? options = null)
+    {
         options ??= new ClaudeAgentOptions();
         var claudePath = FindClaudeExecutable(options);
         // Use streaming arguments (with --input-format stream-json) to allow follow-up messages
@@ -82,12 +94,14 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
             };
             var handler = new ProcessStreamHandler(process, jsonOptions);
 
-            // Send initial prompt
-            var userMessage = SDKUserMessage.CreateText(prompt, "");
+            // Send initial prompt with images
+            var userMessage = images.Count > 0
+                ? SDKUserMessage.CreateWithImages(prompt, images, "")
+                : SDKUserMessage.CreateText(prompt, "");
             var json = JsonSerializer.Serialize(userMessage, jsonOptions);
             process.StandardInput.WriteLine(json);
             process.StandardInput.Flush();
-            Console.Error.WriteLine($"[SDK] Sent initial prompt via stdin: {prompt[..Math.Min(50, prompt.Length)]}...");
+            Console.Error.WriteLine($"[SDK] Sent initial prompt via stdin: {prompt[..Math.Min(50, prompt.Length)]}... (with {images.Count} images)");
 
             return handler;
         }

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.Core.Models;
 using ClaudeCodeOrchestrator.Core.Services;
@@ -24,6 +25,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private decimal _totalCost;
     private string _worktreeBranch = string.Empty;
     private bool _isPreview;
+    private List<ImageAttachment> _pendingAttachments = new();
 
     /// <summary>
     /// Callback to refresh worktrees when session completes.
@@ -122,6 +124,19 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
+
+    /// <summary>
+    /// Sets the pending image attachments for the next message.
+    /// </summary>
+    public void SetAttachments(List<ImageAttachment> attachments)
+    {
+        _pendingAttachments = attachments;
+    }
+
+    /// <summary>
+    /// Callback for the view to clear attachments after sending.
+    /// </summary>
+    public Action? ClearAttachmentsCallback { get; set; }
 
     /// <summary>
     /// Default constructor for design-time and welcome document.
@@ -268,7 +283,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         if (_sessionService is null) return;
 
         var text = InputText;
+        var attachments = _pendingAttachments.ToList();
         InputText = string.Empty;
+        _pendingAttachments.Clear();
+        ClearAttachmentsCallback?.Invoke();
 
         // Add user message to UI
         Messages.Add(new UserMessageViewModel
@@ -280,7 +298,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
         try
         {
-            await _sessionService.SendMessageAsync(SessionId, text);
+            await _sessionService.SendMessageAsync(SessionId, text, attachments);
         }
         catch
         {
@@ -298,7 +316,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         if (_sessionService is null) return;
 
         var text = InputText;
+        var attachments = _pendingAttachments.ToList();
         InputText = string.Empty;
+        _pendingAttachments.Clear();
+        ClearAttachmentsCallback?.Invoke();
 
         // Add user message to UI immediately (message will be injected at next tool boundary)
         Messages.Add(new UserMessageViewModel
@@ -310,7 +331,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         try
         {
             // Send the message immediately - SDK will inject it at next tool boundary
-            await _sessionService.SendMessageAsync(SessionId, text);
+            await _sessionService.SendMessageAsync(SessionId, text, attachments);
         }
         catch
         {

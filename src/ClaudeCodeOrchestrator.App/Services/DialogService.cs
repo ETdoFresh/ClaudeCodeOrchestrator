@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Views.Dialogs;
 
 namespace ClaudeCodeOrchestrator.App.Services;
@@ -37,13 +38,13 @@ public sealed class DialogService : IDialogService
     }
 
     /// <inheritdoc />
-    public async Task<string?> ShowNewTaskDialogAsync()
+    public async Task<TaskInput?> ShowNewTaskDialogAsync()
     {
         var window = GetMainWindow();
         if (window is null) return null;
 
         var dialog = new NewTaskDialog();
-        return await dialog.ShowDialog<string?>(window);
+        return await dialog.ShowDialog<TaskInput?>(window);
     }
 
     /// <inheritdoc />

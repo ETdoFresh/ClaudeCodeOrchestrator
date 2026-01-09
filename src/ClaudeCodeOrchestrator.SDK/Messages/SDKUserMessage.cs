@@ -37,6 +37,49 @@ public sealed record SDKUserMessage : ISDKMessage
             }
         };
     }
+
+    /// <summary>
+    /// Creates a user message with text and optional images.
+    /// </summary>
+    public static SDKUserMessage CreateWithImages(string text, IReadOnlyList<ImageContentBlock> images, string sessionId = "")
+    {
+        if (images.Count == 0)
+        {
+            return CreateText(text, sessionId);
+        }
+
+        // Build content blocks: images first, then text
+        var blocks = new List<UserContentBlock>();
+
+        foreach (var image in images)
+        {
+            blocks.Add(new UserContentBlock
+            {
+                Type = "image",
+                Content = new
+                {
+                    type = "base64",
+                    media_type = image.Source.MediaType,
+                    data = image.Source.Data
+                }
+            });
+        }
+
+        blocks.Add(new UserContentBlock
+        {
+            Type = "text",
+            Content = text
+        });
+
+        return new SDKUserMessage
+        {
+            SessionId = sessionId,
+            Message = new UserMessageContent
+            {
+                Content = new UserContent { Blocks = blocks }
+            }
+        };
+    }
 }
 
 /// <summary>

@@ -1,3 +1,5 @@
+using ClaudeCodeOrchestrator.App.Models;
+
 namespace ClaudeCodeOrchestrator.App.Services;
 
 /// <summary>
@@ -13,10 +15,10 @@ public interface IDialogService
     Task<string?> ShowFolderPickerAsync(string title);
 
     /// <summary>
-    /// Shows the new task dialog to get a task description.
+    /// Shows the new task dialog to get a task description with optional images.
     /// </summary>
-    /// <returns>The task description, or null if cancelled.</returns>
-    Task<string?> ShowNewTaskDialogAsync();
+    /// <returns>The task input with text and images, or null if cancelled.</returns>
+    Task<TaskInput?> ShowNewTaskDialogAsync();
 
     /// <summary>
     /// Shows an error dialog.

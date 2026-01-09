@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.App.Views.Docking;
@@ -158,13 +159,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            var taskDescription = await _dialogService.ShowNewTaskDialogAsync();
-            if (string.IsNullOrEmpty(taskDescription)) return;
+            var taskInput = await _dialogService.ShowNewTaskDialogAsync();
+            if (taskInput is null) return;
 
             // Create worktree
             var worktree = await _worktreeService.CreateWorktreeAsync(
                 CurrentRepositoryPath,
-                taskDescription);
+                taskInput.Text);
 
             // Add to list
             var vm = WorktreeViewModel.FromModel(worktree);
@@ -174,8 +175,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Sync to dock panel
             Factory?.AddWorktree(vm);
 
-            // Create session for the worktree
-            await CreateSessionForWorktreeAsync(worktree, taskDescription);
+            // Create session for the worktree with images
+            await CreateSessionForWorktreeAsync(worktree, taskInput);
         }
         catch (Exception ex)
         {
@@ -471,12 +472,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, string prompt, bool isPreview = false)
     {
+        await CreateSessionForWorktreeAsync(worktree, TaskInput.FromText(prompt), isPreview);
+    }
+
+    private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, TaskInput taskInput, bool isPreview = false)
+    {
         try
         {
             // Store the preview state for when the session is created
             _pendingSessionPreviewStates[worktree.Id] = isPreview;
 
-            var session = await _sessionService.CreateSessionAsync(worktree, prompt);
+            var session = await _sessionService.CreateSessionAsync(worktree, taskInput.Text, taskInput.Images);
 
             // Mark the worktree as having an active session
             var worktreeVm = Worktrees.FirstOrDefault(w => w.Id == worktree.Id);

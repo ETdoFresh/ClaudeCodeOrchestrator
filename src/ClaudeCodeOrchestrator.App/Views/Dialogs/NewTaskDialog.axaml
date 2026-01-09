@@ -1,8 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ClaudeCodeOrchestrator.App.Views.Controls"
         x:Class="ClaudeCodeOrchestrator.App.Views.Dialogs.NewTaskDialog"
         Title="New Task"
-        Width="500" Height="220"
+        Width="500" MinHeight="220"
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         ShowInTaskbar="False"
@@ -23,6 +25,43 @@
                      BorderBrush="#3F3F46"
                      CaretBrush="#CCCCCC"
                      AutomationProperties.AutomationId="TaskDescriptionInput" />
+
+            <!-- Image attachments area -->
+            <Border x:Name="AttachmentsArea"
+                    IsVisible="False"
+                    Background="#252526"
+                    CornerRadius="4"
+                    Padding="8">
+                <StackPanel>
+                    <TextBlock Text="Attached Images:"
+                               FontSize="11"
+                               Foreground="#858585"
+                               Margin="0,0,0,4" />
+                    <ItemsControl x:Name="AttachmentsPanel">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Attach button and hint -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="AttachButton"
+                        Content="Attach Image"
+                        Click="AttachButton_Click"
+                        Background="#3C3C3C"
+                        Foreground="#CCCCCC"
+                        Padding="8,4"
+                        FontSize="12" />
+                <TextBlock Text="or paste from clipboard (Ctrl+V)"
+                           FontSize="11"
+                           Foreground="#666666"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
             <TextBlock x:Name="ErrorText"
                        Foreground="#F44747"
                        FontSize="12"

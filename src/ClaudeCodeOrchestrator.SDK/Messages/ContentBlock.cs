@@ -7,6 +7,7 @@ namespace ClaudeCodeOrchestrator.SDK.Messages;
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(TextContentBlock), "text")]
+[JsonDerivedType(typeof(ImageContentBlock), "image")]
 [JsonDerivedType(typeof(ToolUseContentBlock), "tool_use")]
 [JsonDerivedType(typeof(ToolResultContentBlock), "tool_result")]
 [JsonDerivedType(typeof(ThinkingContentBlock), "thinking")]
@@ -26,6 +27,49 @@ public sealed record TextContentBlock : ContentBlock
 
     [JsonPropertyName("text")]
     public required string Text { get; init; }
+}
+
+/// <summary>
+/// Image content block for sending images to Claude.
+/// </summary>
+public sealed record ImageContentBlock : ContentBlock
+{
+    [JsonPropertyName("type")]
+    public override string Type => "image";
+
+    [JsonPropertyName("source")]
+    public required ImageSource Source { get; init; }
+
+    /// <summary>
+    /// Creates an image content block from base64 data.
+    /// </summary>
+    public static ImageContentBlock FromBase64(string base64Data, string mediaType)
+    {
+        return new ImageContentBlock
+        {
+            Source = new ImageSource
+            {
+                Type = "base64",
+                MediaType = mediaType,
+                Data = base64Data
+            }
+        };
+    }
+}
+
+/// <summary>
+/// Image source for image content blocks.
+/// </summary>
+public sealed record ImageSource
+{
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }
+
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
 }
 
 /// <summary>

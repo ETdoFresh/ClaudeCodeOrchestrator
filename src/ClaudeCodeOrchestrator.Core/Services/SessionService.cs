@@ -30,9 +30,19 @@ public sealed class SessionService : ISessionService, IDisposable
     public event EventHandler<SessionEndedEventArgs>? SessionEnded;
     public event EventHandler<ClaudeSessionIdReceivedEventArgs>? ClaudeSessionIdReceived;
 
+    public Task<Session> CreateSessionAsync(
+        WorktreeInfo worktree,
+        string prompt,
+        ClaudeAgentOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        return CreateSessionAsync(worktree, prompt, null, options, cancellationToken);
+    }
+
     public async Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
         string prompt,
+        IReadOnlyList<IImageData>? images,
         ClaudeAgentOptions? options = null,
         CancellationToken cancellationToken = default)
     {
@@ -56,7 +66,12 @@ public sealed class SessionService : ISessionService, IDisposable
             InitialPrompt = prompt
         };
 
-        var query = ClaudeAgent.CreateQuery(prompt, options);
+        // Convert images to SDK format
+        var imageBlocks = images?.Select(img =>
+            ImageContentBlock.FromBase64(img.Base64Data, img.MediaType)).ToList()
+            ?? new List<ImageContentBlock>();
+
+        var query = ClaudeAgent.CreateQuery(prompt, imageBlocks, options);
         var cts = new CancellationTokenSource();
         var context = new SessionContext(session, query, cts);
 
@@ -247,6 +262,29 @@ public sealed class SessionService : ISessionService, IDisposable
         // If session is Active or Processing, just send the message - it will be injected at next tool boundary
 
         await context.Query.SendMessageAsync(message, cancellationToken);
+    }
+
+    public Task SendMessageAsync(
+        string sessionId,
+        string message,
+        IReadOnlyList<IImageData>? images,
+        CancellationToken cancellationToken = default)
+    {
+        if (images == null || images.Count == 0)
+        {
+            return SendMessageAsync(sessionId, message, cancellationToken);
+        }
+
+        if (!_sessions.TryGetValue(sessionId, out var context))
+        {
+            throw new InvalidOperationException($"Session {sessionId} not found");
+        }
+
+        // Convert images to SDK format
+        var imageBlocks = images.Select(img =>
+            ImageContentBlock.FromBase64(img.Base64Data, img.MediaType)).ToList();
+
+        return context.Query.SendMessageAsync(message, imageBlocks, cancellationToken);
     }
 
     public async Task InterruptSessionAsync(string sessionId)

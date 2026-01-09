@@ -52,6 +52,19 @@ public static class ClaudeAgent
     }
 
     /// <summary>
+    /// Creates a Query object with images for more advanced control over the Claude Code session.
+    /// </summary>
+    /// <param name="prompt">The initial prompt to send to Claude Code.</param>
+    /// <param name="images">Images to include with the prompt.</param>
+    /// <param name="options">Optional configuration options.</param>
+    /// <returns>A Query object that can be enumerated and controlled.</returns>
+    public static Query CreateQuery(string prompt, IReadOnlyList<ImageContentBlock> images, ClaudeAgentOptions? options = null)
+    {
+        var handler = ProcessStreamHandler.Start(prompt, images, options);
+        return new Query(handler);
+    }
+
+    /// <summary>
     /// Creates a Query object with streaming input support for multi-turn conversations.
     /// Use this when you need to send multiple prompts in a conversation.
     /// </summary>
