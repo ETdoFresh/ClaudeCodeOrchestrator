@@ -23,6 +23,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool _isProcessing;
     private decimal _totalCost;
     private string _worktreeBranch = string.Empty;
+    private bool _isPreview;
     private string _queuedMessage = string.Empty;
 
     /// <summary>
@@ -113,6 +114,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     {
         get => _worktreeBranch;
         set => SetProperty(ref _worktreeBranch, value);
+    }
+
+    public bool IsPreview
+    {
+        get => _isPreview;
+        set => SetProperty(ref _isPreview, value);
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();

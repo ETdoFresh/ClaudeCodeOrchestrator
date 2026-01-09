@@ -47,7 +47,8 @@ public partial class WorktreesView : UserControl
 
         if (vm.SelectedWorktree is WorktreeViewModel worktree)
         {
-            vm.SelectWorktreeCommand.Execute(worktree);
+            // Double-click opens as persistent (non-preview)
+            vm.OpenWorktreeCommand.Execute(worktree);
         }
     }
 }

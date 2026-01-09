@@ -27,10 +27,10 @@ public partial class WorktreesViewModel : ToolViewModelBase
     public Func<Task>? OnRefreshRequested { get; set; }
 
     /// <summary>
-    /// Callback to invoke when a worktree is selected (clicked).
-    /// This opens the session for the worktree.
+    /// Callback to invoke when a worktree is selected (single-clicked).
+    /// First parameter is the worktree, second parameter is whether it's a preview (single-click = true).
     /// </summary>
-    public Func<WorktreeViewModel, Task>? OnWorktreeSelected { get; set; }
+    public Func<WorktreeViewModel, bool, Task>? OnWorktreeSelected { get; set; }
 
     public WorktreesViewModel()
     {
@@ -52,11 +52,25 @@ public partial class WorktreesViewModel : ToolViewModelBase
             await OnRefreshRequested();
     }
 
+    /// <summary>
+    /// Called when a worktree is single-clicked (preview mode).
+    /// </summary>
     [RelayCommand]
     private async Task SelectWorktreeAsync(WorktreeViewModel worktree)
     {
         SelectedWorktree = worktree;
         if (OnWorktreeSelected != null)
-            await OnWorktreeSelected(worktree);
+            await OnWorktreeSelected(worktree, true); // true = preview
+    }
+
+    /// <summary>
+    /// Called when a worktree is double-clicked (open persistent).
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenWorktreeAsync(WorktreeViewModel worktree)
+    {
+        SelectedWorktree = worktree;
+        if (OnWorktreeSelected != null)
+            await OnWorktreeSelected(worktree, false); // false = not preview
     }
 }
