@@ -56,6 +56,14 @@ public interface IGitService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the number of commits ahead of the remote tracking branch (unpushed commits).
+    /// </summary>
+    Task<int> GetCommitsAheadOfRemoteAsync(
+        string repoPath,
+        string branch,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks if a branch exists.
     /// </summary>
     Task<bool> BranchExistsAsync(

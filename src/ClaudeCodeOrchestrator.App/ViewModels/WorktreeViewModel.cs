@@ -51,6 +51,9 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     private int _commitsAhead;
 
     [ObservableProperty]
+    private int _unpushedCommits;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SessionDurationText))]
     private bool _hasActiveSession;
 
@@ -197,7 +200,8 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             BaseBranch = info.BaseBranch,
             TaskDescription = info.TaskDescription,
             Title = info.Title,
-            CommitsAhead = info.CommitsAhead
+            CommitsAhead = info.CommitsAhead,
+            UnpushedCommits = info.UnpushedCommits
         };
         // Set these last to trigger NotifyCanExecuteChangedFor
         vm.Status = info.Status;

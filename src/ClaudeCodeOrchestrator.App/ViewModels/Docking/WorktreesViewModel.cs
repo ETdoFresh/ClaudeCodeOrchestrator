@@ -17,9 +17,9 @@ public partial class WorktreesViewModel : ToolViewModelBase
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
     /// <summary>
-    /// Gets the total number of commits ahead across all worktrees (commits to push).
+    /// Gets the total number of unpushed commits across all worktrees.
     /// </summary>
-    public int TotalCommitsToPush => Worktrees.Sum(w => w.CommitsAhead);
+    public int TotalCommitsToPush => Worktrees.Sum(w => w.UnpushedCommits);
 
     /// <summary>
     /// Callback to invoke when the user requests to create a new task.
@@ -79,7 +79,7 @@ public partial class WorktreesViewModel : ToolViewModelBase
 
     private void OnWorktreePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(WorktreeViewModel.CommitsAhead))
+        if (e.PropertyName == nameof(WorktreeViewModel.UnpushedCommits))
         {
             OnPropertyChanged(nameof(TotalCommitsToPush));
         }

@@ -157,6 +157,41 @@ public sealed class GitService : IGitService
         }, cancellationToken);
     }
 
+    public async Task<int> GetCommitsAheadOfRemoteAsync(
+        string repoPath,
+        string branch,
+        CancellationToken cancellationToken = default)
+    {
+        // Use git rev-list to count commits ahead of the remote tracking branch
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"rev-list --count origin/{branch}..{branch}",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process == null)
+            return 0;
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode != 0)
+        {
+            // Remote tracking branch might not exist (new branch not pushed yet)
+            // In this case, count all commits from the branch tip to root
+            // But for a more practical approach, let's just return 0 if no remote exists
+            return 0;
+        }
+
+        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        return int.TryParse(output.Trim(), out var count) ? count : 0;
+    }
+
     public Task<bool> BranchExistsAsync(
         string repoPath,
         string branchName,

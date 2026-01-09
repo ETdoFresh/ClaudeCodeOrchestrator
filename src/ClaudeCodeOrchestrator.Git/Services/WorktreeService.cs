@@ -206,9 +206,13 @@ public sealed class WorktreeService : IWorktreeService
             var changes = await _gitService.GetUncommittedChangesAsync(worktreePath, cancellationToken);
             var hasUncommittedChanges = changes.Any(c => !c.FilePath.EndsWith(MetadataFileName));
 
-            // Get commits ahead
+            // Get commits ahead of base branch (for merge readiness)
             var commitsAhead = await _gitService.GetCommitsAheadAsync(
                 worktreePath, branchName, metadata.BaseBranch, cancellationToken);
+
+            // Get unpushed commits (for push badge)
+            var unpushedCommits = await _gitService.GetCommitsAheadOfRemoteAsync(
+                worktreePath, branchName, cancellationToken);
 
             var status = hasUncommittedChanges
                 ? WorktreeStatus.HasChanges
@@ -228,6 +232,7 @@ public sealed class WorktreeService : IWorktreeService
                 Status = status,
                 HasUncommittedChanges = hasUncommittedChanges,
                 CommitsAhead = commitsAhead,
+                UnpushedCommits = unpushedCommits,
                 ClaudeSessionId = metadata.ClaudeSessionId,
                 SessionWasActive = metadata.SessionWasActive
             };

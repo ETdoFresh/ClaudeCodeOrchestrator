@@ -51,9 +51,14 @@ public sealed record WorktreeInfo
     public bool HasUncommittedChanges { get; init; }
 
     /// <summary>
-    /// Number of commits ahead of base branch.
+    /// Number of commits ahead of base branch (used for merge readiness).
     /// </summary>
     public int CommitsAhead { get; init; }
+
+    /// <summary>
+    /// Number of unpushed commits (ahead of remote tracking branch).
+    /// </summary>
+    public int UnpushedCommits { get; init; }
 
     /// <summary>
     /// The Claude session ID associated with this worktree.
