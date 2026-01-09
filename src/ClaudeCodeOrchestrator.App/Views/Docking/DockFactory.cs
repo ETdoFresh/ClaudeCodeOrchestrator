@@ -45,7 +45,24 @@ public class DockFactory : Factory
     /// new session documents will automatically trigger a re-split of all tabs.
     /// This is disabled when tabs are manually closed or collapsed.
     /// </summary>
-    public SplitLayout AutoSplitLayout { get; private set; } = SplitLayout.None;
+    public SplitLayout AutoSplitLayout
+    {
+        get => _autoSplitLayout;
+        private set
+        {
+            if (_autoSplitLayout != value)
+            {
+                _autoSplitLayout = value;
+                AutoSplitLayoutChanged?.Invoke(this, value);
+            }
+        }
+    }
+    private SplitLayout _autoSplitLayout = SplitLayout.None;
+
+    /// <summary>
+    /// Event raised when the auto-split layout mode changes.
+    /// </summary>
+    public event EventHandler<SplitLayout>? AutoSplitLayoutChanged;
 
     public DockFactory(object context, ISettingsService settingsService)
     {

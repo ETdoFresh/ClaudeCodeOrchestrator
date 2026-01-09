@@ -43,7 +43,7 @@
 
     <Grid RowDefinitions="Auto,*">
         <!-- Title Bar and Menu -->
-        <Grid Grid.Row="0" Background="#333333" ColumnDefinitions="Auto,*">
+        <Grid Grid.Row="0" Background="#333333" ColumnDefinitions="Auto,*,Auto">
             <!-- Menu Bar -->
             <Menu Grid.Column="0" Background="#333333" AutomationProperties.AutomationId="MainMenu">
             <MenuItem Header="_File" AutomationProperties.AutomationId="FileMenu">
@@ -107,6 +107,17 @@
                        Foreground="#999999"
                        FontSize="13"
                        Margin="0,0,100,0" />
+
+            <!-- Auto-Split Indicator -->
+            <TextBlock Grid.Column="2"
+                       Text="{Binding AutoSplitLayoutText}"
+                       IsVisible="{Binding AutoSplitLayoutText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
+                       Foreground="#6CA0DC"
+                       FontSize="12"
+                       Margin="0,0,12,0"
+                       AutomationProperties.AutomationId="AutoSplitIndicator" />
         </Grid>
 
         <!-- Dock Control -->

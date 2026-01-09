@@ -29,6 +29,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private string _windowTitle = "Claude Code Orchestrator";
     private bool _isRepositoryOpen;
     private bool _disposed;
+    private string? _autoSplitLayoutText;
 
     // Track pending preview states for sessions being created
     private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
@@ -36,7 +37,28 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Reference to DockFactory for dynamic document creation.
     /// </summary>
-    public DockFactory? Factory { get; set; }
+    public DockFactory? Factory
+    {
+        get => _factory;
+        set
+        {
+            // Unsubscribe from old factory
+            if (_factory != null)
+            {
+                _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
+            }
+
+            _factory = value;
+
+            // Subscribe to new factory
+            if (_factory != null)
+            {
+                _factory.AutoSplitLayoutChanged += OnAutoSplitLayoutChanged;
+                UpdateAutoSplitLayoutText(_factory.AutoSplitLayout);
+            }
+        }
+    }
+    private DockFactory? _factory;
 
     public MainWindowViewModel()
     {
@@ -82,6 +104,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         get => _isRepositoryOpen;
         set => SetProperty(ref _isRepositoryOpen, value);
+    }
+
+    /// <summary>
+    /// Gets the display text for the current auto-split layout mode.
+    /// Returns null when auto-split is disabled.
+    /// </summary>
+    public string? AutoSplitLayoutText
+    {
+        get => _autoSplitLayoutText;
+        private set => SetProperty(ref _autoSplitLayoutText, value);
     }
 
     public ObservableCollection<SessionViewModel> Sessions { get; } = new();
@@ -974,6 +1006,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         return Task.CompletedTask;
     }
 
+    private void OnAutoSplitLayoutChanged(object? sender, SplitLayout layout)
+    {
+        _dispatcher.Post(() => UpdateAutoSplitLayoutText(layout));
+    }
+
+    private void UpdateAutoSplitLayoutText(SplitLayout layout)
+    {
+        AutoSplitLayoutText = layout switch
+        {
+            SplitLayout.Vertical => "Auto-Split: Vertically",
+            SplitLayout.Horizontal => "Auto-Split: Horizontally",
+            SplitLayout.Grid => "Auto-Split: Grid",
+            _ => null
+        };
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -983,5 +1031,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _sessionService.SessionEnded -= OnSessionEnded;
         _sessionService.SessionStateChanged -= OnSessionStateChanged;
         _sessionService.ClaudeSessionIdReceived -= OnClaudeSessionIdReceived;
+
+        // Unsubscribe from factory events
+        if (_factory != null)
+        {
+            _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
+        }
     }
 }
