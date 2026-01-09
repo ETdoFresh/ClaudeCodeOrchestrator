@@ -37,8 +37,10 @@
     </Window.DataTemplates>
 
     <Grid RowDefinitions="Auto,*">
-        <!-- Menu Bar -->
-        <Menu Grid.Row="0" Background="#333333" AutomationProperties.AutomationId="MainMenu">
+        <!-- Title Bar and Menu -->
+        <Grid Grid.Row="0" Background="#333333" ColumnDefinitions="Auto,*">
+            <!-- Menu Bar -->
+            <Menu Grid.Column="0" Background="#333333" AutomationProperties.AutomationId="MainMenu">
             <MenuItem Header="_File" AutomationProperties.AutomationId="FileMenu">
                 <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}"
                           AutomationProperties.AutomationId="OpenRepositoryMenuItem" />
@@ -66,6 +68,16 @@
                 <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />
             </MenuItem>
         </Menu>
+
+            <!-- Window Title Display -->
+            <TextBlock Grid.Column="1"
+                       Text="{Binding WindowTitle}"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Foreground="#999999"
+                       FontSize="13"
+                       Margin="0,0,100,0" />
+        </Grid>
 
         <!-- Dock Control -->
         <dock:DockControl Grid.Row="1"
