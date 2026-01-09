@@ -9,6 +9,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>ClaudeCodeOrchestrator.App</RootNamespace>
+    <ApplicationIcon>..\..\icons\orchestrator-wand.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- Get git commit count for version -->
@@ -45,6 +46,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ClaudeCodeOrchestrator.Core\ClaudeCodeOrchestrator.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\icons\orchestrator-wand.ico" Link="icons\orchestrator-wand.ico" />
   </ItemGroup>
 
 </Project>

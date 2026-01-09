@@ -10,6 +10,7 @@
         x:Class="ClaudeCodeOrchestrator.App.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding WindowTitle}"
+        Icon="/icons/orchestrator-wand.ico"
         Width="1200" Height="800"
         MinWidth="800" MinHeight="600"
         Background="#1E1E1E"
