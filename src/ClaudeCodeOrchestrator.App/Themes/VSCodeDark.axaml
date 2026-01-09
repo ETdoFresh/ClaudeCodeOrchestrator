@@ -210,6 +210,12 @@
         <Setter Property="IsVisible" Value="False" />
     </Style>
 
+    <!-- Ensure content within DocumentControl stretches properly to fill available space -->
+    <Style Selector="dock|DocumentControl /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
     <!-- Document Tab Strip Context Menu for Split Layout Options -->
     <Style Selector="dock|DocumentTabStrip">
         <Setter Property="ContextMenu">

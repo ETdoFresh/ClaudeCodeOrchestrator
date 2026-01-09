@@ -9,6 +9,8 @@
              x:Class="ClaudeCodeOrchestrator.App.Views.Panels.WorktreesView"
              x:DataType="vm:WorktreesViewModel"
              AutomationProperties.AutomationId="WorktreesPanel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
              Background="#1E1E1E">
 
     <Grid RowDefinitions="Auto,*">
