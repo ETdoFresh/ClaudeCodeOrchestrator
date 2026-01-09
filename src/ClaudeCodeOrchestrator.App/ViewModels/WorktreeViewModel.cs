@@ -158,7 +158,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
         _durationTimer?.Dispose();
         _durationTimer = null;
 
-        SessionEndedAt = endedAt ?? DateTime.Now;
+        SessionEndedAt = endedAt ?? DateTime.UtcNow;
         UpdateDuration();
     }
 
@@ -175,7 +175,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var endTime = SessionEndedAt ?? DateTime.Now;
+        var endTime = SessionEndedAt ?? DateTime.UtcNow;
         SessionDuration = endTime - SessionStartedAt.Value;
     }
 

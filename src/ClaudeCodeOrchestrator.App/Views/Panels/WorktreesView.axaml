@@ -14,8 +14,18 @@
     <Grid RowDefinitions="Auto,*">
         <!-- Header -->
         <Border Grid.Row="0" Padding="8,6" Background="#252526">
-            <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
-                       Foreground="#BBBBBB" VerticalAlignment="Center" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
+                           Foreground="#BBBBBB" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <Button Command="{Binding PushCommand}" Content="⬆"
+                            Padding="6,4" FontSize="10" ToolTip.Tip="Push all branches to remote"
+                            AutomationProperties.AutomationId="PushButton" />
+                    <Button Command="{Binding CreateTaskCommand}" Content="+"
+                            Padding="6,4" FontSize="10" ToolTip.Tip="Create new task"
+                            AutomationProperties.AutomationId="NewTaskButton" />
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Worktree list -->
