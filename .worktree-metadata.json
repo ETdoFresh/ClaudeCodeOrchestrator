@@ -1,9 +1,9 @@
 {
-  "Id": "37f1a5bf",
-  "TaskDescription": "the bottom scroll of sessions are getting cut off, can you fix that for me?",
-  "Title": "Bottom Scroll Sessions Getting Cut",
+  "Id": "afb14e79",
+  "TaskDescription": "next to push changes and add, can we also add a small button for refreshing worktrees?",
+  "Title": "Next Push Changes Add Add",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:48:23.586883Z",
-  "ClaudeSessionId": "cb5cc31e-5e04-4482-8133-538dd944f5a0",
+  "CreatedAt": "2026-01-09T05:49:40.729396Z",
+  "ClaudeSessionId": "132795a9-b25e-451c-868d-a13fbc8e5822",
   "SessionWasActive": true
 }

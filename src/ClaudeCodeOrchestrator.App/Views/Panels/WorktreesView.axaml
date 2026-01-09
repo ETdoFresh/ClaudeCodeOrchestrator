@@ -18,6 +18,9 @@
                 <TextBlock Text="WORKTREES" FontSize="11" FontWeight="SemiBold"
                            Foreground="#BBBBBB" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <Button Command="{Binding RefreshCommand}" Content="↻"
+                            Padding="6,4" FontSize="10" ToolTip.Tip="Refresh worktrees"
+                            AutomationProperties.AutomationId="RefreshButton" />
                     <Button Command="{Binding PushCommand}" Content="⬆"
                             Padding="6,4" FontSize="10" ToolTip.Tip="Push all branches to remote"
                             AutomationProperties.AutomationId="PushButton" />
