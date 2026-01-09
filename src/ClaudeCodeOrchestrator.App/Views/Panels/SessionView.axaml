@@ -23,29 +23,46 @@
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Header with branch info -->
         <Border Grid.Row="0" Padding="12,8" Background="#252526" BorderBrush="#3C3C3C" BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="&#x1F33F;" FontSize="14" />
-                <TextBlock Text="{Binding WorktreeBranch}" FontSize="13" Foreground="#569CD6" />
-                <TextBlock Text="(Preview)"
-                           FontSize="12"
-                           Foreground="#569CD6"
-                           FontStyle="Italic"
-                           IsVisible="{Binding IsPreview}" />
-                <!-- Processing spinner -->
-                <Panel Classes="arc-spinner"
-                       IsVisible="{Binding IsProcessing}"
-                       ToolTip.Tip="Processing...">
-                    <Arc Stroke="#007ACC"
-                         StrokeThickness="2"
-                         StartAngle="0"
-                         SweepAngle="270" />
-                </Panel>
-                <TextBlock Text="•" Foreground="#666666" />
-                <TextBlock FontSize="13" Foreground="#858585">
-                    <Run Text="Cost: $" />
-                    <Run Text="{Binding TotalCost, StringFormat=N4}" />
-                </TextBlock>
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="&#x1F33F;" FontSize="14" />
+                    <TextBlock Text="{Binding WorktreeBranch}" FontSize="13" Foreground="#569CD6" />
+                    <TextBlock Text="(Preview)"
+                               FontSize="12"
+                               Foreground="#569CD6"
+                               FontStyle="Italic"
+                               IsVisible="{Binding IsPreview}" />
+                    <!-- Processing spinner -->
+                    <Panel Classes="arc-spinner"
+                           IsVisible="{Binding IsProcessing}"
+                           ToolTip.Tip="Processing...">
+                        <Arc Stroke="#007ACC"
+                             StrokeThickness="2"
+                             StartAngle="0"
+                             SweepAngle="270" />
+                    </Panel>
+                    <TextBlock Text="•" Foreground="#666666" />
+                    <TextBlock FontSize="13" Foreground="#858585">
+                        <Run Text="Cost: $" />
+                        <Run Text="{Binding TotalCost, StringFormat=N4}" />
+                    </TextBlock>
+                </StackPanel>
+                <!-- Merge button - shown when ready to merge -->
+                <Button Grid.Column="1"
+                        Command="{Binding MergeCommand}"
+                        Padding="10,4"
+                        FontSize="12"
+                        Background="#4CAF50"
+                        Foreground="White"
+                        ToolTip.Tip="Merge to base branch"
+                        IsVisible="{Binding IsReadyToMerge}"
+                        AutomationProperties.AutomationId="MergeButton">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="↗" />
+                        <TextBlock Text="Merge" />
+                    </StackPanel>
+                </Button>
+            </Grid>
         </Border>
 
         <!-- Messages area -->

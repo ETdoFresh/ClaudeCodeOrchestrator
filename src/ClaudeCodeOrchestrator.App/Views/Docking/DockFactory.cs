@@ -159,10 +159,18 @@ public class DockFactory : Factory
     {
         if (_documentDock is null) return;
 
-        // Wire up the session completed callback to refresh worktrees
+        // Wire up callbacks
         if (_context is ViewModels.MainWindowViewModel mainVm)
         {
             document.OnSessionCompleted = () => mainVm.RefreshWorktreesAsync();
+            document.OnMergeRequested = mainVm.MergeWorktreeByIdAsync;
+
+            // Set initial IsReadyToMerge state based on worktree status
+            var worktree = mainVm.Worktrees.FirstOrDefault(w => w.Id == document.WorktreeId);
+            if (worktree != null)
+            {
+                document.IsReadyToMerge = worktree.IsReadyToMerge;
+            }
         }
 
         _isAddingDocument = true;
@@ -298,6 +306,32 @@ public class DockFactory : Factory
             // Dispose the document
             if (doc is IDisposable disposable)
                 disposable.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Updates IsReadyToMerge on all session documents based on their worktree's current state.
+    /// </summary>
+    public void UpdateSessionDocumentsMergeState(IEnumerable<ViewModels.WorktreeViewModel> worktrees)
+    {
+        if (_rootProportional is null) return;
+
+        var worktreeLookup = worktrees.ToDictionary(w => w.Id, w => w.IsReadyToMerge);
+
+        var documentDocks = new List<IDocumentDock>();
+        CollectAllDocumentDocks(_rootProportional, documentDocks);
+
+        foreach (var docDock in documentDocks)
+        {
+            if (docDock.VisibleDockables is null) continue;
+
+            foreach (var doc in docDock.VisibleDockables.OfType<SessionDocumentViewModel>())
+            {
+                if (worktreeLookup.TryGetValue(doc.WorktreeId, out var isReady))
+                {
+                    doc.IsReadyToMerge = isReady;
+                }
+            }
         }
     }
 

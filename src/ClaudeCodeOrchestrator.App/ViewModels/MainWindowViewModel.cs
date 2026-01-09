@@ -426,6 +426,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
                 // Sync to dock panel with main repo's unpushed count for badge
                 Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits);
+
+                // Update merge state on any open session documents
+                Factory?.UpdateSessionDocumentsMergeState(Worktrees);
             });
         }
         catch (Exception ex)
@@ -530,6 +533,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await _dialogService.ShowErrorAsync("Error Merging",
                 $"Failed to merge worktree: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Merges a worktree by its ID. Called from SessionDocumentViewModel.
+    /// </summary>
+    public async Task MergeWorktreeByIdAsync(string worktreeId)
+    {
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            await OnMergeRequestedAsync(worktree);
         }
     }
 

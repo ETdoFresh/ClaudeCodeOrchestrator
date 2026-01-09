@@ -26,12 +26,18 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private decimal _totalCost;
     private string _worktreeBranch = string.Empty;
     private bool _isPreview;
+    private bool _isReadyToMerge;
     private List<ImageAttachment> _pendingAttachments = new();
 
     /// <summary>
     /// Callback to refresh worktrees when session completes.
     /// </summary>
     public Func<Task>? OnSessionCompleted { get; set; }
+
+    /// <summary>
+    /// Callback to merge this worktree.
+    /// </summary>
+    public Func<string, Task>? OnMergeRequested { get; set; }
 
     public string SessionId
     {
@@ -122,6 +128,21 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     {
         get => _isPreview;
         set => SetProperty(ref _isPreview, value);
+    }
+
+    /// <summary>
+    /// Indicates if this session's worktree is ready to merge.
+    /// </summary>
+    public bool IsReadyToMerge
+    {
+        get => _isReadyToMerge;
+        set
+        {
+            if (SetProperty(ref _isReadyToMerge, value))
+            {
+                MergeCommand.NotifyCanExecuteChanged();
+            }
+        }
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -376,6 +397,17 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     private bool CanInterrupt() => IsProcessing;
+
+    [RelayCommand(CanExecute = nameof(CanMerge))]
+    private async Task MergeAsync()
+    {
+        if (OnMergeRequested != null && !string.IsNullOrEmpty(WorktreeId))
+        {
+            await OnMergeRequested(WorktreeId);
+        }
+    }
+
+    private bool CanMerge() => IsReadyToMerge && !IsProcessing;
 
     /// <summary>
     /// Adds a user message to the UI from an external source (e.g., conflict resolution).
