@@ -125,6 +125,7 @@
         <Border Grid.Row="2" Padding="12" Background="#252526" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBox Grid.Column="0"
+                         x:Name="MessageInputTextBox"
                          Text="{Binding InputText}"
                          Watermark="Type a message..."
                          AcceptsReturn="True"
@@ -133,6 +134,7 @@
                          Background="#3C3C3C"
                          BorderBrush="#474747"
                          Foreground="#CCCCCC"
+                         KeyDown="MessageInputTextBox_KeyDown"
                          AutomationProperties.AutomationId="MessageInput" />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
