@@ -1,9 +1,9 @@
 {
-  "Id": "b23d747f",
-  "TaskDescription": "I don\u0027t see the new title and branch names, can we generate that first before creating worktree and rest of flow?",
-  "Title": null,
+  "Id": "37f1a5bf",
+  "TaskDescription": "the bottom scroll of sessions are getting cut off, can you fix that for me?",
+  "Title": "Bottom Scroll Sessions Getting Cut",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:14:14.029703Z",
-  "ClaudeSessionId": "b8aa0e06-4559-4bc0-8923-7560c4596902",
+  "CreatedAt": "2026-01-09T05:48:23.586883Z",
+  "ClaudeSessionId": "cb5cc31e-5e04-4482-8133-538dd944f5a0",
   "SessionWasActive": true
 }
