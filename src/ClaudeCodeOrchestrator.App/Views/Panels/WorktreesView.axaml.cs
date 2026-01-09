@@ -23,6 +23,7 @@ public partial class WorktreesView : UserControl
         });
 
     private DateTime _lastSelectionTime;
+    private DateTime _lastDoubleClickTime;
     private const int DoubleClickThresholdMs = 300;
 
     public WorktreesView()
@@ -55,16 +56,22 @@ public partial class WorktreesView : UserControl
         if (e.AddedItems[0] is not WorktreeViewModel worktree) return;
 
         // Record selection time to detect double-clicks
-        _lastSelectionTime = DateTime.UtcNow;
+        var selectionTime = DateTime.UtcNow;
+        _lastSelectionTime = selectionTime;
 
         // Delay briefly to see if this is part of a double-click
-        await Task.Delay(DoubleClickThresholdMs);
+        await Task.Delay(DoubleClickThresholdMs + 50); // Add buffer for timing variance
 
-        // Check if a double-click happened in the meantime (time would be updated)
-        var elapsed = (DateTime.UtcNow - _lastSelectionTime).TotalMilliseconds;
-        if (elapsed < DoubleClickThresholdMs)
+        // Check if a double-click happened during our delay
+        // If _lastDoubleClickTime is more recent than our selection, skip preview
+        if (_lastDoubleClickTime > selectionTime)
         {
-            // A double-click is occurring, skip the preview action
+            return;
+        }
+
+        // Also check if another selection happened (user clicked elsewhere)
+        if (_lastSelectionTime != selectionTime)
+        {
             return;
         }
 
@@ -75,8 +82,8 @@ public partial class WorktreesView : UserControl
     {
         if (DataContext is not WorktreesViewModel vm) return;
 
-        // Update time to prevent the delayed selection handler from running
-        _lastSelectionTime = DateTime.UtcNow;
+        // Record double-click time to signal pending selection handlers to abort
+        _lastDoubleClickTime = DateTime.UtcNow;
 
         if (vm.SelectedWorktree is WorktreeViewModel worktree)
         {
