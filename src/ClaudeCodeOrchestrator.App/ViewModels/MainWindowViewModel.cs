@@ -290,6 +290,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             await _gitService.PushAllBranchesAsync(CurrentRepositoryPath);
+            // Refresh to update the badge count after successful push
+            await RefreshWorktreesAsync();
         }
         catch (Exception ex)
         {
@@ -549,6 +551,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         Worktrees.Remove(worktree);
         Factory?.RemoveWorktree(worktree);
+
+        // Refresh to update the push badge count after merge adds commits
+        await RefreshWorktreesAsync();
     }
 
     private async Task ResolveConflictsWithClaudeAsync(WorktreeViewModel worktree, IReadOnlyList<string> conflictingFiles)
