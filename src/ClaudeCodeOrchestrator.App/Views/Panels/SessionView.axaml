@@ -161,6 +161,29 @@
                                                                         MaxHeight="150">
                                                                     <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}" />
                                                                 </Border>
+
+                                                                <!-- Todo list display for TodoWrite operations -->
+                                                                <Border IsVisible="{Binding HasTodos}"
+                                                                        Margin="16,4,0,4"
+                                                                        Background="#1E1E2E"
+                                                                        CornerRadius="6"
+                                                                        Padding="10,8"
+                                                                        BorderBrush="#3C3C4C"
+                                                                        BorderThickness="1">
+                                                                    <ItemsControl ItemsSource="{Binding Todos}">
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate DataType="{x:Type vmBase:TodoItemViewModel}">
+                                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+                                                                                    <TextBlock Text="{Binding StatusIcon}" FontSize="12" VerticalAlignment="Center" />
+                                                                                    <TextBlock Text="{Binding DisplayText}"
+                                                                                               FontSize="12"
+                                                                                               Foreground="#D4D4D4"
+                                                                                               VerticalAlignment="Center" />
+                                                                                </StackPanel>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </Border>
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>

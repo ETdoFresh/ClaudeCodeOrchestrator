@@ -299,6 +299,51 @@ public partial class ToolUseViewModel : ViewModelBase
     public bool HasWriteContent => ToolName == "Write" && WriteContent != null;
 
     /// <summary>
+    /// Gets the todo items if this is a TodoWrite operation.
+    /// </summary>
+    public ObservableCollection<TodoItemViewModel> Todos
+    {
+        get
+        {
+            var items = new ObservableCollection<TodoItemViewModel>();
+            if (ToolName != "TodoWrite") return items;
+
+            try
+            {
+                var json = System.Text.Json.JsonDocument.Parse(InputJson);
+                if (json.RootElement.TryGetProperty("todos", out var todosArray) &&
+                    todosArray.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var todo in todosArray.EnumerateArray())
+                    {
+                        var content = GetStringProperty(todo, "content") ?? "";
+                        var status = GetStringProperty(todo, "status") ?? "pending";
+                        var activeForm = GetStringProperty(todo, "activeForm") ?? "";
+
+                        items.Add(new TodoItemViewModel
+                        {
+                            Content = content,
+                            Status = status,
+                            ActiveForm = activeForm
+                        });
+                    }
+                }
+            }
+            catch
+            {
+                // Parsing failed, return empty list
+            }
+
+            return items;
+        }
+    }
+
+    /// <summary>
+    /// Whether this is a TodoWrite operation with todos.
+    /// </summary>
+    public bool HasTodos => ToolName == "TodoWrite" && Todos.Count > 0;
+
+    /// <summary>
     /// Icon for the tool type.
     /// </summary>
     public string ToolIcon => ToolName switch
@@ -331,4 +376,36 @@ public enum ToolUseStatus
     Running,
     Completed,
     Failed
+}
+
+/// <summary>
+/// View model for a single todo item.
+/// </summary>
+public partial class TodoItemViewModel : ViewModelBase
+{
+    [ObservableProperty]
+    private string _content = string.Empty;
+
+    [ObservableProperty]
+    private string _status = "pending";
+
+    [ObservableProperty]
+    private string _activeForm = string.Empty;
+
+    /// <summary>
+    /// Gets the status icon based on status.
+    /// </summary>
+    public string StatusIcon => Status switch
+    {
+        "completed" => "✅",
+        "in_progress" => "🔄",
+        _ => "⬜"
+    };
+
+    /// <summary>
+    /// Gets the display text - active form when in progress, content otherwise.
+    /// </summary>
+    public string DisplayText => Status == "in_progress" && !string.IsNullOrEmpty(ActiveForm)
+        ? ActiveForm
+        : Content;
 }
