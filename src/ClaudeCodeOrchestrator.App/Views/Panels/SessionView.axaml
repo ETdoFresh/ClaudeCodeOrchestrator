@@ -13,6 +13,8 @@
 
     <UserControl.Resources>
         <conv:MarkdownToHtmlConverter x:Key="MarkdownToHtml" />
+        <conv:DiffToHtmlConverter x:Key="DiffToHtml" />
+        <conv:CodePreviewConverter x:Key="CodePreview" />
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto">
@@ -45,18 +47,51 @@
 
                                 <!-- Assistant message -->
                                 <DataTemplate DataType="{x:Type vmBase:AssistantMessageViewModel}">
-                                    <Border Margin="0,6" Padding="12,10" Background="Transparent" CornerRadius="6">
+                                    <Border Margin="0,2" Padding="12,2" Background="Transparent" CornerRadius="6">
                                         <StackPanel>
                                             <html:HtmlLabel Text="{Binding TextContent, Converter={StaticResource MarkdownToHtml}}" />
 
-                                            <!-- Tool uses -->
-                                            <ItemsControl ItemsSource="{Binding ToolUses}" Margin="0,8,0,0">
+                                            <!-- Tool uses - faded/transparent style, compact -->
+                                            <ItemsControl ItemsSource="{Binding ToolUses}" Margin="0,0,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type vmBase:ToolUseViewModel}">
-                                                        <Border Margin="0,4" Padding="8,6" Background="#252526" CornerRadius="4" BorderBrush="#3C3C3C" BorderThickness="1">
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <TextBlock Text="⚡" FontSize="12" />
-                                                                <TextBlock Text="{Binding ToolName}" FontSize="12" Foreground="#DCDCAA" />
+                                                        <Border Margin="0,0" Padding="0,1" Background="Transparent" Opacity="0.7">
+                                                            <StackPanel>
+                                                                <!-- Tool action header - faded text -->
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <TextBlock Text="{Binding ToolIcon}" FontSize="11" />
+                                                                    <TextBlock Text="{Binding ActionDescription}"
+                                                                               FontSize="11"
+                                                                               Foreground="#808080"
+                                                                               FontStyle="Italic" />
+                                                                </StackPanel>
+
+                                                                <!-- Diff preview for Edit operations -->
+                                                                <Border IsVisible="{Binding HasDiff}"
+                                                                        Margin="16,4,0,0"
+                                                                        Background="#1A1A1A"
+                                                                        CornerRadius="4"
+                                                                        Padding="0"
+                                                                        MaxHeight="150">
+                                                                    <html:HtmlLabel>
+                                                                        <html:HtmlLabel.Text>
+                                                                            <MultiBinding Converter="{StaticResource DiffToHtml}">
+                                                                                <Binding Path="OldString" />
+                                                                                <Binding Path="NewString" />
+                                                                            </MultiBinding>
+                                                                        </html:HtmlLabel.Text>
+                                                                    </html:HtmlLabel>
+                                                                </Border>
+
+                                                                <!-- Content preview for Write operations -->
+                                                                <Border IsVisible="{Binding HasWriteContent}"
+                                                                        Margin="16,4,0,0"
+                                                                        Background="#1A1A1A"
+                                                                        CornerRadius="4"
+                                                                        Padding="0"
+                                                                        MaxHeight="150">
+                                                                    <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}" />
+                                                                </Border>
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>

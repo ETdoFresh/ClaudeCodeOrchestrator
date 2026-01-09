@@ -112,15 +112,18 @@ public sealed class SessionHistoryService
                 // Skip sidechain entries (agent tasks)
                 if (entry.IsSidechain == true) continue;
 
-                var content = ExtractContent(entry);
-                if (string.IsNullOrEmpty(content)) continue;
+                var (content, toolUses) = ExtractContentAndToolUses(entry);
+
+                // Skip if no content and no tool uses
+                if (string.IsNullOrEmpty(content) && toolUses.Count == 0) continue;
 
                 messages.Add(new SessionHistoryMessage
                 {
                     Role = entry.Type == "user" ? "user" : "assistant",
-                    Content = content,
+                    Content = content ?? "",
                     Timestamp = entry.Timestamp,
-                    Uuid = entry.Uuid
+                    Uuid = entry.Uuid,
+                    ToolUses = toolUses
                 });
             }
             catch (JsonException)
@@ -153,16 +156,18 @@ public sealed class SessionHistoryService
         return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
     }
 
-    private static string? ExtractContent(SessionHistoryEntry entry)
+    private static (string? Content, List<SessionHistoryToolUse> ToolUses) ExtractContentAndToolUses(SessionHistoryEntry entry)
     {
-        if (entry.Message is null) return null;
+        var toolUses = new List<SessionHistoryToolUse>();
+
+        if (entry.Message is null) return (null, toolUses);
 
         // For user messages, content might be a string
         if (entry.Message.Content is JsonElement contentElement)
         {
             if (contentElement.ValueKind == JsonValueKind.String)
             {
-                return contentElement.GetString();
+                return (contentElement.GetString(), toolUses);
             }
 
             // For assistant messages, content is an array of content blocks
@@ -175,9 +180,28 @@ public sealed class SessionHistoryService
                     {
                         var blockType = typeEl.GetString();
 
-                        // Skip tool_result and tool_use blocks - these are not user/assistant text
-                        if (blockType == "tool_result" || blockType == "tool_use")
+                        // Skip tool_result blocks - these are user message responses
+                        if (blockType == "tool_result")
                             continue;
+
+                        // Extract tool_use blocks for assistant messages
+                        if (blockType == "tool_use")
+                        {
+                            var id = block.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                            var name = block.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+                            var input = block.TryGetProperty("input", out var inputEl) ? inputEl.ToString() : "{}";
+
+                            if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(name))
+                            {
+                                toolUses.Add(new SessionHistoryToolUse
+                                {
+                                    Id = id,
+                                    Name = name,
+                                    InputJson = input ?? "{}"
+                                });
+                            }
+                            continue;
+                        }
 
                         if (blockType == "text" && block.TryGetProperty("text", out var textEl))
                         {
@@ -187,11 +211,12 @@ public sealed class SessionHistoryService
                         }
                     }
                 }
-                return textParts.Count > 0 ? string.Join("\n", textParts) : null;
+                var content = textParts.Count > 0 ? string.Join("\n", textParts) : null;
+                return (content, toolUses);
             }
         }
 
-        return null;
+        return (null, toolUses);
     }
 }
 
@@ -237,4 +262,15 @@ public sealed class SessionHistoryMessage
     public required string Content { get; init; }
     public string? Timestamp { get; init; }
     public string? Uuid { get; init; }
+    public List<SessionHistoryToolUse> ToolUses { get; init; } = new();
+}
+
+/// <summary>
+/// A tool use from session history.
+/// </summary>
+public sealed class SessionHistoryToolUse
+{
+    public required string Id { get; init; }
+    public required string Name { get; init; }
+    public required string InputJson { get; init; }
 }

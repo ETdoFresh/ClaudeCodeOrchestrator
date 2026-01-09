@@ -277,9 +277,19 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                         {
                             vm.TextContent += textBlock.Text;
                         }
+                        else if (block is ToolUseContentBlock toolBlock)
+                        {
+                            vm.ToolUses.Add(new ToolUseViewModel
+                            {
+                                Id = toolBlock.Id,
+                                ToolName = toolBlock.Name,
+                                InputJson = toolBlock.Input?.ToString() ?? "{}",
+                                Status = ToolUseStatus.Completed // From history, assume completed
+                            });
+                        }
                     }
-                    // Only add if there's actual text content
-                    if (!string.IsNullOrEmpty(vm.TextContent))
+                    // Add if there's text content OR tool uses
+                    if (!string.IsNullOrEmpty(vm.TextContent) || vm.ToolUses.Count > 0)
                     {
                         Messages.Add(vm);
                     }

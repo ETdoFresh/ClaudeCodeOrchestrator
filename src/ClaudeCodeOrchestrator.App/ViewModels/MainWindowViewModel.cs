@@ -492,6 +492,28 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
             else if (msg.Role == "assistant")
             {
+                // Build content blocks including text and tool uses
+                var contentBlocks = new List<SDK.Messages.ContentBlock>();
+
+                // Add text content if present
+                if (!string.IsNullOrEmpty(msg.Content))
+                {
+                    contentBlocks.Add(new SDK.Messages.TextContentBlock { Text = msg.Content });
+                }
+
+                // Add tool use blocks from history
+                foreach (var toolUse in msg.ToolUses)
+                {
+                    // Parse the JSON input - the Input property accepts object and ToString() is called on it
+                    var inputElement = System.Text.Json.JsonDocument.Parse(toolUse.InputJson).RootElement;
+                    contentBlocks.Add(new SDK.Messages.ToolUseContentBlock
+                    {
+                        Id = toolUse.Id,
+                        Name = toolUse.Name,
+                        Input = inputElement
+                    });
+                }
+
                 historyMessages.Add(new SDK.Messages.SDKAssistantMessage
                 {
                     Uuid = msg.Uuid ?? Guid.NewGuid().ToString(),
@@ -500,10 +522,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     {
                         Id = msg.Uuid ?? Guid.NewGuid().ToString(),
                         Model = "claude-opus-4-5-20251101",
-                        Content = new List<SDK.Messages.ContentBlock>
-                        {
-                            new SDK.Messages.TextContentBlock { Text = msg.Content }
-                        }
+                        Content = contentBlocks
                     }
                 });
             }
