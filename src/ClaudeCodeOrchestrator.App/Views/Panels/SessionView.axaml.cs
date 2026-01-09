@@ -28,8 +28,8 @@ public partial class SessionView : UserControl
 
     private async void MessageInput_KeyDown(object? sender, KeyEventArgs e)
     {
-        // Handle Ctrl+V for paste
-        if (e.Key == Key.V && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        // Handle Ctrl+V (Windows/Linux) or Cmd+V (macOS) for paste
+        if (e.Key == Key.V && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
         {
             await TryPasteImageFromClipboard();
             return;

@@ -210,12 +210,12 @@
                             Margin="0,0,8,0"
                             Background="#3C3C3C"
                             Foreground="#CCCCCC"
-                            ToolTip.Tip="Attach image (or paste with Ctrl+V)" />
+                            ToolTip.Tip="Attach image (or paste with ⌘V / Ctrl+V)" />
 
                     <TextBox Grid.Column="1"
                              x:Name="MessageInput"
                              Text="{Binding InputText}"
-                             Watermark="Type a message... (Ctrl+V to paste image)"
+                             Watermark="Type a message... (⌘V / Ctrl+V to paste image)"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              MaxHeight="150"

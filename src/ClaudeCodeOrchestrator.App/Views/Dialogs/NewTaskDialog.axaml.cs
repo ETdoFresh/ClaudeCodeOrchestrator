@@ -34,8 +34,8 @@ public partial class NewTaskDialog : Window
 
     private async void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        // Handle Ctrl+V for paste
-        if (e.Key == Key.V && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        // Handle Ctrl+V (Windows/Linux) or Cmd+V (macOS) for paste
+        if (e.Key == Key.V && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
         {
             await TryPasteImageFromClipboard();
         }

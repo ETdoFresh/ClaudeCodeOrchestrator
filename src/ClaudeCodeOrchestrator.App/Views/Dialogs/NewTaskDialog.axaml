@@ -56,7 +56,7 @@
                         Foreground="#CCCCCC"
                         Padding="8,4"
                         FontSize="12" />
-                <TextBlock Text="or paste from clipboard (Ctrl+V)"
+                <TextBlock Text="or paste from clipboard (⌘V / Ctrl+V)"
                            FontSize="11"
                            Foreground="#666666"
                            VerticalAlignment="Center" />
