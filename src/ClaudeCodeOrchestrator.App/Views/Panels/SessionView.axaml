@@ -28,6 +28,15 @@
                            Foreground="#569CD6"
                            FontStyle="Italic"
                            IsVisible="{Binding IsPreview}" />
+                <!-- Processing spinner -->
+                <Panel Classes="arc-spinner"
+                       IsVisible="{Binding IsProcessing}"
+                       ToolTip.Tip="Processing...">
+                    <Arc Stroke="#007ACC"
+                         StrokeThickness="2"
+                         StartAngle="0"
+                         SweepAngle="270" />
+                </Panel>
                 <TextBlock Text="•" Foreground="#666666" />
                 <TextBlock FontSize="13" Foreground="#858585">
                     <Run Text="Cost: $" />
