@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
 using ClaudeCodeOrchestrator.App.Services;
 using ClaudeCodeOrchestrator.App.ViewModels;
@@ -35,6 +36,10 @@ public partial class MainWindow : Window
 
         // Initialize after window is loaded (restore last repository)
         Loaded += OnWindowLoaded;
+
+        // Set up drag-drop handlers for opening repositories
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
     }
 
     private void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -50,5 +55,60 @@ public partial class MainWindow : Window
     {
         // Dispose view model to unsubscribe from events
         _viewModel?.Dispose();
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        // Check if this is a folder being dragged
+        if (e.Data.Contains(DataFormats.Files))
+        {
+            var files = e.Data.GetFiles();
+            if (files != null)
+            {
+                foreach (var item in files)
+                {
+                    // Check if it's a directory
+                    if (item is Avalonia.Platform.Storage.IStorageFolder)
+                    {
+                        e.DragEffects = DragDropEffects.Copy;
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Not a valid folder drop
+        e.DragEffects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnDrop(object? sender, DragEventArgs e)
+    {
+        if (e.Data.Contains(DataFormats.Files))
+        {
+            var files = e.Data.GetFiles();
+            if (files != null)
+            {
+                foreach (var item in files)
+                {
+                    // Check if it's a directory
+                    if (item is Avalonia.Platform.Storage.IStorageFolder folder)
+                    {
+                        var path = folder.Path.LocalPath;
+                        if (!string.IsNullOrEmpty(path))
+                        {
+                            // Open the repository asynchronously
+                            Dispatcher.UIThread.Post(async () =>
+                            {
+                                await (_viewModel?.OpenRepositoryFromPathAsync(path) ?? Task.CompletedTask);
+                            });
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

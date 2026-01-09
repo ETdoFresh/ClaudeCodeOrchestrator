@@ -198,6 +198,23 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var path = await _dialogService.ShowFolderPickerAsync("Select Git Repository");
             if (string.IsNullOrEmpty(path)) return;
 
+            await OpenRepositoryFromPathAsync(path);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Repository",
+                $"Failed to open repository: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Opens a repository from the given path. Used by both the menu command and drag-drop.
+    /// </summary>
+    /// <param name="path">The path to the repository folder.</param>
+    public async Task OpenRepositoryFromPathAsync(string path)
+    {
+        try
+        {
             // Validate it's a git repository
             await _gitService.OpenRepositoryAsync(path);
 
