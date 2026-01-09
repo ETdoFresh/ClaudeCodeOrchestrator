@@ -60,9 +60,6 @@
                                     <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="White" />
                                 </Border>
 
-                                <Button Command="{Binding OpenSessionCommand}" Content="▶"
-                                        Padding="6,4" FontSize="10" ToolTip.Tip="Open Session"
-                                        AutomationProperties.AutomationId="{Binding Id, StringFormat='OpenSession_{0}'}" />
                                 <Button Command="{Binding MergeCommand}" Content="↗"
                                         Padding="6,4" FontSize="10" ToolTip.Tip="Merge to base branch"
                                         AutomationProperties.AutomationId="{Binding Id, StringFormat='MergeWorktree_{0}'}" />
