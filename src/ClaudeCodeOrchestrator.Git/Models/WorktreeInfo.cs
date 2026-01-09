@@ -55,6 +55,12 @@ public sealed record WorktreeInfo
     /// One session per worktree for consistent history.
     /// </summary>
     public string? ClaudeSessionId { get; set; }
+
+    /// <summary>
+    /// Whether the session was actively running when the app last closed.
+    /// Used to restore sessions on app restart.
+    /// </summary>
+    public bool SessionWasActive { get; set; }
 }
 
 /// <summary>
