@@ -20,6 +20,39 @@ Or if already built:
 /Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
 ```
 
+## Targeting a Specific Instance (Required)
+
+Since multiple instances of the app can run simultaneously, you **must** specify which instance to interact with using the `--pid` flag.
+
+### Finding the PID
+
+If you started the app yourself, capture the PID:
+```bash
+/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
+APP_PID=$!
+echo "App started with PID: $APP_PID"
+```
+
+If you need to find running instances:
+```bash
+pgrep -f "ClaudeCodeOrchestrator.App"
+```
+
+If no instance is running, start one and capture the PID:
+```bash
+/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
+APP_PID=$!
+```
+
+### Using the PID
+
+All CLI commands require the `--pid` flag to target a specific instance:
+```bash
+$APP --pid $APP_PID --ping
+$APP --pid $APP_PID --click FileMenu
+$APP --pid $APP_PID --screenshot /tmp/test.png
+```
+
 ## CLI Commands
 
 The app binary supports automation commands when passed CLI arguments:
@@ -118,43 +151,54 @@ The app binary supports automation commands when passed CLI arguments:
 ```bash
 APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App
 
+# Start a new instance and capture the PID (or use existing PID)
+$APP &
+APP_PID=$!
+
 # Verify app is running
-$APP --ping
+$APP --pid $APP_PID --ping
 
 # Click File menu
-$APP --click FileMenu
+$APP --pid $APP_PID --click FileMenu
 
 # Click Open Repository
-$APP --click OpenRepositoryMenuItem
+$APP --pid $APP_PID --click OpenRepositoryMenuItem
 
 # Take screenshot to verify dialog opened
-$APP --screenshot /tmp/open-repo-dialog.png
+$APP --pid $APP_PID --screenshot /tmp/open-repo-dialog.png
 ```
 
 ### Test: Create a new task (requires open repository)
 ```bash
 APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App
 
+# Use existing PID or start new instance
+# APP_PID=<your_pid> or:
+# $APP &
+# APP_PID=$!
+
 # Click Task menu
-$APP --click TaskMenu
+$APP --pid $APP_PID --click TaskMenu
 
 # Click New Task
-$APP --click NewTaskMenuItem
+$APP --pid $APP_PID --click NewTaskMenuItem
 
 # Wait for dialog
-$APP --wait --for NewTaskDialog --timeout 3000
+$APP --pid $APP_PID --wait --for NewTaskDialog --timeout 3000
 
 # Type task description
-$APP --type "Add user authentication" --id TaskDescriptionInput
+$APP --pid $APP_PID --type "Add user authentication" --id TaskDescriptionInput
 
 # Click Create
-$APP --click TaskCreateButton
+$APP --pid $APP_PID --click TaskCreateButton
 ```
 
 ## Tips
 
-1. Always check `--ping` first to ensure the app is running
-2. Use `--screenshot` to capture state for verification
-3. Use `--wait --for <id>` when expecting dialogs to appear
-4. Menu items need the menu to be open first (click FileMenu, then click OpenRepositoryMenuItem)
-5. The binary path can be shortened with an alias: `APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App`
+1. **Always specify `--pid`** to target the correct app instance when multiple are running
+2. Always check `--ping` first to ensure the app is running and responsive
+3. Use `--screenshot` to capture state for verification
+4. Use `--wait --for <id>` when expecting dialogs to appear
+5. Menu items need the menu to be open first (click FileMenu, then click OpenRepositoryMenuItem)
+6. The binary path can be shortened with an alias: `APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App`
+7. Use `pgrep -f "ClaudeCodeOrchestrator.App"` to find all running instances and their PIDs
