@@ -370,35 +370,35 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             After resolving all conflicts, stage the resolved files and commit the merge.
             """;
 
-        // Check if there's an existing session for this worktree
-        var existingSession = _sessionService.GetSession(worktree.ActiveSessionId ?? "");
+        // Find existing session for this worktree by worktree ID (more reliable than ActiveSessionId
+        // which gets cleared when session ends)
+        var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
 
-        if (existingSession != null &&
-            existingSession.State is Core.Models.SessionState.Active or Core.Models.SessionState.Processing or Core.Models.SessionState.Completed)
+        string sessionId;
+        if (existingSession != null)
         {
-            // Send message to existing session (will be queued if processing)
+            // Send message to existing session - will resume if completed, queue if processing
             await _sessionService.SendMessageAsync(existingSession.Id, conflictPrompt);
+            sessionId = existingSession.Id;
+
+            // Update UI to show session is active again
+            worktree.HasActiveSession = true;
+            worktree.ActiveSessionId = sessionId;
         }
         else
         {
-            // Create a new session with the conflict resolution prompt
-            await CreateSessionForWorktreeAsync(worktreeInfo, conflictPrompt);
+            // No existing session - create a new one with the conflict resolution prompt
+            // This will trigger OnSessionCreated which creates the session document
+            var session = await _sessionService.CreateSessionAsync(worktreeInfo, conflictPrompt);
+            sessionId = session.Id;
+
+            // Update worktree with active session
+            worktree.HasActiveSession = true;
+            worktree.ActiveSessionId = sessionId;
         }
 
-        // Subscribe to session completion to retry merge
-        var sessionId = worktree.ActiveSessionId;
-        if (string.IsNullOrEmpty(sessionId))
-        {
-            // Wait a bit for the session to be created and ID assigned
-            await Task.Delay(500);
-            sessionId = worktree.ActiveSessionId;
-        }
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            // Store the worktree info for retry after session completes
-            _pendingMergeRetries[sessionId] = worktree;
-        }
+        // Store the worktree info for retry after session completes
+        _pendingMergeRetries[sessionId] = worktree;
     }
 
     // Track pending merge retries by session ID
@@ -519,7 +519,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSessionEnded(object? sender, SessionEndedEventArgs e)
     {
-        _dispatcher.Post(async () =>
+        _dispatcher.Post(() =>
         {
             // Update worktree to show no active session
             var worktree = Worktrees.FirstOrDefault(w =>
@@ -532,8 +532,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
 
             // Check if this session has a pending merge retry
-            await OnSessionEndedForMergeRetryAsync(e.SessionId, e.FinalState);
+            // Fire and forget with proper error handling
+            _ = SafeRetryMergeAsync(e.SessionId, e.FinalState);
         });
+    }
+
+    private async Task SafeRetryMergeAsync(string sessionId, Core.Models.SessionState finalState)
+    {
+        try
+        {
+            await OnSessionEndedForMergeRetryAsync(sessionId, finalState);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error", $"Failed to retry merge: {ex.Message}");
+        }
     }
 
     private async void OnClaudeSessionIdReceived(object? sender, ClaudeSessionIdReceivedEventArgs e)

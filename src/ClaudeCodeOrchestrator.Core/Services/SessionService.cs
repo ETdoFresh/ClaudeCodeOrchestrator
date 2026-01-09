@@ -272,6 +272,12 @@ public sealed class SessionService : ISessionService, IDisposable
         return _sessions.TryGetValue(sessionId, out var context) ? context.Session : null;
     }
 
+    public Session? GetSessionByWorktreeId(string worktreeId)
+    {
+        return _sessions.Values
+            .FirstOrDefault(c => c.Session.WorktreeId == worktreeId)?.Session;
+    }
+
     public IReadOnlyList<Session> GetActiveSessions()
     {
         return _sessions.Values

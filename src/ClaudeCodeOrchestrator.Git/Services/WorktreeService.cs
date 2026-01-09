@@ -326,7 +326,11 @@ public sealed class WorktreeService : IWorktreeService
         string targetBranch,
         CancellationToken cancellationToken)
     {
-        // First checkout target branch
+        // First, abort any existing merge that might be in progress
+        // This ensures the repo is in a clean state before we start
+        await AbortMergeAsync(repoPath, cancellationToken);
+
+        // Checkout target branch
         var checkoutPsi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "git",

@@ -60,6 +60,11 @@ public interface ISessionService
     Session? GetSession(string sessionId);
 
     /// <summary>
+    /// Gets a session by worktree ID.
+    /// </summary>
+    Session? GetSessionByWorktreeId(string worktreeId);
+
+    /// <summary>
     /// Gets all active sessions.
     /// </summary>
     IReadOnlyList<Session> GetActiveSessions();
