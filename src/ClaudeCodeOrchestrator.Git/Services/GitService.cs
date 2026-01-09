@@ -39,9 +39,9 @@ public sealed class GitService : IGitService
         }, cancellationToken);
     }
 
-    public Task<RepositoryInfo> InitializeRepositoryAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<RepositoryInfo> InitializeRepositoryAsync(string path, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() =>
+        var repoInfo = await Task.Run(() =>
         {
             // Initialize a new repository with 'main' as the default branch
             Repository.Init(path);
@@ -69,6 +69,11 @@ public sealed class GitService : IGitService
                 IsWorktree = false
             };
         }, cancellationToken);
+
+        // Ensure .worktrees directory is in .gitignore from the start
+        await EnsureGitIgnoreEntryAsync(path, WorktreesDirectoryName, cancellationToken);
+
+        return repoInfo;
     }
 
     public Task<IReadOnlyList<string>> GetBranchesAsync(string repoPath, CancellationToken cancellationToken = default)
