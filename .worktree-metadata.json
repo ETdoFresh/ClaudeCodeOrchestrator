@@ -1,9 +1,9 @@
 {
-  "Id": "68d9d79b",
-  "TaskDescription": "Can we remove title bar of left side bar",
-  "Title": "Remove Title Bar Left Side",
+  "Id": "c148905b",
+  "TaskDescription": "scrolling to the bottom of a worktree session still sometimes cuts off bottom of content, i think we need a little more scrollability",
+  "Title": "Scrolling Bottom Worktree Session Still",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T06:03:14.661871Z",
-  "ClaudeSessionId": "235190bf-c65a-475a-a21b-72224d3d0183",
+  "CreatedAt": "2026-01-09T06:08:59.333876Z",
+  "ClaudeSessionId": "14f94429-bc45-428f-b9ab-c38d9d3cddf5",
   "SessionWasActive": true
 }
