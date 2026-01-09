@@ -519,7 +519,16 @@ public class DockFactory : Factory
     /// <param name="layout">The layout orientation for splitting.</param>
     public void SplitAllDocuments(SplitLayout layout)
     {
-        if (_documentDock?.VisibleDockables is null || _rootProportional?.VisibleDockables is null)
+        if (_rootProportional?.VisibleDockables is null)
+            return;
+
+        // If already split, collapse first then re-split
+        if (CanCollapseSplitDocuments)
+        {
+            CollapseSplitDocuments();
+        }
+
+        if (_documentDock?.VisibleDockables is null)
             return;
 
         var documents = _documentDock.VisibleDockables.ToList();
