@@ -57,8 +57,8 @@
                                 <!-- User message - light grey box style -->
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
                                     <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6">
-                                        <Grid>
-                                            <StackPanel>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Grid.Column="0">
                                                 <!-- Image attachments -->
                                                 <ItemsControl ItemsSource="{Binding Images}"
                                                               IsVisible="{Binding HasImages}"
@@ -86,7 +86,7 @@
                                                 <!-- Text content -->
                                                 <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}" />
                                             </StackPanel>
-                                            <Button x:Name="CopyButton"
+                                            <Button Grid.Column="1" x:Name="CopyButton"
                                                     Command="{Binding CopyCommand}"
                                                     Content="📋"
                                                     ToolTip.Tip="Copy message"
@@ -123,9 +123,9 @@
                                             </Style>
                                         </Border.Styles>
                                         <StackPanel>
-                                            <Grid>
-                                                <html:HtmlLabel Text="{Binding TextContent, Converter={StaticResource MarkdownToHtml}}" />
-                                                <Button x:Name="CopyButton"
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <html:HtmlLabel Grid.Column="0" Text="{Binding TextContent, Converter={StaticResource MarkdownToHtml}}" />
+                                                <Button Grid.Column="1" x:Name="CopyButton"
                                                         Command="{Binding CopyCommand}"
                                                         Content="📋"
                                                         ToolTip.Tip="Copy message"
