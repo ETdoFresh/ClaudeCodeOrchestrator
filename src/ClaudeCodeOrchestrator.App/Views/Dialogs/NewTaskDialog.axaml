@@ -24,6 +24,7 @@
                      Foreground="#CCCCCC"
                      BorderBrush="#3F3F46"
                      CaretBrush="#CCCCCC"
+                     KeyDown="TaskDescriptionBox_KeyDown"
                      AutomationProperties.AutomationId="TaskDescriptionInput" />
 
             <!-- Image attachments area -->

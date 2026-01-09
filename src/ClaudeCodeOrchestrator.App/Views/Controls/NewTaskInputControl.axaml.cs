@@ -274,6 +274,27 @@ public partial class NewTaskInputControl : UserControl
         };
     }
 
+    private void TaskDescriptionBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        // Only handle Enter key without modifiers (Shift+Enter should still add newlines)
+        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None)
+            return;
+
+        if (sender is not TextBox textBox)
+            return;
+
+        // Check if cursor is at the end of the text
+        var text = textBox.Text ?? string.Empty;
+        var caretIndex = textBox.CaretIndex;
+
+        if (caretIndex != text.Length)
+            return;
+
+        // Trigger the Create button click
+        e.Handled = true;
+        Create_Click(sender, e);
+    }
+
     private void Create_Click(object? sender, RoutedEventArgs e)
     {
         var description = TaskDescriptionBox.Text?.Trim();
