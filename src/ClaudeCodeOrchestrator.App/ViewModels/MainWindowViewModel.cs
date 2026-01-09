@@ -271,6 +271,47 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Creates a task from the provided input (called from inline input control).
+    /// Title and branch name will be generated automatically.
+    /// </summary>
+    public async Task CreateTaskFromInputAsync(TaskInput taskInput)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            throw new InvalidOperationException("Please open a repository first.");
+        }
+
+        // Generate title and branch name
+        var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
+        var title = generated.Title;
+        var branchName = generated.BranchName;
+
+        // Create worktree with the generated title and branch name
+        var worktree = await _worktreeService.CreateWorktreeAsync(
+            CurrentRepositoryPath,
+            taskInput.Text,
+            title: title,
+            branchName: branchName);
+
+        // Add to list
+        var vm = WorktreeViewModel.FromModel(worktree);
+        SetupWorktreeCallbacks(vm);
+        Worktrees.Insert(0, vm);
+
+        // Sync to dock panel
+        Factory?.AddWorktree(vm);
+
+        // Create session for the worktree with images
+        // Create a new TaskInput with the generated title/branch
+        var fullTaskInput = TaskInput.Create(
+            taskInput.Text,
+            taskInput.Images.ToList(),
+            title,
+            branchName);
+        await CreateSessionForWorktreeAsync(worktree, fullTaskInput);
+    }
+
     [RelayCommand]
     private async Task RefreshWorktrees()
     {

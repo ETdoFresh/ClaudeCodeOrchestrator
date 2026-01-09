@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using ClaudeCodeOrchestrator.App.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -36,10 +37,16 @@ public partial class WorktreesViewModel : ToolViewModelBase
     }
 
     /// <summary>
-    /// Callback to invoke when the user requests to create a new task.
+    /// Callback to invoke when the user requests to create a new task (legacy, from button).
     /// This is wired up by the DockFactory to call MainWindowViewModel.CreateTaskAsync.
     /// </summary>
     public Func<Task>? OnCreateTaskRequested { get; set; }
+
+    /// <summary>
+    /// Callback to invoke when the user requests to create a new task with input (from inline control).
+    /// The TaskInput contains the description and images, title/branch will be generated.
+    /// </summary>
+    public Func<TaskInput, Task>? OnCreateTaskWithInputRequested { get; set; }
 
     /// <summary>
     /// Callback to invoke when the user requests to refresh worktrees.

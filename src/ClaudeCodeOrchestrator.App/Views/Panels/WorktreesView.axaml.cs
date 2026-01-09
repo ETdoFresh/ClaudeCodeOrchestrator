@@ -3,6 +3,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.ViewModels;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.Git.Models;
@@ -32,6 +33,9 @@ public partial class WorktreesView : UserControl
     public WorktreesView()
     {
         InitializeComponent();
+
+        // Subscribe to task creation event from inline input
+        NewTaskInput.TaskCreationRequested += OnTaskCreationRequested;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)
@@ -50,6 +54,32 @@ public partial class WorktreesView : UserControl
         base.OnUnloaded(e);
         WorktreesList.SelectionChanged -= OnSelectionChanged;
         WorktreesList.DoubleTapped -= OnDoubleTapped;
+        NewTaskInput.TaskCreationRequested -= OnTaskCreationRequested;
+    }
+
+    private async void OnTaskCreationRequested(object? sender, TaskInput taskInput)
+    {
+        if (DataContext is not WorktreesViewModel vm) return;
+
+        NewTaskInput.IsCreating = true;
+        NewTaskInput.ClearError();
+
+        try
+        {
+            if (vm.OnCreateTaskWithInputRequested != null)
+            {
+                await vm.OnCreateTaskWithInputRequested(taskInput);
+                NewTaskInput.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            NewTaskInput.ShowError(ex.Message);
+        }
+        finally
+        {
+            NewTaskInput.IsCreating = false;
+        }
     }
 
     private async void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
