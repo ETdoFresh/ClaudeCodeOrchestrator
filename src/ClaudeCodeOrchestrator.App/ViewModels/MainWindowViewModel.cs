@@ -275,7 +275,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         CurrentRepositoryPath = path;
         IsRepositoryOpen = true;
-        WindowTitle = $"Claude Code Orchestrator - {Path.GetFileName(path)}";
+        // TrimEnd to handle paths with trailing slashes
+        var repoName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        WindowTitle = $"Claude Code Orchestrator - {repoName}";
     }
 
     public async Task RefreshWorktreesAsync()
