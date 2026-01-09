@@ -14,11 +14,11 @@ public partial class WorktreesView : UserControl
     public static FuncValueConverter<WorktreeStatus, IBrush> StatusToBrushConverter { get; } =
         new(status => status switch
         {
-            WorktreeStatus.Active => new SolidColorBrush(Color.Parse("#0E639C")),
-            WorktreeStatus.HasChanges => new SolidColorBrush(Color.Parse("#CCA700")),
-            WorktreeStatus.ReadyToMerge => new SolidColorBrush(Color.Parse("#388A34")),
-            WorktreeStatus.Merged => new SolidColorBrush(Color.Parse("#4EC9B0")),
-            WorktreeStatus.Locked => new SolidColorBrush(Color.Parse("#6C2022")),
+            WorktreeStatus.Active => new SolidColorBrush(Color.Parse("#0E639C")),      // Blue - Active
+            WorktreeStatus.HasChanges => new SolidColorBrush(Color.Parse("#0E639C")),  // Blue - Active (same as Active)
+            WorktreeStatus.ReadyToMerge => new SolidColorBrush(Color.Parse("#388A34")), // Green - Ready
+            WorktreeStatus.Merged => new SolidColorBrush(Color.Parse("#4EC9B0")),      // Cyan - Complete
+            WorktreeStatus.Locked => new SolidColorBrush(Color.Parse("#6C2022")),      // Red - Locked
             _ => new SolidColorBrush(Color.Parse("#666666"))
         });
 
