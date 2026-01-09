@@ -62,4 +62,11 @@ public interface IGitService
         string repoPath,
         string branchName,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pushes all local branches to the remote.
+    /// </summary>
+    Task PushAllBranchesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
 }

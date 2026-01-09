@@ -236,6 +236,26 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await RefreshWorktreesAsync();
     }
 
+    public async Task PushAllBranchesAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            await _dialogService.ShowErrorAsync("No Repository",
+                "Please open a repository first.");
+            return;
+        }
+
+        try
+        {
+            await _gitService.PushAllBranchesAsync(CurrentRepositoryPath);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Push Failed",
+                $"Failed to push branches: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void CloseRepository()
     {
