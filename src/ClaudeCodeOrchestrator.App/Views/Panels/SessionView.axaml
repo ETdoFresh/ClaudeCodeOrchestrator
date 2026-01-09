@@ -127,15 +127,23 @@
                          AutomationProperties.AutomationId="MessageInput" />
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
+                    <!-- Send button - shown when not processing -->
                     <Button Command="{Binding SendMessageCommand}"
                             Content="Send"
-                            IsVisible="{Binding !IsProcessing}"
+                            IsVisible="{Binding ShowSendButton}"
                             AutomationProperties.AutomationId="SendMessageButton" />
+                    <!-- Stop button - shown when processing and input is empty -->
                     <Button Command="{Binding InterruptCommand}"
                             Content="Stop"
                             Background="#6C2022"
-                            IsVisible="{Binding IsProcessing}"
+                            IsVisible="{Binding ShowStopButton}"
                             AutomationProperties.AutomationId="StopButton" />
+                    <!-- Queue button - shown when processing and has input text -->
+                    <Button Command="{Binding QueueMessageCommand}"
+                            Content="Queue"
+                            Background="#4A6C20"
+                            IsVisible="{Binding ShowQueueButton}"
+                            AutomationProperties.AutomationId="QueueButton" />
                 </StackPanel>
             </Grid>
         </Border>

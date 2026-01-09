@@ -24,6 +24,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private decimal _totalCost;
     private string _worktreeBranch = string.Empty;
     private bool _isPreview;
+    private string _queuedMessage = string.Empty;
+
+    /// <summary>
+    /// Callback to refresh worktrees when session completes.
+    /// </summary>
+    public Func<Task>? OnSessionCompleted { get; set; }
 
     public string SessionId
     {
@@ -51,6 +57,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             if (SetProperty(ref _inputText, value))
             {
                 SendMessageCommand.NotifyCanExecuteChanged();
+                QueueMessageCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(ShowStopButton));
+                OnPropertyChanged(nameof(ShowQueueButton));
+                OnPropertyChanged(nameof(ActionButtonText));
             }
         }
     }
@@ -64,9 +74,35 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             {
                 SendMessageCommand.NotifyCanExecuteChanged();
                 InterruptCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(ShowSendButton));
+                OnPropertyChanged(nameof(ShowStopButton));
+                OnPropertyChanged(nameof(ShowQueueButton));
+                OnPropertyChanged(nameof(ActionButtonText));
             }
         }
     }
+
+    /// <summary>
+    /// True when not processing (show Send button).
+    /// </summary>
+    public bool ShowSendButton => !IsProcessing;
+
+    /// <summary>
+    /// True when processing and input is empty (show Stop button).
+    /// </summary>
+    public bool ShowStopButton => IsProcessing && string.IsNullOrWhiteSpace(InputText);
+
+    /// <summary>
+    /// True when processing and has input text (show Queue button).
+    /// </summary>
+    public bool ShowQueueButton => IsProcessing && !string.IsNullOrWhiteSpace(InputText);
+
+    /// <summary>
+    /// Gets the action button text based on current state.
+    /// </summary>
+    public string ActionButtonText => IsProcessing
+        ? (string.IsNullOrWhiteSpace(InputText) ? "Stop" : "Queue")
+        : "Send";
 
     public decimal TotalCost
     {
@@ -102,7 +138,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// <summary>
     /// Constructor for session-backed documents.
     /// </summary>
-    public SessionDocumentViewModel(string sessionId, string title, string worktreeBranch, string worktreeId)
+    public SessionDocumentViewModel(string sessionId, string title, string worktreeBranch, string worktreeId, bool isActiveSession = true)
     {
         SessionId = sessionId;
         WorktreeId = worktreeId;
@@ -111,6 +147,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         WorktreeBranch = worktreeBranch;
         CanClose = true;
         CanFloat = true;
+
+        // If this is a new active session, it starts in processing state
+        IsProcessing = isActiveSession;
 
         // Get services
         _sessionService = ServiceLocator.GetService<ISessionService>();
@@ -188,22 +227,67 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         Messages.Add(vm);
     }
 
-    private void ProcessResultMessage(SDKResultMessage msg)
+    private async void ProcessResultMessage(SDKResultMessage msg)
     {
         TotalCost = msg.TotalCostUsd;
         IsProcessing = false;
 
         State = msg.IsError ? SessionState.Error : SessionState.Completed;
+
+        // Check if there's a queued message to send
+        if (!string.IsNullOrWhiteSpace(_queuedMessage))
+        {
+            var queuedText = _queuedMessage;
+            _queuedMessage = string.Empty;
+
+            // Add user message to UI
+            Messages.Add(new UserMessageViewModel
+            {
+                Uuid = Guid.NewGuid().ToString(),
+                Content = queuedText
+            });
+            IsProcessing = true;
+
+            try
+            {
+                if (_sessionService != null)
+                {
+                    await _sessionService.SendMessageAsync(SessionId, queuedText);
+                }
+            }
+            catch
+            {
+                IsProcessing = false;
+            }
+        }
+        else
+        {
+            // Session completed, refresh worktrees to show updated status
+            if (OnSessionCompleted != null)
+            {
+                await OnSessionCompleted();
+            }
+        }
     }
 
     private void OnSessionStateChanged(object? sender, SessionStateChangedEventArgs e)
     {
         if (e.Session.Id != SessionId) return;
 
-        _dispatcher?.Post(() =>
+        _dispatcher?.Post(async () =>
         {
             State = e.Session.State;
-            IsProcessing = e.Session.State == SessionState.Processing;
+            // Session is processing when Active (Claude working) or Processing (sending message)
+            IsProcessing = e.Session.State is SessionState.Active or SessionState.Processing or SessionState.Starting;
+
+            // If session was cancelled or completed, refresh worktrees
+            if (e.Session.State is SessionState.Cancelled or SessionState.Completed or SessionState.Error)
+            {
+                if (OnSessionCompleted != null)
+                {
+                    await OnSessionCompleted();
+                }
+            }
         });
     }
 
@@ -237,6 +321,24 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
     private bool CanSendMessage() => !IsProcessing && !string.IsNullOrWhiteSpace(InputText);
 
+    [RelayCommand(CanExecute = nameof(CanQueueMessage))]
+    private void QueueMessage()
+    {
+        if (string.IsNullOrWhiteSpace(InputText)) return;
+
+        _queuedMessage = InputText;
+        InputText = string.Empty;
+
+        // Show the queued message in the UI as a pending user message
+        Messages.Add(new UserMessageViewModel
+        {
+            Uuid = Guid.NewGuid().ToString(),
+            Content = $"[Queued] {_queuedMessage}"
+        });
+    }
+
+    private bool CanQueueMessage() => IsProcessing && !string.IsNullOrWhiteSpace(InputText);
+
     [RelayCommand(CanExecute = nameof(CanInterrupt))]
     private async Task InterruptAsync()
     {
@@ -263,6 +365,8 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
         State = session.State;
         TotalCost = session.TotalCostUsd;
+        // Update IsProcessing based on session state
+        IsProcessing = session.State is SessionState.Active or SessionState.Processing or SessionState.Starting;
 
         foreach (var message in session.Messages)
         {
