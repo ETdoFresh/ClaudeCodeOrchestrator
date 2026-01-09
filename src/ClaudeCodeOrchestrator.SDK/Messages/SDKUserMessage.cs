@@ -56,11 +56,11 @@ public sealed record SDKUserMessage : ISDKMessage
             blocks.Add(new UserContentBlock
             {
                 Type = "image",
-                Content = new
+                Source = new ImageBlockSource
                 {
-                    type = "base64",
-                    media_type = image.Source.MediaType,
-                    data = image.Source.Data
+                    Type = "base64",
+                    MediaType = image.Source.MediaType,
+                    Data = image.Source.Data
                 }
             });
         }
@@ -68,7 +68,7 @@ public sealed record SDKUserMessage : ISDKMessage
         blocks.Add(new UserContentBlock
         {
             Type = "text",
-            Content = text
+            Text = text
         });
 
         return new SDKUserMessage
@@ -128,18 +128,130 @@ public sealed record UserContent
 }
 
 /// <summary>
-/// A content block in user message (tool result, text, etc.)
+/// A content block in user message (tool result, text, image, etc.)
 /// </summary>
+[JsonConverter(typeof(UserContentBlockConverter))]
 public sealed record UserContentBlock
 {
     [JsonPropertyName("type")]
     public string Type { get; init; } = "text";
 
     [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ToolUseId { get; init; }
 
-    [JsonPropertyName("content")]
+    /// <summary>
+    /// Content for text and tool_result blocks.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Content { get; init; }
+
+    /// <summary>
+    /// Source for image blocks.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ImageBlockSource? Source { get; init; }
+
+    /// <summary>
+    /// Text content for text blocks.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Text { get; init; }
+}
+
+/// <summary>
+/// Source for an image content block in user messages.
+/// </summary>
+public sealed record ImageBlockSource
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "base64";
+
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
+}
+
+/// <summary>
+/// JSON converter for UserContentBlock that serializes based on block type.
+/// </summary>
+public class UserContentBlockConverter : JsonConverter<UserContentBlock>
+{
+    public override UserContentBlock Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var root = doc.RootElement;
+
+        var type = root.GetProperty("type").GetString() ?? "text";
+        var block = new UserContentBlock { Type = type };
+
+        if (type == "image" && root.TryGetProperty("source", out var sourceElement))
+        {
+            return block with
+            {
+                Source = new ImageBlockSource
+                {
+                    Type = sourceElement.GetProperty("type").GetString() ?? "base64",
+                    MediaType = sourceElement.GetProperty("media_type").GetString() ?? "",
+                    Data = sourceElement.GetProperty("data").GetString() ?? ""
+                }
+            };
+        }
+        else if (type == "text")
+        {
+            if (root.TryGetProperty("text", out var textElement))
+            {
+                return block with { Text = textElement.GetString() };
+            }
+            if (root.TryGetProperty("content", out var contentElement) && contentElement.ValueKind == JsonValueKind.String)
+            {
+                return block with { Text = contentElement.GetString() };
+            }
+        }
+        else if (root.TryGetProperty("tool_use_id", out var toolUseIdElement))
+        {
+            var content = root.TryGetProperty("content", out var contentEl) ? contentEl.GetString() : null;
+            return block with { ToolUseId = toolUseIdElement.GetString(), Content = content };
+        }
+
+        return block;
+    }
+
+    public override void Write(Utf8JsonWriter writer, UserContentBlock value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+
+        writer.WriteString("type", value.Type);
+
+        if (value.Type == "image" && value.Source != null)
+        {
+            writer.WritePropertyName("source");
+            writer.WriteStartObject();
+            writer.WriteString("type", value.Source.Type);
+            writer.WriteString("media_type", value.Source.MediaType);
+            writer.WriteString("data", value.Source.Data);
+            writer.WriteEndObject();
+        }
+        else if (value.Type == "text")
+        {
+            writer.WriteString("text", value.Text ?? value.Content?.ToString() ?? "");
+        }
+        else if (value.Type == "tool_result")
+        {
+            if (value.ToolUseId != null)
+            {
+                writer.WriteString("tool_use_id", value.ToolUseId);
+            }
+            if (value.Content != null)
+            {
+                writer.WriteString("content", value.Content.ToString());
+            }
+        }
+
+        writer.WriteEndObject();
+    }
 }
 
 /// <summary>
