@@ -210,10 +210,10 @@ public partial class DiffBrowserViewModel : ToolViewModelBase
 
     private void BuildDiffTree(IReadOnlyList<DiffEntry> entries)
     {
-        // Build a tree structure from flat diff entries
+        // Build a tree structure from flat diff entries, excluding identical files
         var rootItems = new Dictionary<string, DiffFileItemViewModel>();
 
-        foreach (var entry in entries)
+        foreach (var entry in entries.Where(e => e.ChangeType != DiffChangeType.Unmodified))
         {
             var parts = entry.FilePath.Split('/', '\\');
             DiffFileItemViewModel? parent = null;
