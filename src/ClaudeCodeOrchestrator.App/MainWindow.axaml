@@ -20,6 +20,11 @@
             <panels:FileBrowserView />
         </DataTemplate>
 
+        <!-- Diff Browser -->
+        <DataTemplate DataType="{x:Type dockVm:DiffBrowserViewModel}">
+            <panels:DiffBrowserView />
+        </DataTemplate>
+
         <!-- Session Document -->
         <DataTemplate DataType="{x:Type dockVm:SessionDocumentViewModel}">
             <panels:SessionView />
@@ -33,6 +38,11 @@
         <!-- File Document -->
         <DataTemplate DataType="{x:Type dockVm:FileDocumentViewModel}">
             <panels:FileView />
+        </DataTemplate>
+
+        <!-- Diff Document -->
+        <DataTemplate DataType="{x:Type dockVm:DiffDocumentViewModel}">
+            <panels:DiffView />
         </DataTemplate>
 
         <!-- Settings -->
