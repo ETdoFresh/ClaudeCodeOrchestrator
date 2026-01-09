@@ -1,4 +1,8 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ClaudeCodeOrchestrator.Core.Models;
@@ -79,6 +83,23 @@ public partial class UserMessageViewModel : MessageViewModel
 {
     [ObservableProperty]
     private string _content = string.Empty;
+
+    [RelayCommand]
+    private async Task CopyAsync()
+    {
+        var clipboard = GetClipboard();
+        if (clipboard != null)
+        {
+            await clipboard.SetTextAsync(Content);
+        }
+    }
+
+    private static IClipboard? GetClipboard()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            return TopLevel.GetTopLevel(desktop.MainWindow)?.Clipboard;
+        return null;
+    }
 }
 
 /// <summary>
@@ -96,6 +117,23 @@ public partial class AssistantMessageViewModel : MessageViewModel
     private bool _showThinking;
 
     public ObservableCollection<ToolUseViewModel> ToolUses { get; } = new();
+
+    [RelayCommand]
+    private async Task CopyAsync()
+    {
+        var clipboard = GetClipboard();
+        if (clipboard != null)
+        {
+            await clipboard.SetTextAsync(TextContent);
+        }
+    }
+
+    private static IClipboard? GetClipboard()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            return TopLevel.GetTopLevel(desktop.MainWindow)?.Clipboard;
+        return null;
+    }
 }
 
 /// <summary>
