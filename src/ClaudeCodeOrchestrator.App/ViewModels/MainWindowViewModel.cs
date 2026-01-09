@@ -461,6 +461,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Close any open session documents for this worktree
         Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
 
+        // Close any open file documents from this worktree's path
+        Factory?.RemoveFileDocumentsByWorktreePath(worktree.Path);
+
         // Delete the worktree since merge is complete
         await _worktreeService.DeleteWorktreeAsync(
             CurrentRepositoryPath,
@@ -589,13 +592,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (!confirmed) return;
 
+            // Close any open session documents for this worktree
+            Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
+
+            // Close any open file documents from this worktree's path
+            Factory?.RemoveFileDocumentsByWorktreePath(worktree.Path);
+
             await _worktreeService.DeleteWorktreeAsync(
                 CurrentRepositoryPath,
                 worktree.Id,
                 force: true);
-
-            // Close any open session documents for this worktree
-            Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
 
             Worktrees.Remove(worktree);
 

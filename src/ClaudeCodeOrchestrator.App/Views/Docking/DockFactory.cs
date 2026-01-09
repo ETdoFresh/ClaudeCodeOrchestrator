@@ -255,6 +255,28 @@ public class DockFactory : Factory
     }
 
     /// <summary>
+    /// Removes all file documents that are inside a worktree path.
+    /// </summary>
+    public void RemoveFileDocumentsByWorktreePath(string worktreePath)
+    {
+        if (_documentDock?.VisibleDockables is null || string.IsNullOrEmpty(worktreePath)) return;
+
+        // Normalize path for comparison
+        var normalizedWorktreePath = worktreePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        var docsToRemove = _documentDock.VisibleDockables
+            .OfType<FileDocumentViewModel>()
+            .Where(d => d.FilePath.StartsWith(normalizedWorktreePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                     || d.FilePath.Equals(normalizedWorktreePath, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var doc in docsToRemove)
+        {
+            _documentDock.VisibleDockables.Remove(doc);
+        }
+    }
+
+    /// <summary>
     /// Updates the file browser with a new root path.
     /// </summary>
     public void UpdateFileBrowser(string? path)
