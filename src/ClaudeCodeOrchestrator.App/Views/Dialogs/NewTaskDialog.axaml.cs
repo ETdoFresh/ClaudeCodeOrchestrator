@@ -30,8 +30,8 @@ public partial class NewTaskDialog : Window
         InitializeComponent();
         Opened += OnOpened;
 
-        // Handle keyboard shortcuts
-        KeyDown += OnKeyDown;
+        // Subscribe to paste event on the task description box - this is the proper way to intercept paste in Avalonia
+        TaskDescriptionBox.PastingFromClipboard += TaskDescriptionBox_PastingFromClipboard;
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -39,17 +39,13 @@ public partial class NewTaskDialog : Window
         TaskDescriptionBox.Focus();
     }
 
-    private async void OnKeyDown(object? sender, KeyEventArgs e)
+    private async void TaskDescriptionBox_PastingFromClipboard(object? sender, RoutedEventArgs e)
     {
-        // Handle Ctrl+V (Windows/Linux) or Cmd+V (macOS) for paste
-        if (e.Key == Key.V && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
+        // This event fires when content is being pasted - check for images first
+        var pastedImage = await TryPasteImageFromClipboard();
+        if (pastedImage)
         {
-            // Only handle the event if we successfully pasted an image
-            // Otherwise, let the TextBox handle text paste normally
-            if (await TryPasteImageFromClipboard())
-            {
-                e.Handled = true;
-            }
+            e.Handled = true; // Prevent default text paste if we handled an image
         }
     }
 
@@ -67,7 +63,14 @@ public partial class NewTaskDialog : Window
             var formats = await clipboard.GetFormatsAsync();
 
             // Check for various image formats (different platforms use different names)
-            string[] imageFormats = { "image/png", "PNG", "image/jpeg", "JPEG", "image/bmp", "BMP", "image/gif", "GIF" };
+            // Include macOS UTI formats (public.png, public.jpeg, etc.)
+            string[] imageFormats = {
+                "image/png", "PNG", "public.png",
+                "image/jpeg", "JPEG", "public.jpeg",
+                "image/bmp", "BMP", "public.bmp",
+                "image/gif", "GIF", "public.gif",
+                "image/tiff", "TIFF", "public.tiff"
+            };
 
             foreach (var format in imageFormats)
             {
@@ -77,7 +80,7 @@ public partial class NewTaskDialog : Window
 
                 if (data is byte[] imageBytes && imageBytes.Length > 0)
                 {
-                    var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                    var mediaType = GetMediaTypeForFormat(format);
                     AddImageAttachment(imageBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
                     return true;
                 }
@@ -90,7 +93,7 @@ public partial class NewTaskDialog : Window
                     var bytes = ms.ToArray();
                     if (bytes.Length > 0)
                     {
-                        var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                        var mediaType = GetMediaTypeForFormat(format);
                         AddImageAttachment(bytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
                         return true;
                     }
@@ -128,15 +131,31 @@ public partial class NewTaskDialog : Window
         }
     }
 
+    private static string GetMediaTypeForFormat(string format)
+    {
+        return format.ToLowerInvariant() switch
+        {
+            "image/png" or "png" or "public.png" => "image/png",
+            "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "image/jpeg",
+            "image/gif" or "gif" or "public.gif" => "image/gif",
+            "image/bmp" or "bmp" or "public.bmp" => "image/bmp",
+            "image/tiff" or "tiff" or "public.tiff" => "image/tiff",
+            "image/webp" or "webp" or "public.webp" => "image/webp",
+            _ when format.StartsWith("image/") => format,
+            _ => "image/png"
+        };
+    }
+
     private static string GetExtensionForFormat(string format)
     {
         return format.ToLowerInvariant() switch
         {
-            "image/png" or "png" => "png",
-            "image/jpeg" or "jpeg" or "jpg" => "jpg",
-            "image/gif" or "gif" => "gif",
-            "image/bmp" or "bmp" => "bmp",
-            "image/webp" or "webp" => "webp",
+            "image/png" or "png" or "public.png" => "png",
+            "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "jpg",
+            "image/gif" or "gif" or "public.gif" => "gif",
+            "image/bmp" or "bmp" or "public.bmp" => "bmp",
+            "image/tiff" or "tiff" or "public.tiff" => "tiff",
+            "image/webp" or "webp" or "public.webp" => "webp",
             _ => "png"
         };
     }
