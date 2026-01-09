@@ -8,6 +8,12 @@ public partial class NewTaskDialog : Window
     public NewTaskDialog()
     {
         InitializeComponent();
+        Opened += OnOpened;
+    }
+
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        TaskDescriptionBox.Focus();
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs e)
