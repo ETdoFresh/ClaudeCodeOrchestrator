@@ -27,6 +27,12 @@ public partial class WorktreesViewModel : ToolViewModelBase
     public Func<Task>? OnRefreshRequested { get; set; }
 
     /// <summary>
+    /// Callback to invoke when the user requests to push all branches.
+    /// This is wired up by the DockFactory to call MainWindowViewModel.PushAllBranchesAsync.
+    /// </summary>
+    public Func<Task>? OnPushRequested { get; set; }
+
+    /// <summary>
     /// Callback to invoke when a worktree is selected (single-clicked).
     /// First parameter is the worktree, second parameter is whether it's a preview (single-click = true).
     /// </summary>
@@ -50,6 +56,13 @@ public partial class WorktreesViewModel : ToolViewModelBase
     {
         if (OnRefreshRequested != null)
             await OnRefreshRequested();
+    }
+
+    [RelayCommand]
+    private async Task PushAsync()
+    {
+        if (OnPushRequested != null)
+            await OnPushRequested();
     }
 
     /// <summary>
