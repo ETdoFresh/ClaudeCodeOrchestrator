@@ -4,8 +4,22 @@ using Dock.Model.Core;
 using Dock.Model.Mvvm;
 using Dock.Model.Mvvm.Controls;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ClaudeCodeOrchestrator.App.Views.Docking;
+
+/// <summary>
+/// Layout orientation for splitting tabs.
+/// </summary>
+public enum SplitLayout
+{
+    /// <summary>Split tabs vertically (side by side).</summary>
+    Vertical,
+    /// <summary>Split tabs horizontally (stacked).</summary>
+    Horizontal,
+    /// <summary>Split tabs in a grid (2x2 or similar).</summary>
+    Grid
+}
 
 /// <summary>
 /// Factory for creating the dock layout.
@@ -18,6 +32,8 @@ public class DockFactory : Factory
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
     private bool _isAddingDocument;
+    private IRootDock? _rootDock;
+    private IProportionalDock? _rootProportional;
 
     public DockFactory(object context)
     {
@@ -69,7 +85,7 @@ public class DockFactory : Factory
         }
 
         // Root proportional dock (left panel + documents)
-        var rootProportional = new ProportionalDock
+        _rootProportional = new ProportionalDock
         {
             Id = "RootProportional",
             Orientation = Orientation.Horizontal,
@@ -86,14 +102,14 @@ public class DockFactory : Factory
         _documentDock.Proportion = 0.75;
 
         // Root dock
-        var rootDock = CreateRootDock();
-        rootDock.Id = "Root";
-        rootDock.Title = "Root";
-        rootDock.ActiveDockable = rootProportional;
-        rootDock.DefaultDockable = rootProportional;
-        rootDock.VisibleDockables = CreateList<IDockable>(rootProportional);
+        _rootDock = CreateRootDock();
+        _rootDock.Id = "Root";
+        _rootDock.Title = "Root";
+        _rootDock.ActiveDockable = _rootProportional;
+        _rootDock.DefaultDockable = _rootProportional;
+        _rootDock.VisibleDockables = CreateList<IDockable>(_rootProportional);
 
-        return rootDock;
+        return _rootDock;
     }
 
     /// <summary>
@@ -496,4 +512,335 @@ public class DockFactory : Factory
 
         base.InitLayout(layout);
     }
+
+    /// <summary>
+    /// Splits all open document tabs into separate panes.
+    /// </summary>
+    /// <param name="layout">The layout orientation for splitting.</param>
+    public void SplitAllDocuments(SplitLayout layout)
+    {
+        if (_documentDock?.VisibleDockables is null || _rootProportional?.VisibleDockables is null)
+            return;
+
+        var documents = _documentDock.VisibleDockables.ToList();
+
+        // Need at least 2 documents to split
+        if (documents.Count < 2)
+            return;
+
+        // Remove the old document dock from the root proportional
+        var dockIndex = _rootProportional.VisibleDockables.IndexOf(_documentDock);
+        if (dockIndex < 0)
+            return;
+
+        // Create new document docks based on layout
+        var newDocumentDocks = CreateSplitDocumentDocks(documents, layout);
+        if (newDocumentDocks is null)
+            return;
+
+        // Replace the single document dock with the new split layout
+        _rootProportional.VisibleDockables.RemoveAt(dockIndex);
+        _rootProportional.VisibleDockables.Insert(dockIndex, newDocumentDocks);
+
+        // Update the primary document dock reference to the first one for future tab additions
+        _documentDock = GetFirstDocumentDock(newDocumentDocks);
+
+        // Initialize the new layout
+        InitDockable(newDocumentDocks, _rootProportional);
+    }
+
+    /// <summary>
+    /// Collapses all split document panes back into a single pane.
+    /// </summary>
+    public void CollapseSplitDocuments()
+    {
+        if (_rootProportional?.VisibleDockables is null)
+            return;
+
+        // Find all document docks in the layout
+        var allDocuments = new List<IDockable>();
+        CollectAllDocuments(_rootProportional, allDocuments);
+
+        if (allDocuments.Count == 0)
+            return;
+
+        // Find the proportional dock that contains the split layout (not the main document dock)
+        IProportionalDock? splitContainer = null;
+        int splitIndex = -1;
+        for (int i = 0; i < _rootProportional.VisibleDockables.Count; i++)
+        {
+            if (_rootProportional.VisibleDockables[i] is IProportionalDock propDock &&
+                propDock.Id != "RootProportional")
+            {
+                splitContainer = propDock;
+                splitIndex = i;
+                break;
+            }
+        }
+
+        if (splitContainer is null || splitIndex < 0)
+            return;
+
+        // Create a new single document dock with all documents
+        var newDocumentDock = new DocumentDock
+        {
+            Id = "DocumentDock",
+            Title = "Documents",
+            IsCollapsable = false,
+            VisibleDockables = CreateList<IDockable>(),
+            CanCreateDocument = false,
+            Proportion = 0.75
+        };
+
+        foreach (var doc in allDocuments)
+        {
+            newDocumentDock.VisibleDockables.Add(doc);
+        }
+
+        if (allDocuments.Count > 0)
+        {
+            newDocumentDock.ActiveDockable = allDocuments[0];
+        }
+
+        // Replace the split container with the single document dock
+        _rootProportional.VisibleDockables.RemoveAt(splitIndex);
+        _rootProportional.VisibleDockables.Insert(splitIndex, newDocumentDock);
+
+        // Update reference
+        _documentDock = newDocumentDock;
+
+        // Subscribe to property changes for preview behavior
+        if (_documentDock is System.ComponentModel.INotifyPropertyChanged notifyPropertyChanged)
+        {
+            notifyPropertyChanged.PropertyChanged += OnDocumentDockPropertyChanged;
+        }
+
+        InitDockable(newDocumentDock, _rootProportional);
+    }
+
+    private IProportionalDock? CreateSplitDocumentDocks(List<IDockable> documents, SplitLayout layout)
+    {
+        return layout switch
+        {
+            SplitLayout.Vertical => CreateVerticalSplit(documents),
+            SplitLayout.Horizontal => CreateHorizontalSplit(documents),
+            SplitLayout.Grid => CreateGridSplit(documents),
+            _ => null
+        };
+    }
+
+    private IProportionalDock CreateVerticalSplit(List<IDockable> documents)
+    {
+        var docks = new List<IDockable>();
+        var proportion = 1.0 / documents.Count;
+        var counter = 0;
+
+        foreach (var doc in documents)
+        {
+            if (docks.Count > 0)
+            {
+                docks.Add(new ProportionalDockSplitter { Id = $"VSplitter_{counter}" });
+            }
+
+            var docDock = new DocumentDock
+            {
+                Id = $"DocumentDock_{counter}",
+                Title = "Documents",
+                IsCollapsable = false,
+                VisibleDockables = CreateList<IDockable>(doc),
+                ActiveDockable = doc,
+                CanCreateDocument = false,
+                Proportion = proportion
+            };
+            docks.Add(docDock);
+            counter++;
+        }
+
+        return new ProportionalDock
+        {
+            Id = "DocumentSplitVertical",
+            Orientation = Orientation.Horizontal,
+            VisibleDockables = CreateList(docks.ToArray()),
+            Proportion = 0.75
+        };
+    }
+
+    private IProportionalDock CreateHorizontalSplit(List<IDockable> documents)
+    {
+        var docks = new List<IDockable>();
+        var proportion = 1.0 / documents.Count;
+        var counter = 0;
+
+        foreach (var doc in documents)
+        {
+            if (docks.Count > 0)
+            {
+                docks.Add(new ProportionalDockSplitter { Id = $"HSplitter_{counter}" });
+            }
+
+            var docDock = new DocumentDock
+            {
+                Id = $"DocumentDock_{counter}",
+                Title = "Documents",
+                IsCollapsable = false,
+                VisibleDockables = CreateList<IDockable>(doc),
+                ActiveDockable = doc,
+                CanCreateDocument = false,
+                Proportion = proportion
+            };
+            docks.Add(docDock);
+            counter++;
+        }
+
+        return new ProportionalDock
+        {
+            Id = "DocumentSplitHorizontal",
+            Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList(docks.ToArray()),
+            Proportion = 0.75
+        };
+    }
+
+    private IProportionalDock CreateGridSplit(List<IDockable> documents)
+    {
+        // Calculate grid dimensions (aim for roughly square)
+        var count = documents.Count;
+        var cols = (int)Math.Ceiling(Math.Sqrt(count));
+        var rows = (int)Math.Ceiling((double)count / cols);
+
+        var rowDocks = new List<IDockable>();
+        var docIndex = 0;
+        var rowProportion = 1.0 / rows;
+
+        for (int row = 0; row < rows && docIndex < count; row++)
+        {
+            if (rowDocks.Count > 0)
+            {
+                rowDocks.Add(new ProportionalDockSplitter { Id = $"RowSplitter_{row}" });
+            }
+
+            var colDocks = new List<IDockable>();
+            var colProportion = 1.0 / cols;
+
+            for (int col = 0; col < cols && docIndex < count; col++)
+            {
+                if (colDocks.Count > 0)
+                {
+                    colDocks.Add(new ProportionalDockSplitter { Id = $"ColSplitter_{row}_{col}" });
+                }
+
+                var doc = documents[docIndex++];
+                var docDock = new DocumentDock
+                {
+                    Id = $"DocumentDock_{row}_{col}",
+                    Title = "Documents",
+                    IsCollapsable = false,
+                    VisibleDockables = CreateList<IDockable>(doc),
+                    ActiveDockable = doc,
+                    CanCreateDocument = false,
+                    Proportion = colProportion
+                };
+                colDocks.Add(docDock);
+            }
+
+            var rowDock = new ProportionalDock
+            {
+                Id = $"DocRow_{row}",
+                Orientation = Orientation.Horizontal,
+                VisibleDockables = CreateList(colDocks.ToArray()),
+                Proportion = rowProportion
+            };
+            rowDocks.Add(rowDock);
+        }
+
+        return new ProportionalDock
+        {
+            Id = "DocumentSplitGrid",
+            Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList(rowDocks.ToArray()),
+            Proportion = 0.75
+        };
+    }
+
+    private void CollectAllDocuments(IDockable dockable, List<IDockable> documents)
+    {
+        if (dockable is IDocumentDock docDock && docDock.VisibleDockables != null)
+        {
+            foreach (var doc in docDock.VisibleDockables)
+            {
+                if (doc is DocumentViewModelBase)
+                {
+                    documents.Add(doc);
+                }
+            }
+        }
+        else if (dockable is IDock dock && dock.VisibleDockables != null)
+        {
+            foreach (var child in dock.VisibleDockables)
+            {
+                CollectAllDocuments(child, documents);
+            }
+        }
+    }
+
+    private IDocumentDock? GetFirstDocumentDock(IDockable dockable)
+    {
+        if (dockable is IDocumentDock docDock)
+        {
+            return docDock;
+        }
+
+        if (dockable is IDock dock && dock.VisibleDockables != null)
+        {
+            foreach (var child in dock.VisibleDockables)
+            {
+                var result = GetFirstDocumentDock(child);
+                if (result != null)
+                    return result;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets whether there are enough documents to split.
+    /// </summary>
+    public bool CanSplitDocuments => (_documentDock?.VisibleDockables?.Count ?? 0) >= 2;
+
+    /// <summary>
+    /// Gets whether documents are currently split and can be collapsed.
+    /// </summary>
+    public bool CanCollapseSplitDocuments
+    {
+        get
+        {
+            if (_rootProportional?.VisibleDockables is null)
+                return false;
+
+            // Check if there's a split container (a proportional dock other than root)
+            return _rootProportional.VisibleDockables
+                .Any(d => d is IProportionalDock && d.Id != "RootProportional");
+        }
+    }
+
+    /// <summary>
+    /// Command to split all documents vertically.
+    /// </summary>
+    public RelayCommand SplitVerticalCommand => new(() => SplitAllDocuments(SplitLayout.Vertical));
+
+    /// <summary>
+    /// Command to split all documents horizontally.
+    /// </summary>
+    public RelayCommand SplitHorizontalCommand => new(() => SplitAllDocuments(SplitLayout.Horizontal));
+
+    /// <summary>
+    /// Command to split all documents in a grid.
+    /// </summary>
+    public RelayCommand SplitGridCommand => new(() => SplitAllDocuments(SplitLayout.Grid));
+
+    /// <summary>
+    /// Command to collapse split documents back to a single pane.
+    /// </summary>
+    public RelayCommand CollapseSplitCommand => new(CollapseSplitDocuments);
 }

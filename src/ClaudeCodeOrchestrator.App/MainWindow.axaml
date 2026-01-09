@@ -63,6 +63,15 @@
             <MenuItem Header="_View" AutomationProperties.AutomationId="ViewMenu">
                 <MenuItem Header="_Worktrees" AutomationProperties.AutomationId="WorktreesMenuItem" />
                 <MenuItem Header="_Explorer" AutomationProperties.AutomationId="ExplorerMenuItem" />
+                <Separator />
+                <MenuItem Header="Split All Tabs _Vertically" Command="{Binding SplitVerticalCommand}"
+                          AutomationProperties.AutomationId="SplitVerticalMenuItem" />
+                <MenuItem Header="Split All Tabs _Horizontally" Command="{Binding SplitHorizontalCommand}"
+                          AutomationProperties.AutomationId="SplitHorizontalMenuItem" />
+                <MenuItem Header="Split All Tabs in _Grid" Command="{Binding SplitGridCommand}"
+                          AutomationProperties.AutomationId="SplitGridMenuItem" />
+                <MenuItem Header="_Collapse Split Tabs" Command="{Binding CollapseSplitCommand}"
+                          AutomationProperties.AutomationId="CollapseSplitMenuItem" />
             </MenuItem>
             <MenuItem Header="_Help" AutomationProperties.AutomationId="HelpMenu">
                 <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />
