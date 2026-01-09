@@ -6,6 +6,8 @@
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
              x:Class="ClaudeCodeOrchestrator.App.Views.Panels.OutputView"
              x:DataType="vm:OutputViewModel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
              Background="#1E1E1E">
 
     <Grid RowDefinitions="Auto,*">

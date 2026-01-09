@@ -6,6 +6,8 @@
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="ClaudeCodeOrchestrator.App.Views.Panels.DiffView"
              x:DataType="vm:DiffDocumentViewModel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
              Background="#1E1E1E">
 
     <Grid RowDefinitions="Auto,*">
