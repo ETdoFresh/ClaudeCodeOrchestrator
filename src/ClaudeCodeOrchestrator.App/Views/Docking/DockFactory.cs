@@ -289,8 +289,22 @@ public class DockFactory : Factory
         }
         else
         {
-            _fileBrowser.LoadDirectory(path);
+            // Update sources with current worktrees list
+            var worktrees = _worktreesViewModel?.Worktrees;
+            _fileBrowser.UpdateSources(path, worktrees);
         }
+    }
+
+    /// <summary>
+    /// Refreshes the file browser sources dropdown with the current worktrees.
+    /// Call this after worktrees are updated.
+    /// </summary>
+    public void RefreshFileBrowserSources()
+    {
+        if (_fileBrowser?.LocalCopyPath is null) return;
+
+        var worktrees = _worktreesViewModel?.Worktrees;
+        _fileBrowser.UpdateSources(_fileBrowser.LocalCopyPath, worktrees);
     }
 
     /// <summary>
@@ -305,6 +319,9 @@ public class DockFactory : Factory
         {
             _worktreesViewModel.Worktrees.Add(wt);
         }
+
+        // Also refresh the file browser sources dropdown
+        RefreshFileBrowserSources();
     }
 
     /// <summary>
@@ -313,6 +330,7 @@ public class DockFactory : Factory
     public void AddWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Insert(0, worktree);
+        RefreshFileBrowserSources();
     }
 
     /// <summary>
@@ -321,6 +339,7 @@ public class DockFactory : Factory
     public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Remove(worktree);
+        RefreshFileBrowserSources();
     }
 
     /// <summary>

@@ -1,8 +1,35 @@
 using System.Collections.ObjectModel;
+using ClaudeCodeOrchestrator.App.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace ClaudeCodeOrchestrator.App.ViewModels.Docking;
+
+/// <summary>
+/// Represents a source option in the Explorer dropdown.
+/// </summary>
+public class ExplorerSource
+{
+    /// <summary>
+    /// Display name shown in the dropdown.
+    /// </summary>
+    public string DisplayName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The path this source points to.
+    /// </summary>
+    public string Path { get; init; } = string.Empty;
+
+    /// <summary>
+    /// True if this is the local repository copy, false if it's a worktree.
+    /// </summary>
+    public bool IsLocalCopy { get; init; }
+
+    /// <summary>
+    /// The worktree ID if this is a worktree source, null for local copy.
+    /// </summary>
+    public string? WorktreeId { get; init; }
+}
 
 /// <summary>
 /// File browser panel view model.
@@ -13,9 +40,20 @@ public partial class FileBrowserViewModel : ToolViewModelBase
     private string? _rootPath;
 
     [ObservableProperty]
+    private string? _localCopyPath;
+
+    [ObservableProperty]
     private FileItemViewModel? _selectedItem;
 
+    [ObservableProperty]
+    private ExplorerSource? _selectedSource;
+
     public ObservableCollection<FileItemViewModel> Items { get; } = new();
+
+    /// <summary>
+    /// Available sources in the dropdown (Local Copy + worktrees).
+    /// </summary>
+    public ObservableCollection<ExplorerSource> Sources { get; } = new();
 
     /// <summary>
     /// Callback to invoke when a file is selected.
@@ -27,6 +65,14 @@ public partial class FileBrowserViewModel : ToolViewModelBase
     {
         Id = "FileBrowser";
         Title = "Explorer";
+    }
+
+    partial void OnSelectedSourceChanged(ExplorerSource? value)
+    {
+        if (value != null)
+        {
+            LoadDirectory(value.Path);
+        }
     }
 
     /// <summary>
@@ -61,7 +107,55 @@ public partial class FileBrowserViewModel : ToolViewModelBase
     public void ClearDirectory()
     {
         RootPath = null;
+        LocalCopyPath = null;
         Items.Clear();
+        Sources.Clear();
+        SelectedSource = null;
+    }
+
+    /// <summary>
+    /// Updates the sources list with Local Copy and available worktrees.
+    /// </summary>
+    /// <param name="localPath">The main repository path.</param>
+    /// <param name="worktrees">The list of available worktrees.</param>
+    public void UpdateSources(string localPath, IEnumerable<WorktreeViewModel>? worktrees)
+    {
+        LocalCopyPath = localPath;
+        var currentSelectedPath = SelectedSource?.Path;
+
+        Sources.Clear();
+
+        // Add Local Copy as first option (always available)
+        var localSource = new ExplorerSource
+        {
+            DisplayName = "Local Copy",
+            Path = localPath,
+            IsLocalCopy = true,
+            WorktreeId = null
+        };
+        Sources.Add(localSource);
+
+        // Add worktrees
+        if (worktrees != null)
+        {
+            foreach (var wt in worktrees)
+            {
+                Sources.Add(new ExplorerSource
+                {
+                    DisplayName = wt.DisplayTitle,
+                    Path = wt.Path,
+                    IsLocalCopy = false,
+                    WorktreeId = wt.Id
+                });
+            }
+        }
+
+        // Restore selection or default to Local Copy
+        var previousSource = currentSelectedPath != null
+            ? Sources.FirstOrDefault(s => s.Path == currentSelectedPath)
+            : null;
+
+        SelectedSource = previousSource ?? localSource;
     }
 
     public void LoadDirectory(string path)
