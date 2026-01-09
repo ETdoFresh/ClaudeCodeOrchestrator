@@ -73,16 +73,35 @@ public partial class FileBrowserViewModel : ToolViewModelBase
 
         try
         {
-            var rootItem = new FileItemViewModel
+            // Load directories first
+            foreach (var dir in Directory.GetDirectories(path).OrderBy(d => Path.GetFileName(d)))
             {
-                Name = Path.GetFileName(path),
-                FullPath = path,
-                IsDirectory = true,
-                IsExpanded = true
-            };
+                var name = Path.GetFileName(dir);
+                if (name.StartsWith('.') || name == "node_modules" || name == "bin" || name == "obj")
+                    continue;
 
-            LoadChildren(rootItem);
-            Items.Add(rootItem);
+                var item = new FileItemViewModel
+                {
+                    Name = name,
+                    FullPath = dir,
+                    IsDirectory = true
+                };
+
+                Items.Add(item);
+            }
+
+            // Then files
+            foreach (var file in Directory.GetFiles(path).OrderBy(f => Path.GetFileName(f)))
+            {
+                var name = Path.GetFileName(file);
+
+                Items.Add(new FileItemViewModel
+                {
+                    Name = name,
+                    FullPath = file,
+                    IsDirectory = false
+                });
+            }
         }
         catch
         {
@@ -150,7 +169,13 @@ public partial class FileBrowserViewModel : ToolViewModelBase
     {
         if (string.IsNullOrEmpty(filePath) || Items.Count == 0) return;
 
-        var item = FindItemByPath(Items[0], filePath);
+        FileItemViewModel? item = null;
+        foreach (var rootItem in Items)
+        {
+            item = FindItemByPath(rootItem, filePath);
+            if (item != null) break;
+        }
+
         if (item != null)
         {
             // Temporarily disable callback if requested

@@ -1,9 +1,9 @@
 {
-  "Id": "3d46709b",
-  "TaskDescription": "can we show preview in chat session after we start a new session with this image? I\u0027m not sure why it doesn\u0027t work right now",
-  "Title": "Show Preview Chat Session Start",
+  "Id": "b1d109b0",
+  "TaskDescription": "In the file explorer on left bar, the root folder does not need to be shown (or expandable/collapsable)",
+  "Title": "File Explorer Left Bar Root",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T07:20:14.024408Z",
-  "ClaudeSessionId": "e6a189e7-007d-404a-8f63-cb3a6ddf7e48",
+  "CreatedAt": "2026-01-09T14:04:01.830218Z",
+  "ClaudeSessionId": "6285066d-e2a9-4b29-9126-5bfb5fbcd57d",
   "SessionWasActive": true
 }
