@@ -34,6 +34,7 @@ public class DockFactory : Factory
         if (_context is ViewModels.MainWindowViewModel mainVm)
         {
             _worktreesViewModel.OnCreateTaskRequested = () => mainVm.CreateTaskCommand.ExecuteAsync(null);
+            _worktreesViewModel.OnRefreshRequested = () => mainVm.RefreshWorktreesAsync();
             _worktreesViewModel.OnWorktreeSelected = worktree => mainVm.OpenWorktreeSessionAsync(worktree);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }

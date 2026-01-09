@@ -15,6 +15,15 @@ public sealed class SessionService : ISessionService, IDisposable
     private readonly ConcurrentDictionary<string, SessionContext> _sessions = new();
     private bool _disposed;
 
+    /// <summary>
+    /// Additional system prompt instructions appended to all sessions.
+    /// </summary>
+    private const string AdditionalSystemPrompt = """
+        IMPORTANT: After completing any code changes, you MUST commit your changes using git.
+        Create a clear, descriptive commit message summarizing what was changed.
+        Do not leave uncommitted changes in the worktree.
+        """;
+
     public event EventHandler<SessionCreatedEventArgs>? SessionCreated;
     public event EventHandler<SessionMessageEventArgs>? MessageReceived;
     public event EventHandler<SessionStateChangedEventArgs>? SessionStateChanged;
@@ -31,7 +40,11 @@ public sealed class SessionService : ISessionService, IDisposable
         options = options with
         {
             Cwd = worktree.Path,
-            PermissionMode = PermissionMode.AcceptAll
+            PermissionMode = PermissionMode.AcceptAll,
+            SystemPrompt = new SystemPromptConfig
+            {
+                Append = AdditionalSystemPrompt
+            }
         };
 
         var session = new Session
@@ -65,7 +78,11 @@ public sealed class SessionService : ISessionService, IDisposable
         options = options with
         {
             Cwd = worktree.Path,
-            PermissionMode = PermissionMode.AcceptAll
+            PermissionMode = PermissionMode.AcceptAll,
+            SystemPrompt = new SystemPromptConfig
+            {
+                Append = AdditionalSystemPrompt
+            }
         };
 
         var session = new Session

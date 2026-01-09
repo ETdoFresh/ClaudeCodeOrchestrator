@@ -203,7 +203,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowTitle = $"Claude Code Orchestrator - {Path.GetFileName(path)}";
     }
 
-    private async Task RefreshWorktreesAsync()
+    public async Task RefreshWorktreesAsync()
     {
         if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
 
@@ -293,7 +293,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (result.Success)
             {
-                worktree.Status = WorktreeStatus.Merged;
+                // Close any open session documents for this worktree
+                Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
+
+                // Delete the worktree since merge is complete
+                await _worktreeService.DeleteWorktreeAsync(
+                    CurrentRepositoryPath,
+                    worktree.Id,
+                    force: true);
+
+                Worktrees.Remove(worktree);
+                Factory?.RemoveWorktree(worktree);
             }
             else
             {
