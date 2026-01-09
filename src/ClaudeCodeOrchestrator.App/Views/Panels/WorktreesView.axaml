@@ -75,6 +75,16 @@
                                              StartAngle="0"
                                              SweepAngle="270" />
                                     </Panel>
+                                    <!-- Merge button - shown when ready to merge and no active session -->
+                                    <Button Command="{Binding MergeCommand}"
+                                            Content="↗ Merge"
+                                            Padding="6,2"
+                                            FontSize="10"
+                                            Background="#4CAF50"
+                                            Foreground="White"
+                                            ToolTip.Tip="Merge to base branch"
+                                            IsVisible="{Binding IsReadyToMerge}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='MergeWorktreeTop_{0}'}" />
                                     <!-- Status badge -->
                                     <Border Padding="6,2" CornerRadius="2"
                                             Background="{Binding Status, Converter={x:Static local:WorktreesView.StatusToBrushConverter}}">
