@@ -24,7 +24,7 @@
                        TextWrapping="Wrap"
                        Foreground="#888888"
                        FontSize="12" />
-            <TextBlock Text="© 2025 Anthropic"
+            <TextBlock Text="© 2025 ETdoFresh"
                        AutomationProperties.AutomationId="AboutDialogCopyright"
                        Foreground="#666666"
                        FontSize="11"
