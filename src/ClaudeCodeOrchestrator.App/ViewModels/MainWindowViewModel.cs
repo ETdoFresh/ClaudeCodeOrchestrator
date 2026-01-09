@@ -297,31 +297,144 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (result.Success)
             {
-                // Close any open session documents for this worktree
-                Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
+                await CompleteMergeAsync(worktree);
+            }
+            else if (result.Status == MergeStatus.Conflicts)
+            {
+                // Ask user if they want Claude to resolve conflicts
+                var resolveConflicts = await _dialogService.ShowConfirmAsync("Merge Conflicts",
+                    $"Merge conflicts detected in:\n{string.Join("\n", result.ConflictingFiles ?? [])}\n\n" +
+                    "Would you like Claude to resolve these conflicts?");
 
-                // Delete the worktree since merge is complete
-                await _worktreeService.DeleteWorktreeAsync(
-                    CurrentRepositoryPath,
-                    worktree.Id,
-                    force: true);
-
-                Worktrees.Remove(worktree);
-                Factory?.RemoveWorktree(worktree);
+                if (resolveConflicts)
+                {
+                    await ResolveConflictsWithClaudeAsync(worktree, result.ConflictingFiles ?? []);
+                }
+                else
+                {
+                    await _dialogService.ShowErrorAsync("Merge Failed",
+                        $"Merge conflicts in: {string.Join(", ", result.ConflictingFiles ?? [])}");
+                }
             }
             else
             {
-                var message = result.ConflictingFiles?.Count > 0
-                    ? $"Merge conflicts in: {string.Join(", ", result.ConflictingFiles)}"
-                    : result.ErrorMessage ?? "Unknown error";
-
-                await _dialogService.ShowErrorAsync("Merge Failed", message);
+                await _dialogService.ShowErrorAsync("Merge Failed",
+                    result.ErrorMessage ?? "Unknown error");
             }
         }
         catch (Exception ex)
         {
             await _dialogService.ShowErrorAsync("Error Merging",
                 $"Failed to merge worktree: {ex.Message}");
+        }
+    }
+
+    private async Task CompleteMergeAsync(WorktreeViewModel worktree)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        // Close any open session documents for this worktree
+        Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
+
+        // Delete the worktree since merge is complete
+        await _worktreeService.DeleteWorktreeAsync(
+            CurrentRepositoryPath,
+            worktree.Id,
+            force: true);
+
+        Worktrees.Remove(worktree);
+        Factory?.RemoveWorktree(worktree);
+    }
+
+    private async Task ResolveConflictsWithClaudeAsync(WorktreeViewModel worktree, IReadOnlyList<string> conflictingFiles)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        var worktreeInfo = await _worktreeService.GetWorktreeAsync(CurrentRepositoryPath, worktree.Id);
+        if (worktreeInfo == null) return;
+
+        // Claude works in the worktree, so instruct it to:
+        // 1. Fetch latest changes
+        // 2. Merge the base branch into the current worktree branch
+        // 3. Resolve conflicts
+        // 4. Commit the merge
+        var conflictPrompt = $"""
+            Please merge the latest changes from '{worktree.BaseBranch}' into the current branch.
+
+            Run these commands:
+            1. git fetch origin
+            2. git merge origin/{worktree.BaseBranch}
+
+            When merge conflicts occur, resolve them in the following files: {string.Join(", ", conflictingFiles)}
+
+            After resolving all conflicts, stage the resolved files and commit the merge.
+            """;
+
+        // Check if there's an existing session for this worktree
+        var existingSession = _sessionService.GetSession(worktree.ActiveSessionId ?? "");
+
+        if (existingSession != null &&
+            existingSession.State is Core.Models.SessionState.Active or Core.Models.SessionState.Processing or Core.Models.SessionState.Completed)
+        {
+            // Send message to existing session (will be queued if processing)
+            await _sessionService.SendMessageAsync(existingSession.Id, conflictPrompt);
+        }
+        else
+        {
+            // Create a new session with the conflict resolution prompt
+            await CreateSessionForWorktreeAsync(worktreeInfo, conflictPrompt);
+        }
+
+        // Subscribe to session completion to retry merge
+        var sessionId = worktree.ActiveSessionId;
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            // Wait a bit for the session to be created and ID assigned
+            await Task.Delay(500);
+            sessionId = worktree.ActiveSessionId;
+        }
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            // Store the worktree info for retry after session completes
+            _pendingMergeRetries[sessionId] = worktree;
+        }
+    }
+
+    // Track pending merge retries by session ID
+    private readonly ConcurrentDictionary<string, WorktreeViewModel> _pendingMergeRetries = new();
+
+    private async Task OnSessionEndedForMergeRetryAsync(string sessionId, Core.Models.SessionState finalState)
+    {
+        if (!_pendingMergeRetries.TryRemove(sessionId, out var worktree)) return;
+
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        // Only retry if session completed successfully
+        if (finalState != Core.Models.SessionState.Completed)
+        {
+            await _dialogService.ShowErrorAsync("Merge Failed",
+                "Claude could not resolve the merge conflicts. Please resolve them manually.");
+            return;
+        }
+
+        // Retry the merge
+        var result = await _worktreeService.MergeWorktreeAsync(
+            CurrentRepositoryPath,
+            worktree.Id,
+            worktree.BaseBranch);
+
+        if (result.Success)
+        {
+            await CompleteMergeAsync(worktree);
+        }
+        else
+        {
+            var message = result.ConflictingFiles?.Count > 0
+                ? $"Merge still has conflicts in: {string.Join(", ", result.ConflictingFiles)}"
+                : result.ErrorMessage ?? "Unknown error";
+
+            await _dialogService.ShowErrorAsync("Merge Failed", message);
         }
     }
 
@@ -406,7 +519,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnSessionEnded(object? sender, SessionEndedEventArgs e)
     {
-        _dispatcher.Post(() =>
+        _dispatcher.Post(async () =>
         {
             // Update worktree to show no active session
             var worktree = Worktrees.FirstOrDefault(w =>
@@ -417,6 +530,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 worktree.HasActiveSession = false;
                 worktree.ActiveSessionId = null;
             }
+
+            // Check if this session has a pending merge retry
+            await OnSessionEndedForMergeRetryAsync(e.SessionId, e.FinalState);
         });
     }
 

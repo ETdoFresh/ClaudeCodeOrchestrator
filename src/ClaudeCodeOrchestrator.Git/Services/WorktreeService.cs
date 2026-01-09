@@ -391,13 +391,73 @@ public sealed class WorktreeService : IWorktreeService
             var errorOutput = await mergeProcess.StandardError.ReadToEndAsync(cancellationToken);
             var hasConflicts = errorOutput.Contains("CONFLICT") || output.Contains("CONFLICT");
 
+            // If there are conflicts, abort the merge to leave the repo in a clean state
+            if (hasConflicts)
+            {
+                var conflictingFiles = ParseConflictingFiles(output + errorOutput);
+                await AbortMergeAsync(repoPath, cancellationToken);
+
+                return new MergeResultModel
+                {
+                    Success = false,
+                    Status = MergeStatusModel.Conflicts,
+                    ConflictingFiles = conflictingFiles,
+                    ErrorMessage = "Merge conflicts detected"
+                };
+            }
+
             return new MergeResultModel
             {
                 Success = false,
-                Status = hasConflicts ? MergeStatusModel.Conflicts : MergeStatusModel.Failed,
+                Status = MergeStatusModel.Failed,
                 ErrorMessage = errorOutput
             };
         }
+    }
+
+    private static async Task AbortMergeAsync(string repoPath, CancellationToken cancellationToken)
+    {
+        var abortPsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "merge --abort",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var abortProcess = System.Diagnostics.Process.Start(abortPsi);
+        if (abortProcess != null)
+        {
+            await abortProcess.WaitForExitAsync(cancellationToken);
+        }
+    }
+
+    private static List<string> ParseConflictingFiles(string output)
+    {
+        var files = new List<string>();
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
+        {
+            // Parse lines like "CONFLICT (content): Merge conflict in filename.cs"
+            if (line.Contains("CONFLICT") && line.Contains("Merge conflict in "))
+            {
+                var idx = line.IndexOf("Merge conflict in ", StringComparison.Ordinal);
+                if (idx >= 0)
+                {
+                    var file = line[(idx + "Merge conflict in ".Length)..].Trim();
+                    if (!string.IsNullOrEmpty(file))
+                    {
+                        files.Add(file);
+                    }
+                }
+            }
+        }
+
+        return files;
     }
 
     private sealed record WorktreeMetadata
