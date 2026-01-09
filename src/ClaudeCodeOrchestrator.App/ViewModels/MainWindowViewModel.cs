@@ -50,6 +50,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Subscribe to session events
         _sessionService.SessionCreated += OnSessionCreated;
         _sessionService.SessionEnded += OnSessionEnded;
+        _sessionService.SessionStateChanged += OnSessionStateChanged;
         _sessionService.ClaudeSessionIdReceived += OnClaudeSessionIdReceived;
     }
 
@@ -558,6 +559,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         });
     }
 
+    private void OnSessionStateChanged(object? sender, SessionStateChangedEventArgs e)
+    {
+        _dispatcher.Post(() =>
+        {
+            // When a session transitions to an active state (Processing, Active, Starting),
+            // ensure the worktree shows it as having an active session.
+            // This is needed when a completed session is resumed with a follow-up message.
+            if (e.Session.State is Core.Models.SessionState.Processing
+                or Core.Models.SessionState.Active
+                or Core.Models.SessionState.Starting)
+            {
+                var worktree = Worktrees.FirstOrDefault(w => w.Id == e.Session.WorktreeId);
+                if (worktree != null && !worktree.HasActiveSession)
+                {
+                    worktree.HasActiveSession = true;
+                    worktree.ActiveSessionId = e.Session.Id;
+                }
+            }
+        });
+    }
+
     private async Task SafeRetryMergeAsync(string sessionId, Core.Models.SessionState finalState)
     {
         try
@@ -756,6 +778,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         _sessionService.SessionCreated -= OnSessionCreated;
         _sessionService.SessionEnded -= OnSessionEnded;
+        _sessionService.SessionStateChanged -= OnSessionStateChanged;
         _sessionService.ClaudeSessionIdReceived -= OnClaudeSessionIdReceived;
     }
 }
