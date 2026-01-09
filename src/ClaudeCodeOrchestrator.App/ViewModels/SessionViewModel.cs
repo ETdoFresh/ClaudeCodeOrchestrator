@@ -209,6 +209,9 @@ public partial class ToolUseViewModel : ViewModelBase
                     "Task" => GetStringProperty(root, "description") is string taskDesc
                         ? taskDesc
                         : "Running task",
+                    "TaskOutput" => GetStringProperty(root, "task_id") is string taskId
+                        ? $"Getting output from {taskId}"
+                        : "Getting task output",
                     "TodoWrite" => "Updating todo list",
                     _ => ToolName
                 };
@@ -366,6 +369,7 @@ public partial class ToolUseViewModel : ViewModelBase
         "Glob" => "🔍",
         "Grep" => "🔎",
         "Task" => "🤖",
+        "TaskOutput" => "📥",
         "TodoWrite" => "📋",
         _ => "⚡"
     };
