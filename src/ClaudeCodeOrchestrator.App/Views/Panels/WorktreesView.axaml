@@ -73,9 +73,7 @@
                                     <Arc Stroke="#007ACC"
                                          StrokeThickness="2"
                                          StartAngle="0"
-                                         SweepAngle="270"
-                                         Width="14"
-                                         Height="14" />
+                                         SweepAngle="270" />
                                 </Panel>
 
                                 <!-- Status badge -->
