@@ -1,4 +1,6 @@
+using System.Collections.Specialized;
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -15,6 +17,7 @@ public partial class SessionView : UserControl
 {
     private readonly List<ImageAttachment> _attachments = new();
     private DispatcherTimer? _statusTimer;
+    private SessionDocumentViewModel? _currentViewModel;
 
     private static readonly FilePickerFileType ImageFileTypes = new("Images")
     {
@@ -28,6 +31,49 @@ public partial class SessionView : UserControl
 
         // Set up event handlers
         AttachButton.Click += AttachButton_Click;
+
+        // Subscribe to DataContext changes to track when session changes
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        // Unsubscribe from old view model's messages collection
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.Messages.CollectionChanged -= OnMessagesCollectionChanged;
+        }
+
+        // Subscribe to new view model's messages collection
+        _currentViewModel = DataContext as SessionDocumentViewModel;
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.Messages.CollectionChanged += OnMessagesCollectionChanged;
+
+            // Scroll to bottom if there are already messages (opening an existing session)
+            if (_currentViewModel.Messages.Count > 0)
+            {
+                ScrollToBottom();
+            }
+        }
+    }
+
+    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Scroll to bottom when new messages are added
+        if (e.Action == NotifyCollectionChangedAction.Add)
+        {
+            ScrollToBottom();
+        }
+    }
+
+    private void ScrollToBottom()
+    {
+        // Use dispatcher to ensure layout is complete before scrolling
+        Dispatcher.UIThread.Post(() =>
+        {
+            MessagesScrollViewer.ScrollToEnd();
+        }, DispatcherPriority.Loaded);
     }
 
     private async void MessageInput_KeyDown(object? sender, KeyEventArgs e)
