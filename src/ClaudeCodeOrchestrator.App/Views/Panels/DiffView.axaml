@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.DiffView"
+             x:DataType="vm:DiffDocumentViewModel"
+             Background="#1E1E1E">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with file paths and preview indicator -->
+        <Border Grid.Row="0" Padding="12,8" Background="#252526" BorderBrush="#474747" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding RelativePath}"
+                           FontSize="12"
+                           Foreground="#858585"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="(Preview)"
+                           FontSize="12"
+                           Foreground="#569CD6"
+                           FontStyle="Italic"
+                           IsVisible="{Binding IsPreview}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Loading Indicator -->
+        <ProgressBar Grid.Row="1"
+                     IsVisible="{Binding IsLoading}"
+                     IsIndeterminate="True"
+                     Height="4"
+                     VerticalAlignment="Top" />
+
+        <!-- Error Message -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                Background="#3A1F1F"
+                Padding="16">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="#F85149"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Diff Content -->
+        <ScrollViewer Grid.Row="1"
+                      IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding DiffLines}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiffLine">
+                        <Border Background="{Binding BackgroundColor}"
+                                Padding="0">
+                            <Grid ColumnDefinitions="50,50,Auto,*">
+                                <!-- Old Line Number -->
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding OldLineNumber}"
+                                           FontFamily="Consolas, Menlo, Monaco, monospace"
+                                           FontSize="12"
+                                           Foreground="#606060"
+                                           TextAlignment="Right"
+                                           Padding="4,2,8,2"
+                                           Background="#2D2D30" />
+
+                                <!-- New Line Number -->
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding NewLineNumber}"
+                                           FontFamily="Consolas, Menlo, Monaco, monospace"
+                                           FontSize="12"
+                                           Foreground="#606060"
+                                           TextAlignment="Right"
+                                           Padding="4,2,8,2"
+                                           Background="#2D2D30" />
+
+                                <!-- Prefix (+/-/space) -->
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Prefix}"
+                                           FontFamily="Consolas, Menlo, Monaco, monospace"
+                                           FontSize="13"
+                                           Foreground="{Binding ForegroundColor}"
+                                           Padding="4,2"
+                                           Width="20" />
+
+                                <!-- Line Content -->
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding Content}"
+                                           FontFamily="Consolas, Menlo, Monaco, monospace"
+                                           FontSize="13"
+                                           Foreground="{Binding ForegroundColor}"
+                                           Padding="0,2" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
