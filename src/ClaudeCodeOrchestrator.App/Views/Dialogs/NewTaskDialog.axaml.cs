@@ -13,8 +13,6 @@ public partial class NewTaskDialog : Window
 {
     private readonly List<ImageAttachment> _attachments = new();
     private readonly ITitleGeneratorService? _titleGeneratorService;
-    private string? _generatedTitle;
-    private string? _generatedBranch;
 
     private static readonly FilePickerFileType ImageFileTypes = new("Images")
     {
@@ -177,7 +175,7 @@ public partial class NewTaskDialog : Window
         Close(null);
     }
 
-    private async void Generate_Click(object? sender, RoutedEventArgs e)
+    private async void Create_Click(object? sender, RoutedEventArgs e)
     {
         var description = TaskDescriptionBox.Text?.Trim();
 
@@ -189,62 +187,30 @@ public partial class NewTaskDialog : Window
         }
 
         ErrorText.IsVisible = false;
+        string? title = null;
+        string? branch = null;
 
-        if (_titleGeneratorService == null)
+        if (_titleGeneratorService != null)
         {
-            // Fallback: just enable Create without preview
-            _generatedTitle = description.Length > 50 ? description[..50] + "..." : description;
-            _generatedBranch = "task/new-task";
-            GeneratedTitleBox.Text = _generatedTitle;
-            GeneratedBranchBox.Text = _generatedBranch;
-            GeneratedPreviewArea.IsVisible = true;
-            CreateButton.IsEnabled = true;
-            return;
+            // Show creating indicator and disable button
+            CreatingIndicator.IsVisible = true;
+            CreateButton.IsEnabled = false;
+
+            try
+            {
+                var generated = await _titleGeneratorService.GenerateTitleAsync(description);
+                title = generated.Title;
+                branch = generated.BranchName;
+            }
+            catch (Exception ex)
+            {
+                ErrorText.Text = $"Failed to generate title: {ex.Message}";
+                ErrorText.IsVisible = true;
+                CreatingIndicator.IsVisible = false;
+                CreateButton.IsEnabled = true;
+                return;
+            }
         }
-
-        // Show generating indicator
-        GeneratingIndicator.IsVisible = true;
-        GenerateButton.IsEnabled = false;
-        GeneratedPreviewArea.IsVisible = false;
-
-        try
-        {
-            var generated = await _titleGeneratorService.GenerateTitleAsync(description);
-            _generatedTitle = generated.Title;
-            _generatedBranch = generated.BranchName;
-
-            // Show the preview
-            GeneratedTitleBox.Text = _generatedTitle;
-            GeneratedBranchBox.Text = _generatedBranch;
-            GeneratedPreviewArea.IsVisible = true;
-            CreateButton.IsEnabled = true;
-        }
-        catch (Exception ex)
-        {
-            ErrorText.Text = $"Failed to generate title: {ex.Message}";
-            ErrorText.IsVisible = true;
-        }
-        finally
-        {
-            GeneratingIndicator.IsVisible = false;
-            GenerateButton.IsEnabled = true;
-        }
-    }
-
-    private void Create_Click(object? sender, RoutedEventArgs e)
-    {
-        var description = TaskDescriptionBox.Text?.Trim();
-
-        if (string.IsNullOrEmpty(description))
-        {
-            ErrorText.Text = "Please enter a task description.";
-            ErrorText.IsVisible = true;
-            return;
-        }
-
-        // Use edited values from the text boxes if available
-        var title = GeneratedTitleBox.Text?.Trim() ?? _generatedTitle;
-        var branch = GeneratedBranchBox.Text?.Trim() ?? _generatedBranch;
 
         var result = TaskInput.Create(description, _attachments.ToList(), title, branch);
         Close(result);
