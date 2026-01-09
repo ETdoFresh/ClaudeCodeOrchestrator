@@ -101,7 +101,7 @@ public partial class MainWindow : Window
                             // Open the repository asynchronously
                             Dispatcher.UIThread.Post(async () =>
                             {
-                                await (_viewModel?.OpenRepositoryFromPathAsync(path) ?? Task.CompletedTask);
+                                await (_viewModel?.OpenRepositoryAtPathAsync(path) ?? Task.CompletedTask);
                             });
                             e.Handled = true;
                             return;

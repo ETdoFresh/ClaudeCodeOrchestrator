@@ -210,7 +210,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task OpenRepositoryAtPathAsync(string path)
+    internal async Task OpenRepositoryAtPathAsync(string path)
     {
         try
         {
