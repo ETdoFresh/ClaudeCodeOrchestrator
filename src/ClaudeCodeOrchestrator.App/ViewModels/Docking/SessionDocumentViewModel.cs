@@ -278,7 +278,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                             vm.TextContent += textBlock.Text;
                         }
                     }
-                    Messages.Add(vm);
+                    // Only add if there's actual text content
+                    if (!string.IsNullOrEmpty(vm.TextContent))
+                    {
+                        Messages.Add(vm);
+                    }
                     break;
             }
         }

@@ -109,6 +109,9 @@ public sealed class SessionHistoryService
                 // Skip non-message entries
                 if (entry.Type != "user" && entry.Type != "assistant") continue;
 
+                // Skip sidechain entries (agent tasks)
+                if (entry.IsSidechain == true) continue;
+
                 var content = ExtractContent(entry);
                 if (string.IsNullOrEmpty(content)) continue;
 
@@ -168,16 +171,23 @@ public sealed class SessionHistoryService
                 var textParts = new List<string>();
                 foreach (var block in contentElement.EnumerateArray())
                 {
-                    if (block.TryGetProperty("type", out var typeEl) &&
-                        typeEl.GetString() == "text" &&
-                        block.TryGetProperty("text", out var textEl))
+                    if (block.TryGetProperty("type", out var typeEl))
                     {
-                        var text = textEl.GetString();
-                        if (!string.IsNullOrEmpty(text))
-                            textParts.Add(text);
+                        var blockType = typeEl.GetString();
+
+                        // Skip tool_result and tool_use blocks - these are not user/assistant text
+                        if (blockType == "tool_result" || blockType == "tool_use")
+                            continue;
+
+                        if (blockType == "text" && block.TryGetProperty("text", out var textEl))
+                        {
+                            var text = textEl.GetString();
+                            if (!string.IsNullOrEmpty(text))
+                                textParts.Add(text);
+                        }
                     }
                 }
-                return string.Join("\n", textParts);
+                return textParts.Count > 0 ? string.Join("\n", textParts) : null;
             }
         }
 
@@ -201,6 +211,9 @@ internal sealed class SessionHistoryEntry
 
     [JsonPropertyName("sessionId")]
     public string? SessionId { get; set; }
+
+    [JsonPropertyName("isSidechain")]
+    public bool? IsSidechain { get; set; }
 
     [JsonPropertyName("message")]
     public SessionHistoryMessageData? Message { get; set; }
