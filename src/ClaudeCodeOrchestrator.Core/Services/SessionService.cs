@@ -39,7 +39,7 @@ public sealed class SessionService : ISessionService, IDisposable
         return CreateSessionAsync(worktree, prompt, null, options, cancellationToken);
     }
 
-    public async Task<Session> CreateSessionAsync(
+    public Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
         string prompt,
         IReadOnlyList<IImageData>? images,
@@ -64,7 +64,8 @@ public sealed class SessionService : ISessionService, IDisposable
             WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
             InitialPrompt = prompt,
-            GeneratedTitle = worktree.Title
+            GeneratedTitle = worktree.Title,
+            TaskDescription = worktree.TaskDescription
         };
 
         // Convert images to SDK format
@@ -83,7 +84,7 @@ public sealed class SessionService : ISessionService, IDisposable
         // Start message processing in background
         _ = ProcessMessagesAsync(context, cancellationToken);
 
-        return session;
+        return Task.FromResult(session);
     }
 
     public Task<Session> CreateIdleSessionAsync(
@@ -109,7 +110,8 @@ public sealed class SessionService : ISessionService, IDisposable
             WorktreePath = worktree.Path,
             CreatedAt = DateTime.UtcNow,
             State = SessionState.WaitingForInput,
-            GeneratedTitle = worktree.Title
+            GeneratedTitle = worktree.Title,
+            TaskDescription = worktree.TaskDescription
         };
 
         // Add history messages before firing the event
@@ -133,7 +135,7 @@ public sealed class SessionService : ISessionService, IDisposable
         return Task.FromResult(session);
     }
 
-    public async Task<Session> ResumeSessionAsync(
+    public Task<Session> ResumeSessionAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
     {
@@ -171,7 +173,7 @@ public sealed class SessionService : ISessionService, IDisposable
         // Start message processing
         _ = ProcessMessagesAsync(newContext, cancellationToken);
 
-        return context.Session;
+        return Task.FromResult(context.Session);
     }
 
     public async Task EndSessionAsync(
@@ -187,7 +189,8 @@ public sealed class SessionService : ISessionService, IDisposable
             SessionEnded?.Invoke(this, new SessionEndedEventArgs
             {
                 SessionId = sessionId,
-                FinalState = context.Session.State
+                FinalState = context.Session.State,
+                EndedAt = context.Session.EndedAt.Value
             });
         }
     }
@@ -399,7 +402,8 @@ public sealed class SessionService : ISessionService, IDisposable
             SessionEnded?.Invoke(this, new SessionEndedEventArgs
             {
                 SessionId = context.Session.Id,
-                FinalState = context.Session.State
+                FinalState = context.Session.State,
+                EndedAt = context.Session.EndedAt.Value
             });
         }
     }

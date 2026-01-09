@@ -1,7 +1,12 @@
+using System.Collections.Specialized;
+using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.App.Views.Controls;
@@ -11,6 +16,8 @@ namespace ClaudeCodeOrchestrator.App.Views.Panels;
 public partial class SessionView : UserControl
 {
     private readonly List<ImageAttachment> _attachments = new();
+    private DispatcherTimer? _statusTimer;
+    private SessionDocumentViewModel? _currentViewModel;
 
     private static readonly FilePickerFileType ImageFileTypes = new("Images")
     {
@@ -24,6 +31,49 @@ public partial class SessionView : UserControl
 
         // Set up event handlers
         AttachButton.Click += AttachButton_Click;
+
+        // Subscribe to DataContext changes to track when session changes
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        // Unsubscribe from old view model's messages collection
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.Messages.CollectionChanged -= OnMessagesCollectionChanged;
+        }
+
+        // Subscribe to new view model's messages collection
+        _currentViewModel = DataContext as SessionDocumentViewModel;
+        if (_currentViewModel != null)
+        {
+            _currentViewModel.Messages.CollectionChanged += OnMessagesCollectionChanged;
+
+            // Scroll to bottom if there are already messages (opening an existing session)
+            if (_currentViewModel.Messages.Count > 0)
+            {
+                ScrollToBottom();
+            }
+        }
+    }
+
+    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Scroll to bottom when new messages are added
+        if (e.Action == NotifyCollectionChangedAction.Add)
+        {
+            ScrollToBottom();
+        }
+    }
+
+    private void ScrollToBottom()
+    {
+        // Use dispatcher to ensure layout is complete before scrolling
+        Dispatcher.UIThread.Post(() =>
+        {
+            MessagesScrollViewer.ScrollToEnd();
+        }, DispatcherPriority.Loaded);
     }
 
     private async void MessageInput_KeyDown(object? sender, KeyEventArgs e)
@@ -71,37 +121,117 @@ public partial class SessionView : UserControl
         try
         {
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard == null) return;
+            if (clipboard == null)
+            {
+                ShowStatus("Clipboard not available", isError: true);
+                return;
+            }
 
             var formats = await clipboard.GetFormatsAsync();
+            Debug.WriteLine($"[ImagePaste] Available clipboard formats: {string.Join(", ", formats)}");
 
-            // Check for image data
-            if (formats.Contains("image/png") || formats.Contains("PNG"))
+            // Check for various image formats (different platforms use different names)
+            string[] imageFormats = { "image/png", "PNG", "image/jpeg", "JPEG", "image/bmp", "BMP", "image/gif", "GIF" };
+
+            foreach (var format in imageFormats)
             {
-                var data = await clipboard.GetDataAsync("image/png")
-                        ?? await clipboard.GetDataAsync("PNG");
+                if (!formats.Contains(format)) continue;
 
-                if (data is byte[] imageBytes)
+                var data = await clipboard.GetDataAsync(format);
+                Debug.WriteLine($"[ImagePaste] Got data for format {format}: {data?.GetType().Name ?? "null"}");
+
+                if (data is byte[] imageBytes && imageBytes.Length > 0)
                 {
-                    AddImageAttachment(imageBytes, "image/png", "pasted-image.png");
+                    var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                    AddImageAttachment(imageBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                    ShowStatus($"✓ Image attached ({imageBytes.Length / 1024}KB)", isError: false);
+                    return;
+                }
+
+                // Some platforms return a stream instead of bytes
+                if (data is Stream stream)
+                {
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    if (bytes.Length > 0)
+                    {
+                        var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                        AddImageAttachment(bytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                        ShowStatus($"✓ Image attached ({bytes.Length / 1024}KB)", isError: false);
+                        return;
+                    }
+                }
+            }
+
+            // Try to get files from clipboard (for copied image files)
+            var files = await clipboard.GetDataAsync(DataFormats.Files) as IEnumerable<IStorageItem>;
+            if (files != null)
+            {
+                var imageFiles = files.OfType<IStorageFile>().ToList();
+                var count = 0;
+                foreach (var file in imageFiles)
+                {
+                    var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    if (ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".webp")
+                    {
+                        await AddImageFromFile(file);
+                        count++;
+                    }
+                }
+                if (count > 0)
+                {
+                    ShowStatus($"✓ {count} image(s) attached", isError: false);
                     return;
                 }
             }
 
-            // Try to get files from clipboard
-            var files = await clipboard.GetDataAsync(DataFormats.Files) as IEnumerable<IStorageItem>;
-            if (files != null)
-            {
-                foreach (var file in files.OfType<IStorageFile>())
-                {
-                    await AddImageFromFile(file);
-                }
-            }
+            // No image found - show available formats for debugging
+            ShowStatus($"No image in clipboard. Formats: {string.Join(", ", formats.Take(5))}", isError: true);
         }
-        catch
+        catch (Exception ex)
         {
-            // Clipboard access failed, ignore
+            Debug.WriteLine($"[ImagePaste] Error: {ex}");
+            ShowStatus($"Paste failed: {ex.Message}", isError: true);
         }
+    }
+
+    private static string GetExtensionForFormat(string format)
+    {
+        return format.ToLowerInvariant() switch
+        {
+            "image/png" or "png" => "png",
+            "image/jpeg" or "jpeg" or "jpg" => "jpg",
+            "image/gif" or "gif" => "gif",
+            "image/bmp" or "bmp" => "bmp",
+            "image/webp" or "webp" => "webp",
+            _ => "png"
+        };
+    }
+
+    private void ShowStatus(string message, bool isError)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            PasteStatusText.Text = message;
+            PasteStatusText.Foreground = isError
+                ? new SolidColorBrush(Color.Parse("#FF6B6B"))
+                : new SolidColorBrush(Color.Parse("#4EC9B0"));
+            PasteStatusBorder.IsVisible = true;
+
+            // Auto-hide after 3 seconds
+            _statusTimer?.Stop();
+            _statusTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            _statusTimer.Tick += (_, _) =>
+            {
+                PasteStatusBorder.IsVisible = false;
+                _statusTimer.Stop();
+            };
+            _statusTimer.Start();
+        });
     }
 
     private async void AttachButton_Click(object? sender, RoutedEventArgs e)

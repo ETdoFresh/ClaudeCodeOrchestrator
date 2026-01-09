@@ -228,7 +228,8 @@ public sealed class WorktreeService : IWorktreeService
                 Status = status,
                 HasUncommittedChanges = hasUncommittedChanges,
                 CommitsAhead = commitsAhead,
-                ClaudeSessionId = metadata.ClaudeSessionId
+                ClaudeSessionId = metadata.ClaudeSessionId,
+                SessionWasActive = metadata.SessionWasActive
             };
         }
         catch
@@ -515,6 +516,7 @@ public sealed class WorktreeService : IWorktreeService
         public required string BaseBranch { get; init; }
         public required DateTime CreatedAt { get; init; }
         public string? ClaudeSessionId { get; init; }
+        public bool SessionWasActive { get; init; }
     }
 
     /// <summary>
@@ -535,6 +537,28 @@ public sealed class WorktreeService : IWorktreeService
             return;
 
         var updatedMetadata = metadata with { ClaudeSessionId = claudeSessionId };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the SessionWasActive flag for a worktree.
+    /// </summary>
+    public async Task UpdateSessionWasActiveAsync(
+        string worktreePath,
+        bool wasActive,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { SessionWasActive = wasActive };
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }

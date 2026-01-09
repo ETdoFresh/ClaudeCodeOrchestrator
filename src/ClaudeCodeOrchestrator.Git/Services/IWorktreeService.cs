@@ -72,4 +72,12 @@ public interface IWorktreeService
         string worktreePath,
         string claudeSessionId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the SessionWasActive flag for a worktree.
+    /// </summary>
+    Task UpdateSessionWasActiveAsync(
+        string worktreePath,
+        bool wasActive,
+        CancellationToken cancellationToken = default);
 }

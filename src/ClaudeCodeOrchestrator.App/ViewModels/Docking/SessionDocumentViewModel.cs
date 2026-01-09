@@ -279,7 +279,6 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     [RelayCommand(CanExecute = nameof(CanSendMessage))]
     private async Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputText)) return;
         if (_sessionService is null) return;
 
         var text = InputText;
@@ -288,12 +287,15 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         _pendingAttachments.Clear();
         ClearAttachmentsCallback?.Invoke();
 
-        // Add user message to UI
-        Messages.Add(new UserMessageViewModel
+        // Add user message to UI (only if there's actual content)
+        if (!string.IsNullOrWhiteSpace(text))
         {
-            Uuid = Guid.NewGuid().ToString(),
-            Content = text
-        });
+            Messages.Add(new UserMessageViewModel
+            {
+                Uuid = Guid.NewGuid().ToString(),
+                Content = text
+            });
+        }
         IsProcessing = true;
 
         try
@@ -307,7 +309,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         }
     }
 
-    private bool CanSendMessage() => !IsProcessing && !string.IsNullOrWhiteSpace(InputText);
+    private bool CanSendMessage() => !IsProcessing;
 
     [RelayCommand(CanExecute = nameof(CanQueueMessage))]
     private async Task QueueMessageAsync()
