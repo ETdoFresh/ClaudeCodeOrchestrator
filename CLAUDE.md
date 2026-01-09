@@ -1,5 +1,11 @@
 # Claude Code Instructions
 
+## Tool Usage Restrictions
+
+### test-app Skill and Chrome DevTools MCP
+
+Do NOT automatically use the `test-app` skill or Chrome DevTools MCP tools. Only use these features when the user explicitly asks for them. These tools should not be invoked proactively.
+
 ## Build Commands
 
 ### .NET Build
