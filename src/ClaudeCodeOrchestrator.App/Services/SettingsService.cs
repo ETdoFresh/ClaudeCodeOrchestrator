@@ -132,6 +132,18 @@ public class SettingsService : ISettingsService
         }
     }
 
+    public int CachedPushBadgeCount
+    {
+        get => _settings.CachedPushBadgeCount;
+        set
+        {
+            if (_settings.CachedPushBadgeCount == value) return;
+            _settings.CachedPushBadgeCount = value;
+            Save();
+            // No need to raise event for cached values
+        }
+    }
+
     private void RaiseSettingChanged(string propertyName, object? oldValue, object? newValue)
     {
         SettingChanged?.Invoke(this, new SettingChangedEventArgs(propertyName, oldValue, newValue));
@@ -187,5 +199,6 @@ public class SettingsService : ISettingsService
         public bool CompactWorktreeList { get; set; } = false;
         public bool ShowWorktreeStatusBadges { get; set; } = true;
         public bool AutoSaveSessionHistory { get; set; } = true;
+        public int CachedPushBadgeCount { get; set; } = 0;
     }
 }

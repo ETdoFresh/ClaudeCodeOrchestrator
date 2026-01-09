@@ -56,6 +56,11 @@ public interface ISettingsService
     bool AutoSaveSessionHistory { get; set; }
 
     /// <summary>
+    /// Gets or sets the cached push badge count for immediate display on startup.
+    /// </summary>
+    int CachedPushBadgeCount { get; set; }
+
+    /// <summary>
     /// Loads settings from storage.
     /// </summary>
     void Load();

@@ -17,9 +17,26 @@ public partial class WorktreesViewModel : ToolViewModelBase
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
     /// <summary>
-    /// Gets the total number of unpushed commits across all worktrees.
+    /// Cached badge count to show immediately on startup before data loads.
     /// </summary>
-    public int TotalCommitsToPush => Worktrees.Sum(w => w.UnpushedCommits);
+    private int _cachedBadgeCount;
+
+    /// <summary>
+    /// Gets the total number of unpushed commits across all worktrees.
+    /// Shows cached value if worktrees haven't loaded yet.
+    /// </summary>
+    public int TotalCommitsToPush => Worktrees.Count > 0
+        ? Worktrees.Sum(w => w.UnpushedCommits)
+        : _cachedBadgeCount;
+
+    /// <summary>
+    /// Sets the cached badge count for immediate display on startup.
+    /// </summary>
+    public void SetCachedBadgeCount(int count)
+    {
+        _cachedBadgeCount = count;
+        OnPropertyChanged(nameof(TotalCommitsToPush));
+    }
 
     /// <summary>
     /// Callback to invoke when the user requests to create a new task.

@@ -75,6 +75,7 @@ public class DockFactory : Factory
     {
         // Create tool view models
         _worktreesViewModel = new WorktreesViewModel();
+        _worktreesViewModel.SetCachedBadgeCount(_settingsService.CachedPushBadgeCount);
         _fileBrowser = new FileBrowserViewModel();
         _diffBrowser = new DiffBrowserViewModel();
         _settingsViewModel = new SettingsViewModel(_settingsService);
@@ -444,6 +445,9 @@ public class DockFactory : Factory
         {
             _worktreesViewModel.Worktrees.Add(wt);
         }
+
+        // Cache the badge count for next startup
+        _settingsService.CachedPushBadgeCount = _worktreesViewModel.TotalCommitsToPush;
 
         // Also refresh the file browser sources dropdown
         RefreshFileBrowserSources();
