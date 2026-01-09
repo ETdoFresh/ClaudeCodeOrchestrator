@@ -1,9 +1,9 @@
 {
-  "Id": "20785c92",
-  "TaskDescription": "I like that the title/branch name works, but, i just want it to automatically happen when i press create, not an extra button/click.",
-  "Title": "Title Branch Name Works Automatically",
+  "Id": "afb14e79",
+  "TaskDescription": "next to push changes and add, can we also add a small button for refreshing worktrees?",
+  "Title": "Next Push Changes Add Add",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:44:25.148796Z",
-  "ClaudeSessionId": "ee7b1fa0-33d7-4e7e-b8d2-584681cd348d",
+  "CreatedAt": "2026-01-09T05:49:40.729396Z",
+  "ClaudeSessionId": "132795a9-b25e-451c-868d-a13fbc8e5822",
   "SessionWasActive": true
 }
