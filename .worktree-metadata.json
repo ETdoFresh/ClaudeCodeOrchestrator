@@ -1,7 +1,7 @@
 {
-  "Id": "7eae0d6a",
-  "TaskDescription": "Can you show a preview of pasted image or show proof of pasted image when image is pasted. I can\u0027t get it to work.",
+  "Id": "c5a38534",
+  "TaskDescription": "Add Refresh Worktrees to Menu bar",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T04:35:16.100472Z",
-  "ClaudeSessionId": "4138f08c-d403-46c6-86b9-f84053ae4d9d"
+  "CreatedAt": "2026-01-09T04:50:07.878687Z",
+  "ClaudeSessionId": "d37a2575-b4df-478e-9b73-8f8db59d13ff"
 }

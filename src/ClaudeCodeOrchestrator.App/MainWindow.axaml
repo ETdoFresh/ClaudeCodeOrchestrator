@@ -53,6 +53,10 @@
                 <MenuItem Header="_New Task..." Command="{Binding CreateTaskCommand}"
                           IsEnabled="{Binding IsRepositoryOpen}"
                           AutomationProperties.AutomationId="NewTaskMenuItem" />
+                <Separator />
+                <MenuItem Header="_Refresh Worktrees" Command="{Binding RefreshWorktreesCommand}"
+                          IsEnabled="{Binding IsRepositoryOpen}"
+                          AutomationProperties.AutomationId="RefreshWorktreesMenuItem" />
             </MenuItem>
             <MenuItem Header="_View" AutomationProperties.AutomationId="ViewMenu">
                 <MenuItem Header="_Worktrees" AutomationProperties.AutomationId="WorktreesMenuItem" />
