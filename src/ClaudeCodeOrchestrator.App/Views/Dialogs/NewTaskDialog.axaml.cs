@@ -64,10 +64,11 @@ public partial class NewTaskDialog : Window
 
             // Check for various image formats (different platforms use different names)
             // Include macOS UTI formats (public.png, public.jpeg, etc.)
+            // Include Windows clipboard formats (DeviceIndependentBitmap, Bitmap)
             string[] imageFormats = {
                 "image/png", "PNG", "public.png",
                 "image/jpeg", "JPEG", "public.jpeg",
-                "image/bmp", "BMP", "public.bmp",
+                "image/bmp", "BMP", "public.bmp", "DeviceIndependentBitmap", "Bitmap",
                 "image/gif", "GIF", "public.gif",
                 "image/tiff", "TIFF", "public.tiff"
             };
@@ -138,7 +139,7 @@ public partial class NewTaskDialog : Window
             "image/png" or "png" or "public.png" => "image/png",
             "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "image/jpeg",
             "image/gif" or "gif" or "public.gif" => "image/gif",
-            "image/bmp" or "bmp" or "public.bmp" => "image/bmp",
+            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" => "image/bmp",
             "image/tiff" or "tiff" or "public.tiff" => "image/tiff",
             "image/webp" or "webp" or "public.webp" => "image/webp",
             _ when format.StartsWith("image/") => format,
@@ -153,7 +154,7 @@ public partial class NewTaskDialog : Window
             "image/png" or "png" or "public.png" => "png",
             "image/jpeg" or "jpeg" or "jpg" or "public.jpeg" => "jpg",
             "image/gif" or "gif" or "public.gif" => "gif",
-            "image/bmp" or "bmp" or "public.bmp" => "bmp",
+            "image/bmp" or "bmp" or "public.bmp" or "deviceindependentbitmap" or "bitmap" => "bmp",
             "image/tiff" or "tiff" or "public.tiff" => "tiff",
             "image/webp" or "webp" or "public.webp" => "webp",
             _ => "png"
