@@ -17,6 +17,16 @@ public sealed class TaskInput
     public IReadOnlyList<ImageAttachment> Images { get; init; } = Array.Empty<ImageAttachment>();
 
     /// <summary>
+    /// The generated title for the task (if available).
+    /// </summary>
+    public string? GeneratedTitle { get; init; }
+
+    /// <summary>
+    /// The generated branch name for the task (if available).
+    /// </summary>
+    public string? GeneratedBranch { get; init; }
+
+    /// <summary>
     /// Whether this input has any images.
     /// </summary>
     public bool HasImages => Images.Count > 0;
@@ -27,14 +37,20 @@ public sealed class TaskInput
     public static TaskInput FromText(string text) => new() { Text = text };
 
     /// <summary>
-    /// Creates an input with text and images.
+    /// Creates an input with text, images, and optionally generated title/branch.
     /// </summary>
-    public static TaskInput Create(string text, IReadOnlyList<ImageAttachment>? images = null)
+    public static TaskInput Create(
+        string text,
+        IReadOnlyList<ImageAttachment>? images = null,
+        string? generatedTitle = null,
+        string? generatedBranch = null)
     {
         return new TaskInput
         {
             Text = text,
-            Images = images ?? Array.Empty<ImageAttachment>()
+            Images = images ?? Array.Empty<ImageAttachment>(),
+            GeneratedTitle = generatedTitle,
+            GeneratedBranch = generatedBranch
         };
     }
 }

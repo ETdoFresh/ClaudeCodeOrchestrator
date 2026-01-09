@@ -1,7 +1,9 @@
 {
-  "Id": "6ef02c0a",
-  "TaskDescription": "Can you improve title and branch name using one-off requst similar to: https://raw.githubusercontent.com/webedt/monorepo/e7fa34aa97b9faf2a73b621071b7c4180f6bdec6/shared/src/claudeWeb/titleGenerator.ts",
+  "Id": "b23d747f",
+  "TaskDescription": "I don\u0027t see the new title and branch names, can we generate that first before creating worktree and rest of flow?",
+  "Title": null,
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T04:36:48.948333Z",
-  "ClaudeSessionId": "14c075ff-6ca9-4529-b909-e246298786f6"
+  "CreatedAt": "2026-01-09T05:14:14.029703Z",
+  "ClaudeSessionId": "b8aa0e06-4559-4bc0-8923-7560c4596902",
+  "SessionWasActive": true
 }

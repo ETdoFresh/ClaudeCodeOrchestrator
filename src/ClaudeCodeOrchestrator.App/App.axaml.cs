@@ -63,15 +63,20 @@ public partial class App : Application
             return settings;
         });
 
-        // Dialog service
-        services.AddSingleton<IDialogService, DialogService>();
-
         // HTTP client for API calls
         services.AddSingleton<HttpClient>();
 
         // Title generator service
         services.AddSingleton<ITitleGeneratorService>(sp =>
             new TitleGeneratorService(sp.GetRequiredService<HttpClient>()));
+
+        // Dialog service (with title generator for new task dialog)
+        services.AddSingleton<IDialogService>(sp =>
+        {
+            var dialogService = new DialogService();
+            dialogService.SetTitleGeneratorService(sp.GetRequiredService<ITitleGeneratorService>());
+            return dialogService;
+        });
 
         // Git services
         services.AddSingleton<IGitService, GitService>();

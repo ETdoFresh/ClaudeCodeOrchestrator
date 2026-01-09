@@ -202,15 +202,24 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var taskInput = await _dialogService.ShowNewTaskDialogAsync();
             if (taskInput is null) return;
 
-            // Generate title and branch name using LLM (with fallback)
-            var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
+            // Use title and branch from dialog (user already saw/edited them)
+            // Fall back to generating if not provided (shouldn't happen normally)
+            var title = taskInput.GeneratedTitle;
+            var branchName = taskInput.GeneratedBranch;
 
-            // Create worktree with generated title and branch name
+            if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(branchName))
+            {
+                var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
+                title ??= generated.Title;
+                branchName ??= generated.BranchName;
+            }
+
+            // Create worktree with the title and branch name from the dialog
             var worktree = await _worktreeService.CreateWorktreeAsync(
                 CurrentRepositoryPath,
                 taskInput.Text,
-                title: generated.Title,
-                branchName: generated.BranchName);
+                title: title,
+                branchName: branchName);
 
             // Add to list
             var vm = WorktreeViewModel.FromModel(worktree);
