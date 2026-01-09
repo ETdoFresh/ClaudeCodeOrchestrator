@@ -64,7 +64,7 @@ public class DockFactory : Factory
             ActiveDockable = _worktreesViewModel,
             VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser),
             Alignment = Alignment.Left,
-            GripMode = GripMode.Visible
+            GripMode = GripMode.Hidden
         };
 
         // Document dock (sessions and file contents) - store reference for dynamic document creation

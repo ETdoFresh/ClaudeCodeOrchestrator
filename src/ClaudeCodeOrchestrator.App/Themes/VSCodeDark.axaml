@@ -182,6 +182,16 @@
         <Setter Property="IsVisible" Value="False" />
     </Style>
 
+    <!-- Alternative selectors to ensure the tool tab strip is hidden -->
+    <Style Selector="dock|ToolTabStrip">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <!-- Hide the grip/title area of ToolControl -->
+    <Style Selector="dock|ToolControl /template/ Border#PART_Grip">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
     <!-- Document Tab Strip Context Menu for Split Layout Options -->
     <Style Selector="dock|DocumentTabStrip">
         <Setter Property="ContextMenu">
