@@ -1,9 +1,0 @@
-{
-  "Id": "942f986a",
-  "TaskDescription": "Worktree session should wrap text too long horizontally as shown here",
-  "Title": "Worktree Session Wrap Text Long",
-  "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T16:51:40.733726Z",
-  "ClaudeSessionId": "ecb0b2f6-ccaa-4806-8b89-a4a8be94401a",
-  "SessionWasActive": true
-}
