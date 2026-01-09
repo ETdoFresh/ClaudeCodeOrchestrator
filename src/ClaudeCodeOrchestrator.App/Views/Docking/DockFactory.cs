@@ -302,45 +302,65 @@ public class DockFactory : Factory
 
     /// <summary>
     /// Removes all session documents associated with a worktree.
+    /// Searches across all document docks to handle split layouts.
     /// </summary>
     public void RemoveSessionDocumentsByWorktree(string worktreeId)
     {
-        if (_documentDock?.VisibleDockables is null) return;
+        if (_rootProportional is null) return;
 
-        var docsToRemove = _documentDock.VisibleDockables
-            .OfType<SessionDocumentViewModel>()
-            .Where(d => d.WorktreeId == worktreeId)
-            .ToList();
+        // Collect all document docks (handles split layouts)
+        var documentDocks = new List<IDocumentDock>();
+        CollectAllDocumentDocks(_rootProportional, documentDocks);
 
-        foreach (var doc in docsToRemove)
+        foreach (var docDock in documentDocks)
         {
-            _documentDock.VisibleDockables.Remove(doc);
+            if (docDock.VisibleDockables is null) continue;
 
-            // Dispose the document
-            if (doc is IDisposable disposable)
-                disposable.Dispose();
+            var docsToRemove = docDock.VisibleDockables
+                .OfType<SessionDocumentViewModel>()
+                .Where(d => d.WorktreeId == worktreeId)
+                .ToList();
+
+            foreach (var doc in docsToRemove)
+            {
+                docDock.VisibleDockables.Remove(doc);
+
+                // Dispose the document
+                if (doc is IDisposable disposable)
+                    disposable.Dispose();
+            }
         }
     }
 
     /// <summary>
     /// Removes all file documents that are inside a worktree path.
+    /// Searches across all document docks to handle split layouts.
     /// </summary>
     public void RemoveFileDocumentsByWorktreePath(string worktreePath)
     {
-        if (_documentDock?.VisibleDockables is null || string.IsNullOrEmpty(worktreePath)) return;
+        if (_rootProportional is null || string.IsNullOrEmpty(worktreePath)) return;
 
         // Normalize path for comparison
         var normalizedWorktreePath = worktreePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        var docsToRemove = _documentDock.VisibleDockables
-            .OfType<FileDocumentViewModel>()
-            .Where(d => d.FilePath.StartsWith(normalizedWorktreePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-                     || d.FilePath.Equals(normalizedWorktreePath, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        // Collect all document docks (handles split layouts)
+        var documentDocks = new List<IDocumentDock>();
+        CollectAllDocumentDocks(_rootProportional, documentDocks);
 
-        foreach (var doc in docsToRemove)
+        foreach (var docDock in documentDocks)
         {
-            _documentDock.VisibleDockables.Remove(doc);
+            if (docDock.VisibleDockables is null) continue;
+
+            var docsToRemove = docDock.VisibleDockables
+                .OfType<FileDocumentViewModel>()
+                .Where(d => d.FilePath.StartsWith(normalizedWorktreePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                         || d.FilePath.Equals(normalizedWorktreePath, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var doc in docsToRemove)
+            {
+                docDock.VisibleDockables.Remove(doc);
+            }
         }
     }
 
@@ -1249,6 +1269,24 @@ public class DockFactory : Factory
             foreach (var child in dock.VisibleDockables)
             {
                 CollectAllDocuments(child, documents);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects all document docks from the layout hierarchy.
+    /// </summary>
+    private void CollectAllDocumentDocks(IDockable dockable, List<IDocumentDock> documentDocks)
+    {
+        if (dockable is IDocumentDock docDock)
+        {
+            documentDocks.Add(docDock);
+        }
+        else if (dockable is IDock dock && dock.VisibleDockables != null)
+        {
+            foreach (var child in dock.VisibleDockables)
+            {
+                CollectAllDocumentDocks(child, documentDocks);
             }
         }
     }
