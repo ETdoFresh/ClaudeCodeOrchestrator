@@ -288,14 +288,22 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         _pendingAttachments.Clear();
         ClearAttachmentsCallback?.Invoke();
 
-        // Add user message to UI (only if there's actual content)
-        if (!string.IsNullOrWhiteSpace(text))
+        // Add user message to UI (only if there's actual content or images)
+        if (!string.IsNullOrWhiteSpace(text) || attachments.Count > 0)
         {
-            Messages.Add(new UserMessageViewModel
+            var userVm = new UserMessageViewModel
             {
                 Uuid = Guid.NewGuid().ToString(),
                 Content = text
-            });
+            };
+
+            // Add image attachments to the message for display
+            foreach (var attachment in attachments)
+            {
+                userVm.Images.Add(attachment);
+            }
+
+            Messages.Add(userVm);
         }
         IsProcessing = true;
 
@@ -325,11 +333,19 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         ClearAttachmentsCallback?.Invoke();
 
         // Add user message to UI immediately (message will be injected at next tool boundary)
-        Messages.Add(new UserMessageViewModel
+        var userVm = new UserMessageViewModel
         {
             Uuid = Guid.NewGuid().ToString(),
             Content = text
-        });
+        };
+
+        // Add image attachments to the message for display
+        foreach (var attachment in attachments)
+        {
+            userVm.Images.Add(attachment);
+        }
+
+        Messages.Add(userVm);
 
         try
         {
