@@ -399,16 +399,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (worktreeInfo == null) return;
 
         // Claude works in the worktree, so instruct it to:
-        // 1. Fetch latest changes
-        // 2. Merge the base branch into the current worktree branch
-        // 3. Resolve conflicts
-        // 4. Commit the merge
+        // 1. Merge the base branch into the current worktree branch
+        // 2. Resolve conflicts
+        // 3. Commit the merge
+        // Note: We merge the local branch directly (no fetch needed) since worktrees share
+        // the same git repository and have access to all local branches.
         var conflictPrompt = $"""
             Please merge the latest changes from '{worktree.BaseBranch}' into the current branch.
 
-            Run these commands:
-            1. git fetch origin
-            2. git merge origin/{worktree.BaseBranch}
+            Run this command:
+            git merge {worktree.BaseBranch}
 
             When merge conflicts occur, resolve them in the following files: {string.Join(", ", conflictingFiles)}
 
