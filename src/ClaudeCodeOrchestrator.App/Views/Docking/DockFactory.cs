@@ -741,27 +741,29 @@ public class DockFactory : Factory
     {
         base.OnDockableRemoved(dockable);
 
-        // Only handle document removals when we have a split layout
+        // Only handle document removals
         if (dockable is not DocumentViewModelBase)
             return;
-
-        // Disable auto-split when a tab is closed
-        AutoSplitLayout = SplitLayout.None;
 
         if (!CanCollapseSplitDocuments)
             return;
 
+        // Capture current autosplit layout before cleanup
+        var currentAutoSplit = AutoSplitLayout;
+
         // Schedule the cleanup on the UI thread to ensure layout is updated
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            CleanupEmptySplitPanes();
+            CleanupEmptySplitPanes(currentAutoSplit);
         });
     }
 
     /// <summary>
     /// Cleans up empty document docks in a split layout and recalculates proportions.
+    /// If autosplit is enabled and multiple documents remain, re-applies the split layout.
     /// </summary>
-    private void CleanupEmptySplitPanes()
+    /// <param name="autoSplitLayout">The autosplit layout to preserve if multiple documents remain.</param>
+    private void CleanupEmptySplitPanes(SplitLayout autoSplitLayout = SplitLayout.None)
     {
         if (_rootProportional?.VisibleDockables is null)
             return;
@@ -793,6 +795,13 @@ public class DockFactory : Factory
         if (remainingDocDocks <= 1)
         {
             CollapseSplitDocuments();
+            // Disable autosplit when down to one or zero documents
+            AutoSplitLayout = SplitLayout.None;
+        }
+        else if (autoSplitLayout != SplitLayout.None)
+        {
+            // Re-apply autosplit to recalculate the layout with remaining documents
+            SplitAllDocuments(autoSplitLayout);
         }
         else
         {
