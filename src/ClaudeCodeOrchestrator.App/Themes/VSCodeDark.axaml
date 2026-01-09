@@ -171,13 +171,11 @@
         </Style.Animations>
     </Style>
 
-    <!-- Arc within spinner fills parent panel -->
+    <!-- Arc within spinner - Fill ensures arc geometry fills the exact bounds for centered rotation -->
     <Style Selector="Panel.arc-spinner > Arc">
         <Setter Property="Width" Value="14" />
         <Setter Property="Height" Value="14" />
-        <Setter Property="Stretch" Value="Uniform" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Stretch" Value="Fill" />
     </Style>
 
     <!-- ToolTabStrip styling for left panel tabs (Worktrees/Explorer) -->
