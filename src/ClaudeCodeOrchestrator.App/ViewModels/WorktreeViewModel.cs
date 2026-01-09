@@ -39,6 +39,14 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
     private bool _hasUncommittedChanges;
 
+    /// <summary>
+    /// Indicates that a merge is in progress (e.g., Claude is resolving conflicts).
+    /// When true, the merge button should be disabled.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
+    private bool _isMergePending;
+
     [ObservableProperty]
     private int _commitsAhead;
 
@@ -117,7 +125,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             await OnMergeRequested(this);
     }
 
-    private bool CanMerge() => Status == WorktreeStatus.ReadyToMerge && !HasUncommittedChanges;
+    private bool CanMerge() => Status == WorktreeStatus.ReadyToMerge && !HasUncommittedChanges && !IsMergePending;
 
     [RelayCommand]
     private async Task DeleteAsync()

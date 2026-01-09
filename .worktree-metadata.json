@@ -1,9 +1,9 @@
 {
-  "Id": "b1d109b0",
-  "TaskDescription": "In the file explorer on left bar, the root folder does not need to be shown (or expandable/collapsable)",
-  "Title": "File Explorer Left Bar Root",
+  "Id": "70705a2b",
+  "TaskDescription": "Besides Worktree/Explorer/Settings view, i want to add Diff view and have the same dropdown where Local shows no diff but, then all the other drop down shows how it\u0027s different than local repo (it\u0027s a file explorer as well, but when clicking on the files we see the diff)",
+  "Title": "Besides Worktree Explorer Settings View",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T14:04:01.830218Z",
-  "ClaudeSessionId": "6285066d-e2a9-4b29-9126-5bfb5fbcd57d",
+  "CreatedAt": "2026-01-09T15:04:03.713665Z",
+  "ClaudeSessionId": "57726a54-8843-4cea-8952-4114a255900a",
   "SessionWasActive": true
 }

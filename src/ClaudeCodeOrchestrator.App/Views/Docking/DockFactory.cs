@@ -34,6 +34,7 @@ public class DockFactory : Factory
     private IDocumentDock? _documentDock;
     private IToolDock? _leftDock;
     private FileBrowserViewModel? _fileBrowser;
+    private DiffBrowserViewModel? _diffBrowser;
     private WorktreesViewModel? _worktreesViewModel;
     private SettingsViewModel? _settingsViewModel;
     private bool _isAddingDocument;
@@ -75,6 +76,7 @@ public class DockFactory : Factory
         // Create tool view models
         _worktreesViewModel = new WorktreesViewModel();
         _fileBrowser = new FileBrowserViewModel();
+        _diffBrowser = new DiffBrowserViewModel();
         _settingsViewModel = new SettingsViewModel(_settingsService);
 
         // Wire up callbacks if context is MainWindowViewModel
@@ -85,15 +87,19 @@ public class DockFactory : Factory
             _worktreesViewModel.OnPushRequested = () => mainVm.PushAllBranchesCommand.ExecuteAsync(null);
             _worktreesViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
+            _diffBrowser.OnDiffFileSelected = (localPath, worktreePath, relativePath, isPreview) =>
+                mainVm.OpenDiffDocumentAsync(localPath, worktreePath, relativePath, isPreview);
+            _diffBrowser.OnLoadDiffEntries = (localPath, worktreePath) =>
+                mainVm.LoadDiffEntriesAsync(localPath, worktreePath);
         }
 
-        // Left side panel (worktrees as first tab, file browser as second, settings as third)
+        // Left side panel (worktrees as first tab, file browser as second, diff as third, settings as fourth)
         _leftDock = new ToolDock
         {
             Id = "LeftDock",
             Title = "Explorer",
             ActiveDockable = _worktreesViewModel,
-            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser, _settingsViewModel),
+            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser, _diffBrowser, _settingsViewModel),
             Alignment = Alignment.Left,
             GripMode = GripMode.Hidden
         };
@@ -355,6 +361,28 @@ public class DockFactory : Factory
             var worktrees = _worktreesViewModel?.Worktrees;
             _fileBrowser.UpdateSources(path, worktrees);
         }
+
+        // Also update the diff browser
+        UpdateDiffBrowser(path);
+    }
+
+    /// <summary>
+    /// Updates the diff browser with a new root path.
+    /// </summary>
+    public void UpdateDiffBrowser(string? path)
+    {
+        if (_diffBrowser is null) return;
+
+        if (string.IsNullOrEmpty(path))
+        {
+            _diffBrowser.ClearDiff();
+        }
+        else
+        {
+            // Update sources with current worktrees list
+            var worktrees = _worktreesViewModel?.Worktrees;
+            _diffBrowser.UpdateSources(path, worktrees);
+        }
     }
 
     /// <summary>
@@ -367,6 +395,21 @@ public class DockFactory : Factory
 
         var worktrees = _worktreesViewModel?.Worktrees;
         _fileBrowser.UpdateSources(_fileBrowser.LocalCopyPath, worktrees);
+
+        // Also refresh diff browser sources
+        RefreshDiffBrowserSources();
+    }
+
+    /// <summary>
+    /// Refreshes the diff browser sources dropdown with the current worktrees.
+    /// Call this after worktrees are updated.
+    /// </summary>
+    public void RefreshDiffBrowserSources()
+    {
+        if (_diffBrowser?.LocalCopyPath is null) return;
+
+        var worktrees = _worktreesViewModel?.Worktrees;
+        _diffBrowser.UpdateSources(_diffBrowser.LocalCopyPath, worktrees);
     }
 
     /// <summary>
@@ -408,6 +451,68 @@ public class DockFactory : Factory
     /// Gets the worktrees view model for external updates.
     /// </summary>
     public WorktreesViewModel? GetWorktreesViewModel() => _worktreesViewModel;
+
+    /// <summary>
+    /// Adds a diff document to the document dock.
+    /// </summary>
+    /// <param name="document">The diff document to add.</param>
+    /// <param name="isPreview">If true, replaces any existing preview document.</param>
+    public void AddDiffDocument(DiffDocumentViewModel document, bool isPreview)
+    {
+        if (_documentDock is null) return;
+
+        _isAddingDocument = true;
+        try
+        {
+            // Register context for new document
+            if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+            {
+                contextDict[document.Id] = () => _context;
+            }
+
+            _documentDock.VisibleDockables ??= CreateList<IDockable>();
+
+            // Check if this diff is already open (non-preview)
+            var existingDoc = _documentDock.VisibleDockables
+                .OfType<DiffDocumentViewModel>()
+                .FirstOrDefault(d => d.Id == document.Id && !d.IsPreview);
+
+            if (existingDoc != null)
+            {
+                // Close any existing preview since we're switching to a persistent tab
+                ClosePreviewDocument();
+
+                // Just activate the existing document
+                _documentDock.ActiveDockable = existingDoc;
+                return;
+            }
+
+            if (isPreview)
+            {
+                // Remove existing preview document if any
+                ClosePreviewDocument();
+                document.IsPreview = true;
+            }
+            else
+            {
+                // Opening a new persistent document - close the preview
+                ClosePreviewDocument();
+            }
+
+            // Add to visible dockables
+            _documentDock.VisibleDockables.Add(document);
+
+            // Make it active
+            _documentDock.ActiveDockable = document;
+
+            // Initialize the document
+            InitDockable(document, _documentDock);
+        }
+        finally
+        {
+            _isAddingDocument = false;
+        }
+    }
 
     /// <summary>
     /// Adds a file document to the document dock.
@@ -472,7 +577,7 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Closes the current preview document if one exists (file or session).
+    /// Closes the current preview document if one exists (file, session, or diff).
     /// </summary>
     public void ClosePreviewDocument()
     {
@@ -500,6 +605,16 @@ public class DockFactory : Factory
             // Dispose the session document
             if (existingSessionPreview is IDisposable disposable)
                 disposable.Dispose();
+        }
+
+        // Close diff preview
+        var existingDiffPreview = _documentDock.VisibleDockables
+            .OfType<DiffDocumentViewModel>()
+            .FirstOrDefault(d => d.IsPreview);
+
+        if (existingDiffPreview != null)
+        {
+            _documentDock.VisibleDockables.Remove(existingDiffPreview);
         }
     }
 
@@ -601,6 +716,7 @@ public class DockFactory : Factory
             ["DocumentDock"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
+            ["DiffBrowser"] = () => _context,
             ["Worktrees"] = () => _context,
             ["Settings"] = () => _context
         };

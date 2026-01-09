@@ -69,4 +69,16 @@ public interface IGitService
     Task PushAllBranchesAsync(
         string repoPath,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the diff entries between two directory paths by comparing file contents.
+    /// </summary>
+    /// <param name="basePath">The base directory path (e.g., local repository).</param>
+    /// <param name="comparePath">The directory to compare against (e.g., worktree).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of diff entries representing changed files.</returns>
+    Task<IReadOnlyList<DiffEntry>> GetDiffEntriesBetweenPathsAsync(
+        string basePath,
+        string comparePath,
+        CancellationToken cancellationToken = default);
 }

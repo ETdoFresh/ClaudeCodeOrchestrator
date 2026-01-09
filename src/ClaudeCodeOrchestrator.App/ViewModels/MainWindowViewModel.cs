@@ -608,6 +608,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Store the worktree info for retry after session completes
         _pendingMergeRetries[sessionId] = worktree;
+
+        // Disable the merge button while Claude is resolving conflicts
+        worktree.IsMergePending = true;
     }
 
     // Track pending merge retries by session ID
@@ -617,11 +620,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (!_pendingMergeRetries.TryRemove(sessionId, out var worktree)) return;
 
-        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            // Re-enable merge button even if we can't proceed
+            worktree.IsMergePending = false;
+            return;
+        }
 
         // Only retry if session completed successfully
         if (finalState != Core.Models.SessionState.Completed)
         {
+            // Re-enable merge button so user can try again
+            worktree.IsMergePending = false;
             await _dialogService.ShowErrorAsync("Merge Failed",
                 "Claude could not resolve the merge conflicts. Please resolve them manually.");
             // Refresh worktrees to show updated status
@@ -643,6 +653,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         else
         {
+            // Re-enable merge button so user can try again
+            worktree.IsMergePending = false;
             var message = result.ConflictingFiles?.Count > 0
                 ? $"Merge still has conflicts in: {string.Join(", ", result.ConflictingFiles)}"
                 : result.ErrorMessage ?? "Unknown error";
@@ -1020,6 +1032,48 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SplitLayout.Grid => "Auto-Split: Grid",
             _ => null
         };
+    }
+
+    /// <summary>
+    /// Opens a diff document when clicked in the diff browser.
+    /// </summary>
+    /// <param name="localPath">The local repository path.</param>
+    /// <param name="worktreePath">The worktree path to compare against.</param>
+    /// <param name="relativePath">The relative path of the file to diff.</param>
+    /// <param name="isPreview">If true, opens as a preview tab (replaced on next single-click).</param>
+    public Task OpenDiffDocumentAsync(string localPath, string worktreePath, string relativePath, bool isPreview)
+    {
+        try
+        {
+            var document = new DiffDocumentViewModel(localPath, worktreePath, relativePath);
+            Factory?.AddDiffDocument(document, isPreview);
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowErrorAsync("Error Opening Diff",
+                $"Failed to open diff: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Loads diff entries between local path and a worktree path.
+    /// </summary>
+    /// <param name="localPath">The local repository path.</param>
+    /// <param name="worktreePath">The worktree path to compare against.</param>
+    public async Task<IReadOnlyList<Git.Models.DiffEntry>> LoadDiffEntriesAsync(string localPath, string worktreePath)
+    {
+        try
+        {
+            return await _gitService.GetDiffEntriesBetweenPathsAsync(localPath, worktreePath);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Loading Diff",
+                $"Failed to load diff entries: {ex.Message}");
+            return Array.Empty<Git.Models.DiffEntry>();
+        }
     }
 
     public void Dispose()
