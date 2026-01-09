@@ -9,6 +9,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>ClaudeCodeOrchestrator.App</RootNamespace>
+    <!-- Application Icon -->
+    <ApplicationIcon>Assets\orchestrator-wand.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- Get git commit count for version -->
@@ -46,5 +48,16 @@
   <ItemGroup>
     <ProjectReference Include="..\ClaudeCodeOrchestrator.Core\ClaudeCodeOrchestrator.Core.csproj" />
   </ItemGroup>
+
+  <!-- Avalonia Resources for runtime icon -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\orchestrator-wand.png" />
+  </ItemGroup>
+
+  <!-- macOS bundle configuration -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <CFBundleName>Claude Code Orchestrator</CFBundleName>
+    <CFBundleIconFile>orchestrator-wand.icns</CFBundleIconFile>
+  </PropertyGroup>
 
 </Project>
