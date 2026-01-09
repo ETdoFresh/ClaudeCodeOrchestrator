@@ -20,6 +20,8 @@ public class MarkdownToHtmlConverter : IValueConverter
             margin: 0;
             padding: 0;
             line-height: 1.5;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         h1, h2, h3, h4, h5, h6 {
             color: #569CD6;
@@ -44,6 +46,8 @@ public class MarkdownToHtmlConverter : IValueConverter
             border-radius: 4px;
             overflow-x: auto;
             margin: 0.5em 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         pre code {
             background-color: transparent;
