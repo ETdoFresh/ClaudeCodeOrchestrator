@@ -245,7 +245,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await RefreshWorktreesAsync();
     }
 
-    public async Task PushAllBranchesAsync()
+    [RelayCommand]
+    private async Task PushAllBranchesAsync()
     {
         if (string.IsNullOrEmpty(CurrentRepositoryPath))
         {
