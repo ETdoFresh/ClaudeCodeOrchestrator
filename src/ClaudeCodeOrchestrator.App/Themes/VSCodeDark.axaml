@@ -176,6 +176,12 @@
         <Setter Property="Stretch" Value="Uniform" />
     </Style>
 
+    <!-- Hide ToolTabStrip (title bar/tabs) on the left panel ToolDock -->
+    <!-- This targets the ToolControl's tab strip area to collapse it -->
+    <Style Selector="dock|ToolControl dock|ToolTabStrip">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
     <!-- Document Tab Strip Context Menu for Split Layout Options -->
     <Style Selector="dock|DocumentTabStrip">
         <Setter Property="ContextMenu">
