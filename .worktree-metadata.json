@@ -1,9 +1,9 @@
 {
-  "Id": "afb14e79",
-  "TaskDescription": "next to push changes and add, can we also add a small button for refreshing worktrees?",
-  "Title": "Next Push Changes Add Add",
+  "Id": "c43279cb",
+  "TaskDescription": "On top of the worktrees bar on the left, there are three buttons on the top right of \u0022Worktrees\u0022. can we hide those? If possible hide the hole titlebar in general on the left bar?",
+  "Title": "Top Worktrees Bar Left There",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:49:40.729396Z",
-  "ClaudeSessionId": "132795a9-b25e-451c-868d-a13fbc8e5822",
+  "CreatedAt": "2026-01-09T05:56:31.824514Z",
+  "ClaudeSessionId": "4cc29c2d-268d-4ee1-86c2-5aee3234937a",
   "SessionWasActive": true
 }

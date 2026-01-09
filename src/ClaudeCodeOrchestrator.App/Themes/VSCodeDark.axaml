@@ -1,5 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dock="using:Dock.Avalonia.Controls"
+        xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels">
 
     <!-- VS Code Dark Theme Colors -->
     <Style>
@@ -172,6 +174,25 @@
     <!-- Arc within spinner fills parent panel -->
     <Style Selector="Panel.arc-spinner > Arc">
         <Setter Property="Stretch" Value="Uniform" />
+    </Style>
+
+    <!-- Document Tab Strip Context Menu for Split Layout Options -->
+    <Style Selector="dock|DocumentTabStrip">
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu>
+                    <MenuItem Header="Split All Tabs Vertically"
+                              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SplitVerticalCommand}" />
+                    <MenuItem Header="Split All Tabs Horizontally"
+                              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SplitHorizontalCommand}" />
+                    <MenuItem Header="Split All Tabs in Grid"
+                              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SplitGridCommand}" />
+                    <Separator />
+                    <MenuItem Header="Collapse Split Tabs"
+                              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CollapseSplitCommand}" />
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </Styles>

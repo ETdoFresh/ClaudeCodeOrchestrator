@@ -280,6 +280,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsService.SetLastRepositoryPath(null);
     }
 
+    [RelayCommand]
+    private void SplitVertical()
+    {
+        Factory?.SplitAllDocuments(Views.Docking.SplitLayout.Vertical);
+    }
+
+    [RelayCommand]
+    private void SplitHorizontal()
+    {
+        Factory?.SplitAllDocuments(Views.Docking.SplitLayout.Horizontal);
+    }
+
+    [RelayCommand]
+    private void SplitGrid()
+    {
+        Factory?.SplitAllDocuments(Views.Docking.SplitLayout.Grid);
+    }
+
+    [RelayCommand]
+    private void CollapseSplit()
+    {
+        Factory?.CollapseSplitDocuments();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
