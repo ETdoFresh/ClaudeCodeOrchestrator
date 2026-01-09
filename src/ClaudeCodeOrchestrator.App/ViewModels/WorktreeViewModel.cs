@@ -33,6 +33,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
     [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToMerge))]
     private WorktreeStatus _status = WorktreeStatus.Active;
 
     [ObservableProperty]
@@ -55,6 +56,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SessionDurationText))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToMerge))]
     private bool _hasActiveSession;
 
     [ObservableProperty]
@@ -113,6 +115,12 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
         WorktreeStatus.Locked => "Locked",
         _ => "Unknown"
     };
+
+    /// <summary>
+    /// Indicates if the worktree is ready to merge (session complete and status is ReadyToMerge).
+    /// Used to show the prominent Merge button in the top-right area.
+    /// </summary>
+    public bool IsReadyToMerge => !HasActiveSession && Status == WorktreeStatus.ReadyToMerge;
 
     [RelayCommand]
     private async Task OpenSessionAsync()
