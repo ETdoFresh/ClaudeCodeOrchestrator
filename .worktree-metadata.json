@@ -1,9 +1,9 @@
 {
-  "Id": "c148905b",
-  "TaskDescription": "scrolling to the bottom of a worktree session still sometimes cuts off bottom of content, i think we need a little more scrollability",
-  "Title": "Scrolling Bottom Worktree Session Still",
+  "Id": "8cedab81",
+  "TaskDescription": "Can we wrap text that is too long in chat session.",
+  "Title": "Wrap Text Long Chat Session",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T06:08:59.333876Z",
-  "ClaudeSessionId": "14f94429-bc45-428f-b9ab-c38d9d3cddf5",
+  "CreatedAt": "2026-01-09T06:42:10.42412Z",
+  "ClaudeSessionId": "49401ce0-5267-4f01-ab60-566e1241bdbb",
   "SessionWasActive": true
 }
