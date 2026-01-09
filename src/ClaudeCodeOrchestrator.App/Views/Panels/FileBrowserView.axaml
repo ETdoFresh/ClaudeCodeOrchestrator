@@ -8,15 +8,9 @@
              x:DataType="vm:FileBrowserViewModel"
              Background="#252526">
 
-    <Grid RowDefinitions="Auto,*">
-        <!-- Header -->
-        <Border Grid.Row="0" Padding="8,6" Background="#333333">
-            <TextBlock Text="EXPLORER" FontSize="11" FontWeight="SemiBold"
-                       Foreground="#BBBBBB" />
-        </Border>
-
+    <Grid RowDefinitions="*">
         <!-- Tree View -->
-        <TreeView Grid.Row="1"
+        <TreeView Grid.Row="0"
                   x:Name="FileTree"
                   ItemsSource="{Binding Items}"
                   SelectedItem="{Binding SelectedItem}"

@@ -1,9 +1,9 @@
 {
-  "Id": "c43279cb",
-  "TaskDescription": "On top of the worktrees bar on the left, there are three buttons on the top right of \u0022Worktrees\u0022. can we hide those? If possible hide the hole titlebar in general on the left bar?",
-  "Title": "Top Worktrees Bar Left There",
+  "Id": "68d9d79b",
+  "TaskDescription": "Can we remove title bar of left side bar",
+  "Title": "Remove Title Bar Left Side",
   "BaseBranch": "main",
-  "CreatedAt": "2026-01-09T05:56:31.824514Z",
-  "ClaudeSessionId": "4cc29c2d-268d-4ee1-86c2-5aee3234937a",
+  "CreatedAt": "2026-01-09T06:03:14.661871Z",
+  "ClaudeSessionId": "235190bf-c65a-475a-a21b-72224d3d0183",
   "SessionWasActive": true
 }
