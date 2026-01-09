@@ -49,6 +49,7 @@
 
         <!-- Messages area -->
         <ScrollViewer Grid.Row="1" Padding="12,8">
+            <StackPanel>
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vmBase:MessageViewModel}">
@@ -173,6 +174,28 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- Processing indicator at bottom of chat -->
+            <Border IsVisible="{Binding IsProcessing}"
+                    Margin="0,8,0,4"
+                    Padding="12,8"
+                    Background="Transparent">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Panel Classes="arc-spinner">
+                        <Arc Stroke="#007ACC"
+                             StrokeThickness="2"
+                             StartAngle="0"
+                             SweepAngle="270"
+                             Width="14"
+                             Height="14" />
+                    </Panel>
+                    <TextBlock Text="Processing..."
+                               FontSize="13"
+                               Foreground="#858585"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- Input area -->
