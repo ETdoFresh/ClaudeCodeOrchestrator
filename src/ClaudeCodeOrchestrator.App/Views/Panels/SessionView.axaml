@@ -23,6 +23,11 @@
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="🌿" FontSize="14" />
                 <TextBlock Text="{Binding WorktreeBranch}" FontSize="13" Foreground="#569CD6" />
+                <TextBlock Text="(Preview)"
+                           FontSize="12"
+                           Foreground="#569CD6"
+                           FontStyle="Italic"
+                           IsVisible="{Binding IsPreview}" />
                 <TextBlock Text="•" Foreground="#666666" />
                 <TextBlock FontSize="13" Foreground="#858585">
                     <Run Text="Cost: $" />

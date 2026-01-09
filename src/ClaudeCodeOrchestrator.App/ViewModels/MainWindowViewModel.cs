@@ -28,6 +28,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isRepositoryOpen;
     private bool _disposed;
 
+    // Track pending preview states for sessions being created
+    private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
+
     /// <summary>
     /// Reference to DockFactory for dynamic document creation.
     /// </summary>
@@ -242,7 +245,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
     {
         // Use the same logic as OpenWorktreeSessionAsync to load history
-        await OpenWorktreeSessionAsync(worktree);
+        // Open as persistent (not preview) since user explicitly clicked the open button
+        await OpenWorktreeSessionAsync(worktree, isPreview: false);
     }
 
     private async Task OnOpenSessionRequestedAsync_Legacy(WorktreeViewModel worktree)
@@ -352,10 +356,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, string prompt)
+    private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, string prompt, bool isPreview = false)
     {
         try
         {
+            // Store the preview state for when the session is created
+            _pendingSessionPreviewStates[worktree.Id] = isPreview;
+
             var session = await _sessionService.CreateSessionAsync(worktree, prompt);
 
             // Mark the worktree as having an active session
@@ -368,6 +375,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
+            _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
             await _dialogService.ShowErrorAsync("Error Creating Session",
                 $"Failed to create session: {ex.Message}");
         }
@@ -388,8 +396,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Load any existing messages from the session (for resumed sessions)
             document.LoadMessagesFromSession(e.Session);
 
+            // Check if this session should be opened as preview
+            var isPreview = _pendingSessionPreviewStates.TryRemove(e.Session.WorktreeId, out var preview) && preview;
+
             // Add to document dock via factory
-            Factory?.AddSessionDocument(document);
+            Factory?.AddSessionDocument(document, isPreview);
         });
     }
 
@@ -436,7 +447,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Opens a session for a worktree when clicked in the worktrees panel.
     /// </summary>
-    public async Task OpenWorktreeSessionAsync(WorktreeViewModel worktree)
+    /// <param name="worktree">The worktree to open a session for.</param>
+    /// <param name="isPreview">If true, opens as preview (single-click). If false, opens as persistent (double-click).</param>
+    public async Task OpenWorktreeSessionAsync(WorktreeViewModel worktree, bool isPreview = true)
     {
         if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
 
@@ -445,16 +458,29 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Check if session already exists for this worktree in memory
             if (worktree.HasActiveSession && !string.IsNullOrEmpty(worktree.ActiveSessionId))
             {
+                // If opening as persistent (double-click), promote any existing preview
+                if (!isPreview)
+                {
+                    Factory?.PromoteSessionPreviewDocument(worktree.ActiveSessionId);
+                }
+
                 // Activate existing session document
                 Factory?.ActivateSessionDocument(worktree.ActiveSessionId);
                 return;
             }
 
+            // Store the preview state for when the session is created
+            _pendingSessionPreviewStates[worktree.Id] = isPreview;
+
             // Get the WorktreeInfo
             var worktreeInfo = await _worktreeService.GetWorktreeAsync(
                 CurrentRepositoryPath, worktree.Id);
 
-            if (worktreeInfo is null) return;
+            if (worktreeInfo is null)
+            {
+                _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
+                return;
+            }
 
             // Use the worktree's stored Claude session ID, or find one from disk
             var claudeSessionId = worktreeInfo.ClaudeSessionId;
@@ -478,6 +504,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
+            _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
             await _dialogService.ShowErrorAsync("Error Opening Session",
                 $"Failed to open session: {ex.Message}");
         }

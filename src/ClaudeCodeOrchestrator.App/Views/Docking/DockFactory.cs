@@ -35,7 +35,7 @@ public class DockFactory : Factory
         {
             _worktreesViewModel.OnCreateTaskRequested = () => mainVm.CreateTaskCommand.ExecuteAsync(null);
             _worktreesViewModel.OnRefreshRequested = () => mainVm.RefreshWorktreesAsync();
-            _worktreesViewModel.OnWorktreeSelected = worktree => mainVm.OpenWorktreeSessionAsync(worktree);
+            _worktreesViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }
 
@@ -98,25 +98,63 @@ public class DockFactory : Factory
     /// <summary>
     /// Adds a new session document to the document dock.
     /// </summary>
-    public void AddSessionDocument(SessionDocumentViewModel document)
+    /// <param name="document">The session document to add.</param>
+    /// <param name="isPreview">If true, replaces any existing preview document.</param>
+    public void AddSessionDocument(SessionDocumentViewModel document, bool isPreview)
     {
         if (_documentDock is null) return;
 
-        // Register context for new document
-        if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+        _isAddingDocument = true;
+        try
         {
-            contextDict[document.Id] = () => _context;
+            // Register context for new document
+            if (ContextLocator is Dictionary<string, Func<object?>> contextDict)
+            {
+                contextDict[document.Id] = () => _context;
+            }
+
+            _documentDock.VisibleDockables ??= CreateList<IDockable>();
+
+            // Check if this session is already open (non-preview)
+            var existingDoc = _documentDock.VisibleDockables
+                .OfType<SessionDocumentViewModel>()
+                .FirstOrDefault(d => d.SessionId == document.SessionId && !d.IsPreview);
+
+            if (existingDoc != null)
+            {
+                // Close any existing preview since we're switching to a persistent tab
+                ClosePreviewDocument();
+
+                // Just activate the existing document
+                _documentDock.ActiveDockable = existingDoc;
+                return;
+            }
+
+            if (isPreview)
+            {
+                // Remove existing preview document if any
+                ClosePreviewDocument();
+                document.IsPreview = true;
+            }
+            else
+            {
+                // Opening a new persistent document - close the preview
+                ClosePreviewDocument();
+            }
+
+            // Add to visible dockables
+            _documentDock.VisibleDockables.Add(document);
+
+            // Make it active
+            _documentDock.ActiveDockable = document;
+
+            // Initialize the document
+            InitDockable(document, _documentDock);
         }
-
-        // Add to visible dockables
-        _documentDock.VisibleDockables ??= CreateList<IDockable>();
-        _documentDock.VisibleDockables.Add(document);
-
-        // Make it active
-        _documentDock.ActiveDockable = document;
-
-        // Initialize the document
-        InitDockable(document, _documentDock);
+        finally
+        {
+            _isAddingDocument = false;
+        }
     }
 
     /// <summary>
@@ -296,19 +334,34 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Closes the current preview document if one exists.
+    /// Closes the current preview document if one exists (file or session).
     /// </summary>
     public void ClosePreviewDocument()
     {
         if (_documentDock?.VisibleDockables is null) return;
 
-        var existingPreview = _documentDock.VisibleDockables
+        // Close file preview
+        var existingFilePreview = _documentDock.VisibleDockables
             .OfType<FileDocumentViewModel>()
             .FirstOrDefault(d => d.IsPreview);
 
-        if (existingPreview != null)
+        if (existingFilePreview != null)
         {
-            _documentDock.VisibleDockables.Remove(existingPreview);
+            _documentDock.VisibleDockables.Remove(existingFilePreview);
+        }
+
+        // Close session preview
+        var existingSessionPreview = _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .FirstOrDefault(d => d.IsPreview);
+
+        if (existingSessionPreview != null)
+        {
+            _documentDock.VisibleDockables.Remove(existingSessionPreview);
+
+            // Dispose the session document
+            if (existingSessionPreview is IDisposable disposable)
+                disposable.Dispose();
         }
     }
 
@@ -368,7 +421,7 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Promotes a preview document to a persistent document.
+    /// Promotes a file preview document to a persistent document.
     /// </summary>
     public void PromotePreviewDocument(string filePath)
     {
@@ -377,6 +430,23 @@ public class DockFactory : Factory
         var previewDoc = _documentDock.VisibleDockables
             .OfType<FileDocumentViewModel>()
             .FirstOrDefault(d => d.FilePath == filePath && d.IsPreview);
+
+        if (previewDoc != null)
+        {
+            previewDoc.IsPreview = false;
+        }
+    }
+
+    /// <summary>
+    /// Promotes a session preview document to a persistent document.
+    /// </summary>
+    public void PromoteSessionPreviewDocument(string sessionId)
+    {
+        if (_documentDock?.VisibleDockables is null) return;
+
+        var previewDoc = _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .FirstOrDefault(d => d.SessionId == sessionId && d.IsPreview);
 
         if (previewDoc != null)
         {
