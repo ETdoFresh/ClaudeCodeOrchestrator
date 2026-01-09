@@ -62,50 +62,12 @@
                            VerticalAlignment="Center" />
             </StackPanel>
 
-            <!-- Generated title and branch preview -->
-            <Border x:Name="GeneratedPreviewArea"
-                    IsVisible="False"
-                    Background="#252526"
-                    CornerRadius="4"
-                    Padding="12"
-                    Margin="0,4,0,0">
-                <StackPanel Spacing="8">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Title:"
-                                   FontSize="11"
-                                   Foreground="#858585" />
-                        <TextBox x:Name="GeneratedTitleBox"
-                                 Background="#3C3C3C"
-                                 Foreground="#CCCCCC"
-                                 BorderBrush="#3F3F46"
-                                 CaretBrush="#CCCCCC"
-                                 FontSize="13"
-                                 Padding="8,6"
-                                 AutomationProperties.AutomationId="GeneratedTitleInput" />
-                    </StackPanel>
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Branch:"
-                                   FontSize="11"
-                                   Foreground="#858585" />
-                        <TextBox x:Name="GeneratedBranchBox"
-                                 Background="#3C3C3C"
-                                 Foreground="#9CDCFE"
-                                 BorderBrush="#3F3F46"
-                                 CaretBrush="#CCCCCC"
-                                 FontSize="12"
-                                 FontFamily="Consolas, Menlo, monospace"
-                                 Padding="8,6"
-                                 AutomationProperties.AutomationId="GeneratedBranchInput" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Generating indicator -->
-            <StackPanel x:Name="GeneratingIndicator"
+            <!-- Creating indicator -->
+            <StackPanel x:Name="CreatingIndicator"
                         IsVisible="False"
                         Orientation="Horizontal"
                         Spacing="8">
-                <TextBlock Text="Generating title..."
+                <TextBlock Text="Creating worktree..."
                            FontSize="12"
                            Foreground="#858585"
                            FontStyle="Italic" />
@@ -123,12 +85,8 @@
             <Button Content="Cancel" Click="Cancel_Click" Width="80"
                     Background="#3C3C3C" Foreground="#CCCCCC"
                     AutomationProperties.AutomationId="TaskCancelButton" />
-            <Button x:Name="GenerateButton" Content="Generate" Click="Generate_Click" Width="80"
-                    Background="#3C3C3C" Foreground="#CCCCCC"
-                    AutomationProperties.AutomationId="TaskGenerateButton" />
             <Button x:Name="CreateButton" Content="Create" Click="Create_Click" Width="80"
                     Background="#0E639C" Foreground="White"
-                    IsEnabled="False"
                     AutomationProperties.AutomationId="TaskCreateButton" />
         </StackPanel>
     </Grid>
