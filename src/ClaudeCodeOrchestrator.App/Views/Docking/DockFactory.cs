@@ -14,7 +14,7 @@ public class DockFactory : Factory
 {
     private readonly object _context;
     private IDocumentDock? _documentDock;
-    private IToolDock? _leftDock;
+    private IToolDock? _topDock;
     private FileBrowserViewModel? _fileBrowser;
     private WorktreesViewModel? _worktreesViewModel;
     private bool _isAddingDocument;
@@ -39,14 +39,14 @@ public class DockFactory : Factory
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
         }
 
-        // Left tool dock (worktrees as first tab, file browser as second)
-        _leftDock = new ToolDock
+        // Top tool dock (worktrees as first tab, file browser as second)
+        _topDock = new ToolDock
         {
-            Id = "LeftDock",
+            Id = "TopDock",
             Title = "Explorer",
             ActiveDockable = _worktreesViewModel,
             VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser),
-            Alignment = Alignment.Left,
+            Alignment = Alignment.Top,
             GripMode = GripMode.Visible
         };
 
@@ -67,21 +67,21 @@ public class DockFactory : Factory
             notifyPropertyChanged.PropertyChanged += OnDocumentDockPropertyChanged;
         }
 
-        // Root proportional dock (sidebar + documents)
+        // Root proportional dock (top panel + documents)
         var rootProportional = new ProportionalDock
         {
             Id = "RootProportional",
-            Orientation = Orientation.Horizontal,
+            Orientation = Orientation.Vertical,
             ActiveDockable = _documentDock,
             VisibleDockables = CreateList<IDockable>(
-                _leftDock,
-                new ProportionalDockSplitter { Id = "LeftSplitter" },
+                _topDock,
+                new ProportionalDockSplitter { Id = "TopSplitter" },
                 _documentDock
             )
         };
 
-        // Set proportions
-        _leftDock.Proportion = 0.25;
+        // Set proportions (top panel takes less height than documents)
+        _topDock.Proportion = 0.25;
         _documentDock.Proportion = 0.75;
 
         // Root dock
@@ -397,10 +397,10 @@ public class DockFactory : Factory
     /// </summary>
     private void HighlightFileInExplorer(string filePath)
     {
-        // Switch to Explorer tab in the sidebar
-        if (_leftDock != null && _fileBrowser != null)
+        // Switch to Explorer tab in the top panel
+        if (_topDock != null && _fileBrowser != null)
         {
-            _leftDock.ActiveDockable = _fileBrowser;
+            _topDock.ActiveDockable = _fileBrowser;
         }
 
         _fileBrowser?.SelectFileByPath(filePath, suppressCallback: true);
@@ -413,10 +413,10 @@ public class DockFactory : Factory
     {
         if (_worktreesViewModel is null || string.IsNullOrEmpty(worktreeId)) return;
 
-        // Switch to Worktrees tab in the sidebar
-        if (_leftDock != null)
+        // Switch to Worktrees tab in the top panel
+        if (_topDock != null)
         {
-            _leftDock.ActiveDockable = _worktreesViewModel;
+            _topDock.ActiveDockable = _worktreesViewModel;
         }
 
         var worktree = _worktreesViewModel.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
@@ -465,7 +465,7 @@ public class DockFactory : Factory
         ContextLocator = new Dictionary<string, Func<object?>>
         {
             ["Root"] = () => _context,
-            ["LeftDock"] = () => _context,
+            ["TopDock"] = () => _context,
             ["DocumentDock"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
