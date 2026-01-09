@@ -41,9 +41,9 @@ public partial class SessionViewModel : ViewModelBase
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     [RelayCommand(CanExecute = nameof(CanSendMessage))]
-    private async Task SendMessageAsync()
+    private Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputText)) return;
+        if (string.IsNullOrWhiteSpace(InputText)) return Task.CompletedTask;
 
         var message = InputText;
         InputText = string.Empty;
@@ -51,14 +51,16 @@ public partial class SessionViewModel : ViewModelBase
 
         // TODO: Send via session service
         Messages.Add(new UserMessageViewModel { Content = message });
+        return Task.CompletedTask;
     }
 
     private bool CanSendMessage() => !IsProcessing && !string.IsNullOrWhiteSpace(InputText);
 
     [RelayCommand(CanExecute = nameof(CanInterrupt))]
-    private async Task InterruptAsync()
+    private Task InterruptAsync()
     {
         // TODO: Interrupt via session service
+        return Task.CompletedTask;
     }
 
     private bool CanInterrupt() => IsProcessing;

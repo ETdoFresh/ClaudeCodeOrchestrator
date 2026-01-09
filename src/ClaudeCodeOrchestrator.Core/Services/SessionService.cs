@@ -39,7 +39,7 @@ public sealed class SessionService : ISessionService, IDisposable
         return CreateSessionAsync(worktree, prompt, null, options, cancellationToken);
     }
 
-    public async Task<Session> CreateSessionAsync(
+    public Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
         string prompt,
         IReadOnlyList<IImageData>? images,
@@ -82,7 +82,7 @@ public sealed class SessionService : ISessionService, IDisposable
         // Start message processing in background
         _ = ProcessMessagesAsync(context, cancellationToken);
 
-        return session;
+        return Task.FromResult(session);
     }
 
     public Task<Session> CreateIdleSessionAsync(
@@ -131,7 +131,7 @@ public sealed class SessionService : ISessionService, IDisposable
         return Task.FromResult(session);
     }
 
-    public async Task<Session> ResumeSessionAsync(
+    public Task<Session> ResumeSessionAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
     {
@@ -169,7 +169,7 @@ public sealed class SessionService : ISessionService, IDisposable
         // Start message processing
         _ = ProcessMessagesAsync(newContext, cancellationToken);
 
-        return context.Session;
+        return Task.FromResult(context.Session);
     }
 
     public async Task EndSessionAsync(
