@@ -1,6 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ClaudeCodeOrchestrator.SDK;
+using ClaudeCodeOrchestrator.SDK.Messages;
+using ClaudeCodeOrchestrator.SDK.Options;
 
 namespace ClaudeCodeOrchestrator.Core.Services;
 
@@ -66,7 +69,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
     /// <inheritdoc />
     public async Task<GeneratedTitle> GenerateTitleAsync(string prompt, CancellationToken cancellationToken = default)
     {
-        // Try OpenRouter API if key is available
+        // Try OpenRouter API if key is available (fastest)
         if (!string.IsNullOrEmpty(_openRouterApiKey))
         {
             var apiResult = await TryOpenRouterAsync(prompt, cancellationToken);
@@ -76,7 +79,14 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
             }
         }
 
-        // Fall back to local generation
+        // Fall back to Claude SDK (uses local Claude Code installation)
+        var claudeResult = await TryClaudeSdkAsync(prompt, cancellationToken);
+        if (claudeResult != null)
+        {
+            return claudeResult;
+        }
+
+        // Final fallback to local generation
         return GenerateTitleSync(prompt);
     }
 
@@ -105,7 +115,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
             {
                 Content = JsonContent.Create(new
                 {
-                    model = "google/gemini-2.0-flash-001",
+                    model = "google/gemini-3-flash-preview",
                     messages = new[]
                     {
                         new { role = "user", content = titlePrompt }
@@ -134,6 +144,62 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                         Title = parsed.Value.Title,
                         BranchName = EnsureBranchFormat(parsed.Value.BranchName),
                         Source = "api"
+                    };
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Try Claude SDK for title generation (uses local Claude Code installation).
+    /// </summary>
+    private async Task<GeneratedTitle?> TryClaudeSdkAsync(string prompt, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var titlePrompt = JsonPromptTemplate.Replace("{{PROMPT}}", prompt);
+
+            var options = new ClaudeAgentOptions
+            {
+                Model = "claude-haiku-4-20250514",
+                MaxTurns = 1,
+                PermissionMode = PermissionMode.Plan // No tool use needed
+            };
+
+            string? responseContent = null;
+
+            await foreach (var message in ClaudeAgent.QueryAsync(titlePrompt, options, cancellationToken))
+            {
+                if (message is SDKAssistantMessage assistantMsg)
+                {
+                    // Extract text from content blocks
+                    foreach (var block in assistantMsg.Message.Content)
+                    {
+                        if (block is TextContentBlock textBlock)
+                        {
+                            responseContent = textBlock.Text;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(responseContent))
+            {
+                var parsed = ParseJsonResponse(responseContent);
+                if (parsed != null)
+                {
+                    return new GeneratedTitle
+                    {
+                        Title = parsed.Value.Title,
+                        BranchName = EnsureBranchFormat(parsed.Value.BranchName),
+                        Source = "claude"
                     };
                 }
             }
