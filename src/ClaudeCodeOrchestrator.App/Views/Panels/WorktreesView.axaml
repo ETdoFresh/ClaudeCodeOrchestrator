@@ -24,7 +24,7 @@
                     <Border Padding="8" Margin="2">
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Grid.Column="0" Spacing="4">
-                                <TextBlock Text="{Binding TaskDescription}"
+                                <TextBlock Text="{Binding DisplayTitle}"
                                            FontWeight="SemiBold"
                                            Foreground="#CCCCCC"
                                            TextTrimming="CharacterEllipsis" />
