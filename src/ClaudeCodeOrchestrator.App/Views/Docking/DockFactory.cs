@@ -1071,4 +1071,28 @@ public class DockFactory : Factory
     /// Command to collapse split documents back to a single pane.
     /// </summary>
     public RelayCommand CollapseSplitCommand => new(CollapseSplitDocuments);
+
+    /// <summary>
+    /// Resets the view to default state: collapses split tabs and resets left panel width to 25%.
+    /// </summary>
+    public void ResetToDefaultView()
+    {
+        // Collapse any split document panes
+        if (CanCollapseSplitDocuments)
+        {
+            CollapseSplitDocuments();
+        }
+
+        // Reset left panel proportion to default (25%)
+        if (_leftDock != null)
+        {
+            _leftDock.Proportion = 0.25;
+        }
+
+        // Reset document dock proportion to default (75%)
+        if (_documentDock != null)
+        {
+            _documentDock.Proportion = 0.75;
+        }
+    }
 }

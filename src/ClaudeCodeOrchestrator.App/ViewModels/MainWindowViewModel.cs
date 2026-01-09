@@ -305,6 +305,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Factory?.CollapseSplitDocuments();
     }
 
+    [RelayCommand]
+    private void ResetView()
+    {
+        Factory?.ResetToDefaultView();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
