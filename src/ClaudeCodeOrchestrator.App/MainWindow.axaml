@@ -75,6 +75,15 @@
                           AutomationProperties.AutomationId="SplitGridMenuItem" />
                 <MenuItem Header="_Collapse Split Tabs" Command="{Binding CollapseSplitCommand}"
                           AutomationProperties.AutomationId="CollapseSplitMenuItem" />
+                <Separator />
+                <MenuItem Header="Auto-Split _Vertically" Command="{Binding AutoSplitVerticalCommand}"
+                          AutomationProperties.AutomationId="AutoSplitVerticalMenuItem" />
+                <MenuItem Header="Auto-Split H_orizontally" Command="{Binding AutoSplitHorizontalCommand}"
+                          AutomationProperties.AutomationId="AutoSplitHorizontalMenuItem" />
+                <MenuItem Header="Auto-Split G_rid" Command="{Binding AutoSplitGridCommand}"
+                          AutomationProperties.AutomationId="AutoSplitGridMenuItem" />
+                <MenuItem Header="_Disable Auto-Split" Command="{Binding DisableAutoSplitCommand}"
+                          AutomationProperties.AutomationId="DisableAutoSplitMenuItem" />
             </MenuItem>
             <MenuItem Header="_Help" AutomationProperties.AutomationId="HelpMenu">
                 <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />

@@ -13,6 +13,8 @@ namespace ClaudeCodeOrchestrator.App.Views.Docking;
 /// </summary>
 public enum SplitLayout
 {
+    /// <summary>No split layout.</summary>
+    None,
     /// <summary>Split tabs vertically (side by side).</summary>
     Vertical,
     /// <summary>Split tabs horizontally (stacked).</summary>
@@ -34,6 +36,13 @@ public class DockFactory : Factory
     private bool _isAddingDocument;
     private IRootDock? _rootDock;
     private IProportionalDock? _rootProportional;
+
+    /// <summary>
+    /// Gets or sets the auto-split layout mode. When set to a value other than None,
+    /// new session documents will automatically trigger a re-split of all tabs.
+    /// This is disabled when tabs are manually closed or collapsed.
+    /// </summary>
+    public SplitLayout AutoSplitLayout { get; private set; } = SplitLayout.None;
 
     public DockFactory(object context)
     {
@@ -173,11 +182,42 @@ public class DockFactory : Factory
 
             // Initialize the document
             InitDockable(document, _documentDock);
+
+            // Auto-split if enabled and we have enough documents
+            if (AutoSplitLayout != SplitLayout.None)
+            {
+                // Schedule re-split after the document is added (need to exit this method first)
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    ApplyAutoSplit();
+                });
+            }
         }
         finally
         {
             _isAddingDocument = false;
         }
+    }
+
+    /// <summary>
+    /// Applies auto-split if enabled and there are enough documents.
+    /// </summary>
+    private void ApplyAutoSplit()
+    {
+        if (AutoSplitLayout == SplitLayout.None) return;
+
+        // Count all documents in the layout
+        var allDocuments = new List<IDockable>();
+        if (_rootProportional != null)
+        {
+            CollectAllDocuments(_rootProportional, allDocuments);
+        }
+
+        // Need at least 2 documents to split
+        if (allDocuments.Count < 2) return;
+
+        // Apply the split
+        SplitAllDocuments(AutoSplitLayout);
     }
 
     /// <summary>
@@ -547,6 +587,9 @@ public class DockFactory : Factory
         if (dockable is not DocumentViewModelBase)
             return;
 
+        // Disable auto-split when a tab is closed
+        AutoSplitLayout = SplitLayout.None;
+
         if (!CanCollapseSplitDocuments)
             return;
 
@@ -779,9 +822,13 @@ public class DockFactory : Factory
 
     /// <summary>
     /// Collapses all split document panes back into a single pane.
+    /// Also disables auto-split mode.
     /// </summary>
     public void CollapseSplitDocuments()
     {
+        // Disable auto-split when collapsing
+        AutoSplitLayout = SplitLayout.None;
+
         if (_rootProportional?.VisibleDockables is null)
             return;
 
@@ -844,6 +891,34 @@ public class DockFactory : Factory
         }
 
         InitDockable(newDocumentDock, _rootProportional);
+    }
+
+    /// <summary>
+    /// Enables auto-split mode with the specified layout.
+    /// New session documents will automatically trigger a re-split of all tabs.
+    /// </summary>
+    /// <param name="layout">The layout to use for auto-split.</param>
+    public void EnableAutoSplit(SplitLayout layout)
+    {
+        if (layout == SplitLayout.None)
+        {
+            DisableAutoSplit();
+            return;
+        }
+
+        AutoSplitLayout = layout;
+
+        // Apply the split immediately if we have documents
+        SplitAllDocuments(layout);
+    }
+
+    /// <summary>
+    /// Disables auto-split mode and collapses any existing split layout.
+    /// </summary>
+    public void DisableAutoSplit()
+    {
+        AutoSplitLayout = SplitLayout.None;
+        CollapseSplitDocuments();
     }
 
     private IProportionalDock? CreateSplitDocumentDocks(List<IDockable> documents, SplitLayout layout)
