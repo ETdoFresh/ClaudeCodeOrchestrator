@@ -305,6 +305,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Factory?.CollapseSplitDocuments();
     }
 
+    [RelayCommand]
+    private async Task ShowAboutAsync()
+    {
+        await _dialogService.ShowAboutAsync();
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;

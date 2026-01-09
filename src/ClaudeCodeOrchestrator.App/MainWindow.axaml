@@ -77,7 +77,8 @@
                           AutomationProperties.AutomationId="CollapseSplitMenuItem" />
             </MenuItem>
             <MenuItem Header="_Help" AutomationProperties.AutomationId="HelpMenu">
-                <MenuItem Header="_About" AutomationProperties.AutomationId="AboutMenuItem" />
+                <MenuItem Header="_About" Command="{Binding ShowAboutCommand}"
+                          AutomationProperties.AutomationId="AboutMenuItem" />
             </MenuItem>
         </Menu>
 

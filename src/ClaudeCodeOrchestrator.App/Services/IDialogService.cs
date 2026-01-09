@@ -41,4 +41,9 @@ public interface IDialogService
     /// <param name="message">The confirmation message.</param>
     /// <returns>True if confirmed, false otherwise.</returns>
     Task<bool> ShowConfirmAsync(string title, string message);
+
+    /// <summary>
+    /// Shows the About dialog with application information.
+    /// </summary>
+    Task ShowAboutAsync();
 }
