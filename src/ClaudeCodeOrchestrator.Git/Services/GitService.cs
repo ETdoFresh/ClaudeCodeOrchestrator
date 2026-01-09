@@ -162,7 +162,55 @@ public sealed class GitService : IGitService
         string branch,
         CancellationToken cancellationToken = default)
     {
-        // Use git rev-list to count commits ahead of the remote tracking branch
+        // First check if remote tracking branch exists
+        var checkPsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"rev-parse --verify origin/{branch}",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var checkProcess = System.Diagnostics.Process.Start(checkPsi);
+        if (checkProcess == null)
+            return 0;
+
+        await checkProcess.WaitForExitAsync(cancellationToken);
+
+        if (checkProcess.ExitCode != 0)
+        {
+            // Remote tracking branch doesn't exist (new branch not pushed yet)
+            // Count all commits on this branch that aren't on origin/HEAD or origin/main
+            var countPsi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"rev-list --count {branch} --not --remotes=origin",
+                WorkingDirectory = repoPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var countProcess = System.Diagnostics.Process.Start(countPsi);
+            if (countProcess == null)
+                return 0;
+
+            await countProcess.WaitForExitAsync(cancellationToken);
+
+            if (countProcess.ExitCode == 0)
+            {
+                var countOutput = await countProcess.StandardOutput.ReadToEndAsync(cancellationToken);
+                return int.TryParse(countOutput.Trim(), out var c) ? c : 0;
+            }
+
+            return 0;
+        }
+
+        // Remote tracking branch exists, count commits ahead of it
         var psi = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "git",
@@ -181,12 +229,7 @@ public sealed class GitService : IGitService
         await process.WaitForExitAsync(cancellationToken);
 
         if (process.ExitCode != 0)
-        {
-            // Remote tracking branch might not exist (new branch not pushed yet)
-            // In this case, count all commits from the branch tip to root
-            // But for a more practical approach, let's just return 0 if no remote exists
             return 0;
-        }
 
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
         return int.TryParse(output.Trim(), out var count) ? count : 0;
