@@ -46,46 +46,101 @@ public partial class NewTaskDialog : Window
         // Handle Ctrl+V (Windows/Linux) or Cmd+V (macOS) for paste
         if (e.Key == Key.V && (e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta)))
         {
-            await TryPasteImageFromClipboard();
+            // Only handle the event if we successfully pasted an image
+            // Otherwise, let the TextBox handle text paste normally
+            if (await TryPasteImageFromClipboard())
+            {
+                e.Handled = true;
+            }
         }
     }
 
-    private async Task TryPasteImageFromClipboard()
+    /// <summary>
+    /// Attempts to paste an image from the clipboard.
+    /// </summary>
+    /// <returns>True if an image was pasted, false otherwise (allowing text paste to proceed).</returns>
+    private async Task<bool> TryPasteImageFromClipboard()
     {
         try
         {
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-            if (clipboard == null) return;
+            if (clipboard == null) return false;
 
             var formats = await clipboard.GetFormatsAsync();
 
-            // Check for image data
-            if (formats.Contains("image/png") || formats.Contains("PNG"))
-            {
-                var data = await clipboard.GetDataAsync("image/png")
-                        ?? await clipboard.GetDataAsync("PNG");
+            // Check for various image formats (different platforms use different names)
+            string[] imageFormats = { "image/png", "PNG", "image/jpeg", "JPEG", "image/bmp", "BMP", "image/gif", "GIF" };
 
-                if (data is byte[] imageBytes)
+            foreach (var format in imageFormats)
+            {
+                if (!formats.Contains(format)) continue;
+
+                var data = await clipboard.GetDataAsync(format);
+
+                if (data is byte[] imageBytes && imageBytes.Length > 0)
                 {
-                    AddImageAttachment(imageBytes, "image/png", "pasted-image.png");
-                    return;
+                    var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                    AddImageAttachment(imageBytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                    return true;
+                }
+
+                // Some platforms return a stream instead of bytes
+                if (data is Stream stream)
+                {
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    if (bytes.Length > 0)
+                    {
+                        var mediaType = format.StartsWith("image/") ? format : $"image/{format.ToLowerInvariant()}";
+                        AddImageAttachment(bytes, mediaType, $"pasted-image.{GetExtensionForFormat(format)}");
+                        return true;
+                    }
                 }
             }
 
-            // Try to get files from clipboard
+            // Try to get image files from clipboard (for copied image files)
             var files = await clipboard.GetDataAsync(DataFormats.Files) as IEnumerable<IStorageItem>;
             if (files != null)
             {
-                foreach (var file in files.OfType<IStorageFile>())
+                var imageFiles = files.OfType<IStorageFile>().ToList();
+                var count = 0;
+                foreach (var file in imageFiles)
                 {
-                    await AddImageFromFile(file);
+                    var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    if (ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".webp")
+                    {
+                        await AddImageFromFile(file);
+                        count++;
+                    }
+                }
+                if (count > 0)
+                {
+                    return true;
                 }
             }
+
+            // No image found in clipboard - let TextBox handle text paste
+            return false;
         }
         catch
         {
-            // Clipboard access failed, ignore
+            // Clipboard access failed - let TextBox try its default paste
+            return false;
         }
+    }
+
+    private static string GetExtensionForFormat(string format)
+    {
+        return format.ToLowerInvariant() switch
+        {
+            "image/png" or "png" => "png",
+            "image/jpeg" or "jpeg" or "jpg" => "jpg",
+            "image/gif" or "gif" => "gif",
+            "image/bmp" or "bmp" => "bmp",
+            "image/webp" or "webp" => "webp",
+            _ => "png"
+        };
     }
 
     private async void AttachButton_Click(object? sender, RoutedEventArgs e)
