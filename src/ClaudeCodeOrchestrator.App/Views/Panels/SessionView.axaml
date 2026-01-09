@@ -35,7 +35,9 @@
                     <Arc Stroke="#007ACC"
                          StrokeThickness="2"
                          StartAngle="0"
-                         SweepAngle="270" />
+                         SweepAngle="270"
+                         Width="14"
+                         Height="14" />
                 </Panel>
                 <TextBlock Text="•" Foreground="#666666" />
                 <TextBlock FontSize="13" Foreground="#858585">
@@ -175,9 +177,22 @@
 
         <!-- Input area -->
         <Border Grid.Row="2" Padding="12" Background="#252526" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0">
-            <Grid RowDefinitions="Auto,Auto">
-                <!-- Image attachments display -->
+            <Grid RowDefinitions="Auto,Auto,Auto">
+                <!-- Paste status indicator -->
                 <Border Grid.Row="0"
+                        x:Name="PasteStatusBorder"
+                        IsVisible="False"
+                        Background="#2D2D30"
+                        CornerRadius="4"
+                        Padding="8,4"
+                        Margin="0,0,0,8">
+                    <TextBlock x:Name="PasteStatusText"
+                               FontSize="12"
+                               Foreground="#4EC9B0" />
+                </Border>
+
+                <!-- Image attachments display -->
+                <Border Grid.Row="1"
                         x:Name="AttachmentsArea"
                         IsVisible="False"
                         Background="#1E1E1E"
@@ -200,7 +215,7 @@
                 </Border>
 
                 <!-- Input row -->
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
                     <!-- Attach button -->
                     <Button Grid.Column="0"
                             x:Name="AttachButton"
