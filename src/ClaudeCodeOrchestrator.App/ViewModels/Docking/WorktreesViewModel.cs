@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -13,6 +15,11 @@ public partial class WorktreesViewModel : ToolViewModelBase
     private WorktreeViewModel? _selectedWorktree;
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
+
+    /// <summary>
+    /// Gets the total number of commits ahead across all worktrees (commits to push).
+    /// </summary>
+    public int TotalCommitsToPush => Worktrees.Sum(w => w.CommitsAhead);
 
     /// <summary>
     /// Callback to invoke when the user requests to create a new task.
@@ -42,6 +49,40 @@ public partial class WorktreesViewModel : ToolViewModelBase
     {
         Id = "Worktrees";
         Title = "Worktrees";
+
+        // Subscribe to collection changes to update TotalCommitsToPush
+        Worktrees.CollectionChanged += OnWorktreesCollectionChanged;
+    }
+
+    private void OnWorktreesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Unsubscribe from old items
+        if (e.OldItems != null)
+        {
+            foreach (WorktreeViewModel worktree in e.OldItems)
+            {
+                worktree.PropertyChanged -= OnWorktreePropertyChanged;
+            }
+        }
+
+        // Subscribe to new items
+        if (e.NewItems != null)
+        {
+            foreach (WorktreeViewModel worktree in e.NewItems)
+            {
+                worktree.PropertyChanged += OnWorktreePropertyChanged;
+            }
+        }
+
+        OnPropertyChanged(nameof(TotalCommitsToPush));
+    }
+
+    private void OnWorktreePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WorktreeViewModel.CommitsAhead))
+        {
+            OnPropertyChanged(nameof(TotalCommitsToPush));
+        }
     }
 
     [RelayCommand]

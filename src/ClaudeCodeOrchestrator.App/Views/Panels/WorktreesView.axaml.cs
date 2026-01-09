@@ -22,6 +22,9 @@ public partial class WorktreesView : UserControl
             _ => new SolidColorBrush(Color.Parse("#666666"))
         });
 
+    public static FuncValueConverter<int, bool> PositiveNumberConverter { get; } =
+        new(value => value > 0);
+
     private DateTime _lastSelectionTime;
     private DateTime _lastDoubleClickTime;
     private const int DoubleClickThresholdMs = 300;
