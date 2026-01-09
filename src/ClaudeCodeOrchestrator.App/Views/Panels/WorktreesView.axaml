@@ -44,6 +44,16 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <!-- Active session spinner -->
+                                <Panel Classes="arc-spinner"
+                                       IsVisible="{Binding HasActiveSession}"
+                                       ToolTip.Tip="Session is active">
+                                    <Arc Stroke="#007ACC"
+                                         StrokeThickness="2"
+                                         StartAngle="0"
+                                         SweepAngle="270" />
+                                </Panel>
+
                                 <!-- Status badge -->
                                 <Border Padding="6,2" CornerRadius="2"
                                         Background="{Binding Status, Converter={x:Static local:WorktreesView.StatusToBrushConverter}}">
