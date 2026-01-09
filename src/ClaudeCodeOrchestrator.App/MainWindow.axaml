@@ -59,6 +59,9 @@
                 <MenuItem Header="_Refresh Worktrees" Command="{Binding RefreshWorktreesCommand}"
                           IsEnabled="{Binding IsRepositoryOpen}"
                           AutomationProperties.AutomationId="RefreshWorktreesMenuItem" />
+                <MenuItem Header="_Push All Branches" Command="{Binding PushAllBranchesCommand}"
+                          IsEnabled="{Binding IsRepositoryOpen}"
+                          AutomationProperties.AutomationId="PushAllBranchesMenuItem" />
             </MenuItem>
             <MenuItem Header="_View" AutomationProperties.AutomationId="ViewMenu">
                 <MenuItem Header="_Worktrees" AutomationProperties.AutomationId="WorktreesMenuItem" />
