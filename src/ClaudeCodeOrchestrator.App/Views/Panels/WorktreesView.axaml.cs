@@ -31,6 +31,9 @@ public partial class WorktreesView : UserControl
     {
         base.OnLoaded(e);
 
+        // Subscribe to selection changed for single-click (preview)
+        WorktreesList.SelectionChanged += OnSelectionChanged;
+
         // Subscribe to double-click to open session
         WorktreesList.DoubleTapped += OnDoubleTapped;
     }
@@ -38,7 +41,19 @@ public partial class WorktreesView : UserControl
     protected override void OnUnloaded(RoutedEventArgs e)
     {
         base.OnUnloaded(e);
+        WorktreesList.SelectionChanged -= OnSelectionChanged;
         WorktreesList.DoubleTapped -= OnDoubleTapped;
+    }
+
+    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not WorktreesViewModel vm) return;
+        if (e.AddedItems.Count == 0) return;
+
+        if (e.AddedItems[0] is WorktreeViewModel worktree)
+        {
+            vm.SelectWorktreeCommand.Execute(worktree);
+        }
     }
 
     private void OnDoubleTapped(object? sender, TappedEventArgs e)
