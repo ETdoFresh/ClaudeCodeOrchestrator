@@ -13,6 +13,14 @@ public interface IGitService
     Task<RepositoryInfo> OpenRepositoryAsync(string path, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Initializes a new Git repository at the specified path.
+    /// </summary>
+    /// <param name="path">The path where the repository should be initialized.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Information about the newly initialized repository.</returns>
+    Task<RepositoryInfo> InitializeRepositoryAsync(string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all branches in the repository.
     /// </summary>
     Task<IReadOnlyList<string>> GetBranchesAsync(string repoPath, CancellationToken cancellationToken = default);

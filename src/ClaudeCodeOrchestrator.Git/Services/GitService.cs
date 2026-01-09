@@ -39,6 +39,38 @@ public sealed class GitService : IGitService
         }, cancellationToken);
     }
 
+    public Task<RepositoryInfo> InitializeRepositoryAsync(string path, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            // Initialize a new repository with 'main' as the default branch
+            Repository.Init(path);
+
+            using var repo = new Repository(path);
+
+            // Create an initial commit to establish the main branch
+            var signature = repo.Config.BuildSignature(DateTimeOffset.Now);
+
+            // If no user is configured, use default values
+            signature ??= new Signature("User", "user@localhost", DateTimeOffset.Now);
+
+            repo.Commit("Initial commit", signature, signature, new CommitOptions { AllowEmptyCommit = true });
+
+            var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+            var currentBranch = repo.Head.FriendlyName;
+
+            return new RepositoryInfo
+            {
+                Path = path,
+                Name = name,
+                CurrentBranch = currentBranch,
+                DefaultBranch = currentBranch,
+                WorktreesDirectory = Path.Combine(path, WorktreesDirectoryName),
+                IsWorktree = false
+            };
+        }, cancellationToken);
+    }
+
     public Task<IReadOnlyList<string>> GetBranchesAsync(string repoPath, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
