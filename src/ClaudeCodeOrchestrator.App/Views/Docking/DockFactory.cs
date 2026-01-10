@@ -1022,7 +1022,10 @@ public class DockFactory : Factory
         // If already split, collapse first then re-split
         if (CanCollapseSplitDocuments)
         {
+            // Preserve auto-split layout during re-split operations
+            var savedAutoSplitLayout = AutoSplitLayout;
             CollapseSplitDocuments();
+            AutoSplitLayout = savedAutoSplitLayout;
         }
 
         if (_documentDock?.VisibleDockables is null)
