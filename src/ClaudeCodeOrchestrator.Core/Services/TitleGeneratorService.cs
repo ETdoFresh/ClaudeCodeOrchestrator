@@ -68,25 +68,41 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
     /// <inheritdoc />
     public async Task<GeneratedTitle> GenerateTitleAsync(string prompt, CancellationToken cancellationToken = default)
     {
+        var promptPreview = prompt.Length > 60 ? prompt[..60] + "..." : prompt;
+        Console.Error.WriteLine($"[TitleGenerator] Starting generation for: \"{promptPreview}\"");
+
         // Try OpenRouter API if key is available (fastest)
         if (!string.IsNullOrEmpty(_openRouterApiKey))
         {
             var apiResult = await TryOpenRouterAsync(prompt, cancellationToken);
             if (apiResult != null)
             {
+                LogResult(apiResult);
                 return apiResult;
             }
+        }
+        else
+        {
+            Console.Error.WriteLine("[TitleGenerator] OpenRouter: Skipped (no API key configured)");
         }
 
         // Fall back to Claude SDK (uses local Claude Code installation)
         var claudeResult = await TryClaudeSdkAsync(prompt, cancellationToken);
         if (claudeResult != null)
         {
+            LogResult(claudeResult);
             return claudeResult;
         }
 
         // Final fallback to local generation
-        return GenerateTitleSync(prompt);
+        var fallbackResult = GenerateTitleSync(prompt);
+        LogResult(fallbackResult);
+        return fallbackResult;
+    }
+
+    private static void LogResult(GeneratedTitle result)
+    {
+        Console.Error.WriteLine($"[TitleGenerator] Result: Title=\"{result.Title}\" Branch=\"{result.BranchName}\" Source=\"{result.Source}\"");
     }
 
     /// <inheritdoc />
@@ -106,6 +122,9 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
     /// </summary>
     private async Task<GeneratedTitle?> TryOpenRouterAsync(string prompt, CancellationToken cancellationToken)
     {
+        const string model = "google/gemini-3-flash-preview";
+        Console.Error.WriteLine($"[TitleGenerator] OpenRouter: Attempting with model {model}");
+
         try
         {
             var titlePrompt = JsonPromptTemplate.Replace("{{PROMPT}}", prompt);
@@ -114,7 +133,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
             {
                 Content = JsonContent.Create(new
                 {
-                    model = "google/gemini-3-flash-preview",
+                    model,
                     messages = new[]
                     {
                         new { role = "user", content = titlePrompt }
@@ -127,6 +146,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
             using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
+                Console.Error.WriteLine($"[TitleGenerator] OpenRouter: HTTP error {(int)response.StatusCode} {response.ReasonPhrase}");
                 return null;
             }
 
@@ -138,6 +158,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                 var parsed = ParseJsonResponse(content);
                 if (parsed != null)
                 {
+                    Console.Error.WriteLine("[TitleGenerator] OpenRouter: Success - parsed title and branch");
                     return new GeneratedTitle
                     {
                         Title = parsed.Value.Title,
@@ -145,12 +166,18 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                         Source = "api"
                     };
                 }
+                Console.Error.WriteLine("[TitleGenerator] OpenRouter: Failed to parse JSON from response");
+            }
+            else
+            {
+                Console.Error.WriteLine("[TitleGenerator] OpenRouter: Empty response content");
             }
 
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[TitleGenerator] OpenRouter: Exception - {ex.Message}");
             return null;
         }
     }
@@ -161,13 +188,16 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
     /// </summary>
     private async Task<GeneratedTitle?> TryClaudeSdkAsync(string prompt, CancellationToken cancellationToken)
     {
+        const string model = "haiku";
+        Console.Error.WriteLine($"[TitleGenerator] Claude SDK: Attempting with model {model}");
+
         try
         {
             var titlePrompt = JsonPromptTemplate.Replace("{{PROMPT}}", prompt);
 
             var options = new ClaudeAgentOptions
             {
-                Model = "claude-haiku-4-20250514",
+                Model = model,
                 MaxTurns = 1,
                 PermissionMode = PermissionMode.Plan // No tool use needed
             };
@@ -177,10 +207,11 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
 
             if (!string.IsNullOrEmpty(responseContent))
             {
-                Console.Error.WriteLine($"[TitleGenerator] Claude SDK response: {responseContent[..Math.Min(200, responseContent.Length)]}...");
+                Console.Error.WriteLine($"[TitleGenerator] Claude SDK: Response preview: {responseContent[..Math.Min(200, responseContent.Length)]}...");
                 var parsed = ParseJsonResponse(responseContent);
                 if (parsed != null)
                 {
+                    Console.Error.WriteLine("[TitleGenerator] Claude SDK: Success - parsed title and branch");
                     return new GeneratedTitle
                     {
                         Title = parsed.Value.Title,
@@ -188,18 +219,18 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                         Source = "claude"
                     };
                 }
-                Console.Error.WriteLine("[TitleGenerator] Failed to parse JSON from Claude response");
+                Console.Error.WriteLine("[TitleGenerator] Claude SDK: Failed to parse JSON from response");
             }
             else
             {
-                Console.Error.WriteLine("[TitleGenerator] Claude SDK returned empty response");
+                Console.Error.WriteLine("[TitleGenerator] Claude SDK: Empty response");
             }
 
             return null;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[TitleGenerator] Claude SDK failed: {ex.Message}");
+            Console.Error.WriteLine($"[TitleGenerator] Claude SDK: Exception - {ex.Message}");
             return null;
         }
     }
@@ -240,6 +271,8 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
     /// </summary>
     private static (string Title, string BranchName) GenerateTitleLocal(string prompt)
     {
+        Console.Error.WriteLine("[TitleGenerator] Fallback: Using local word extraction");
+
         // Clean the prompt
         var cleaned = Regex.Replace(prompt, @"\n", " ");
         cleaned = Regex.Replace(cleaned, @"[^a-zA-Z0-9\s]", " ");
@@ -256,6 +289,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
         // If we didn't get enough meaningful words, use original approach
         if (titleWords.Count < 2)
         {
+            Console.Error.WriteLine($"[TitleGenerator] Fallback: Not enough meaningful words ({titleWords.Count}), using raw words");
             var fallbackWords = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(5).ToList();
             var title = string.Join(" ", fallbackWords.Select(ToTitleCase));
             if (string.IsNullOrEmpty(title))
@@ -264,6 +298,8 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
             }
             return (title, GenerateBranchFromTitle(title));
         }
+
+        Console.Error.WriteLine($"[TitleGenerator] Fallback: Extracted words: [{string.Join(", ", titleWords)}]");
 
         // Convert to Title Case
         var resultTitle = string.Join(" ", titleWords.Select(ToTitleCase));

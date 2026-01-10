@@ -32,7 +32,6 @@ public static class ClaudeAgent
         var startInfo = new ProcessStartInfo
         {
             FileName = claudePath,
-            Arguments = args,
             UseShellExecute = false,
             RedirectStandardInput = false,
             RedirectStandardOutput = true,
@@ -40,6 +39,12 @@ public static class ClaudeAgent
             CreateNoWindow = true,
             WorkingDirectory = options.Cwd ?? Environment.CurrentDirectory
         };
+
+        // Use ArgumentList for proper escaping (no shell interpretation issues)
+        foreach (var arg in args)
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
 
         if (options.Environment != null)
         {
@@ -123,7 +128,7 @@ public static class ClaudeAgent
         return "claude";
     }
 
-    private static string BuildPrintArguments(string prompt, ClaudeAgentOptions options)
+    private static List<string> BuildPrintArguments(string prompt, ClaudeAgentOptions options)
     {
         var args = new List<string> { "--print" };
 
@@ -142,18 +147,18 @@ public static class ClaudeAgent
         if (options.PermissionMode == PermissionMode.Plan)
         {
             args.Add("--allowedTools");
-            args.Add("\"[]\"");
+            args.Add("[]");
         }
         else if (options.PermissionMode == PermissionMode.AcceptAll)
         {
             args.Add("--dangerously-skip-permissions");
         }
 
-        // Escape prompt for shell
-        var escapedPrompt = prompt.Replace("\"", "\\\"");
-        args.Add($"\"{escapedPrompt}\"");
+        // Add prompt using -p flag for explicit prompt argument
+        args.Add("-p");
+        args.Add(prompt);
 
-        return string.Join(" ", args);
+        return args;
     }
 
     /// <summary>
