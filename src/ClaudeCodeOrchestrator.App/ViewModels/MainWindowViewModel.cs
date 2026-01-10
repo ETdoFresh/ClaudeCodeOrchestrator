@@ -30,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isRepositoryOpen;
     private bool _disposed;
     private string? _autoSplitLayoutText;
+    private string? _gitHubUrl;
 
     // Track pending preview states for sessions being created
     private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
@@ -114,6 +115,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         get => _autoSplitLayoutText;
         private set => SetProperty(ref _autoSplitLayoutText, value);
+    }
+
+    /// <summary>
+    /// Gets the GitHub URL for the current repository, if it's a GitHub repository.
+    /// Returns null if no repository is open or the remote is not GitHub.
+    /// </summary>
+    public string? GitHubUrl
+    {
+        get => _gitHubUrl;
+        private set => SetProperty(ref _gitHubUrl, value);
     }
 
     public ObservableCollection<SessionViewModel> Sessions { get; } = new();
@@ -238,11 +249,57 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Save as last opened repository
         _settingsService.SetLastRepositoryPath(path);
 
+        // Fetch remote URL and set GitHubUrl if it's a GitHub repository
+        await UpdateGitHubUrlAsync(path);
+
         // Load worktrees
         await RefreshWorktreesAsync();
 
         // Update file browser
         Factory?.UpdateFileBrowser(path);
+    }
+
+    private async Task UpdateGitHubUrlAsync(string path)
+    {
+        try
+        {
+            var remoteUrl = await _gitService.GetRemoteUrlAsync(path);
+            GitHubUrl = ConvertToGitHubUrl(remoteUrl);
+        }
+        catch
+        {
+            GitHubUrl = null;
+        }
+    }
+
+    private static string? ConvertToGitHubUrl(string? remoteUrl)
+    {
+        if (string.IsNullOrEmpty(remoteUrl))
+            return null;
+
+        // Handle SSH URLs: git@github.com:user/repo.git
+        if (remoteUrl.StartsWith("git@github.com:"))
+        {
+            var path = remoteUrl["git@github.com:".Length..];
+            if (path.EndsWith(".git"))
+                path = path[..^4];
+            return $"https://github.com/{path}";
+        }
+
+        // Handle HTTPS URLs: https://github.com/user/repo.git
+        if (remoteUrl.StartsWith("https://github.com/") || remoteUrl.StartsWith("http://github.com/"))
+        {
+            var url = remoteUrl;
+            if (url.EndsWith(".git"))
+                url = url[..^4];
+            // Ensure it uses https
+            if (url.StartsWith("http://"))
+                url = "https://" + url[7..];
+            return url;
+        }
+
+        // Not a GitHub URL
+        return null;
     }
 
     [RelayCommand]
@@ -373,6 +430,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         CurrentRepositoryPath = null;
         IsRepositoryOpen = false;
         WindowTitle = "Claude Code Orchestrator";
+        GitHubUrl = null;
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
@@ -451,6 +509,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Silently fail if browser can't be opened
+        }
+    }
+
+    [RelayCommand]
+    private void OpenRepo()
+    {
+        if (string.IsNullOrEmpty(GitHubUrl)) return;
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = GitHubUrl,
                 UseShellExecute = true
             });
         }

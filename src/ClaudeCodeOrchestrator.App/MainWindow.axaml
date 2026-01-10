@@ -130,6 +130,22 @@
                            FontSize="12"
                            Margin="0,0,12,0"
                            AutomationProperties.AutomationId="AutoSplitIndicator" />
+                <!-- Repo Link (only visible for GitHub repositories) -->
+                <Button Content="Repo"
+                        Command="{Binding OpenRepoCommand}"
+                        IsVisible="{Binding GitHubUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        Background="Transparent"
+                        Foreground="#6CA0DC"
+                        FontSize="12"
+                        Padding="8,4"
+                        Cursor="Hand"
+                        AutomationProperties.AutomationId="RepoLink">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#8FBAEC" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
                 <!-- Usage Link -->
                 <Button Content="Usage"
                         Command="{Binding OpenUsageCommand}"
