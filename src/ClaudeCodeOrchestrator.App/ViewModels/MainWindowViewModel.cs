@@ -278,7 +278,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Only include paths that still exist
             if (Directory.Exists(path))
             {
-                RecentRepositories.Add(new RecentRepositoryItem(path, OpenRecentRepositoryCommand));
+                RecentRepositories.Add(new RecentRepositoryItem(path, OpenRecentRepositoryAsync));
             }
         }
         OnPropertyChanged(nameof(HasRecentRepositories));
@@ -1599,14 +1599,15 @@ public class RecentRepositoryItem
 {
     public string Path { get; }
     public string DisplayName { get; }
-    public IAsyncRelayCommand<string> OpenCommand { get; }
+    public IAsyncRelayCommand OpenCommand { get; }
 
-    public RecentRepositoryItem(string path, IAsyncRelayCommand<string> openCommand)
+    public RecentRepositoryItem(string path, Func<string, Task> openAction)
     {
         Path = path;
         DisplayName = System.IO.Path.GetFileName(path.TrimEnd(
             System.IO.Path.DirectorySeparatorChar,
             System.IO.Path.AltDirectorySeparatorChar));
-        OpenCommand = openCommand;
+        // Create a parameterless command that captures the path
+        OpenCommand = new AsyncRelayCommand(() => openAction(path));
     }
 }
