@@ -42,8 +42,7 @@ public sealed class WorktreeService : IWorktreeService
         // Ensure worktrees directory exists and is gitignored
         var worktreesDir = Path.Combine(repoPath, WorktreesDirectoryName);
         Directory.CreateDirectory(worktreesDir);
-        await _gitService.EnsureGitIgnoreEntryAsync(repoPath, WorktreesDirectoryName, cancellationToken);
-        await _gitService.EnsureGitIgnoreEntryAsync(repoPath, MetadataFileName, cancellationToken);
+        await _gitService.EnsureGitIgnoreEntriesAsync(repoPath, [WorktreesDirectoryName, MetadataFileName], cancellationToken);
 
         // Create worktree path
         var worktreeId = Guid.NewGuid().ToString("N")[..8];

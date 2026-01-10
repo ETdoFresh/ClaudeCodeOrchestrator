@@ -55,6 +55,14 @@ public interface IGitService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Ensures multiple lines are present in .gitignore with a single commit.
+    /// </summary>
+    Task EnsureGitIgnoreEntriesAsync(
+        string repoPath,
+        IEnumerable<string> entries,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the number of commits a branch is ahead of another.
     /// </summary>
     Task<int> GetCommitsAheadAsync(
