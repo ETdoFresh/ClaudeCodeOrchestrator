@@ -9,6 +9,7 @@ namespace ClaudeCodeOrchestrator.Git.Services;
 public sealed class GitService : IGitService
 {
     private const string WorktreesDirectoryName = ".worktrees";
+    private const string MetadataFileName = ".worktree-metadata.json";
 
     public Task<RepositoryInfo> OpenRepositoryAsync(string path, CancellationToken cancellationToken = default)
     {
@@ -70,8 +71,9 @@ public sealed class GitService : IGitService
             };
         }, cancellationToken);
 
-        // Ensure .worktrees directory is in .gitignore from the start
+        // Ensure .worktrees directory and metadata file are in .gitignore from the start
         await EnsureGitIgnoreEntryAsync(path, WorktreesDirectoryName, cancellationToken);
+        await EnsureGitIgnoreEntryAsync(path, MetadataFileName, cancellationToken);
 
         return repoInfo;
     }
@@ -160,14 +162,31 @@ public sealed class GitService : IGitService
 
         if (!entryExists)
         {
-            // Add entry with trailing slash for directories
-            if (!entry.EndsWith('/'))
+            // Add entry with trailing slash for directories (entries without file extensions)
+            var isDirectory = !Path.HasExtension(entry) && !entry.EndsWith('/');
+            if (isDirectory)
             {
                 entry += "/";
             }
 
             lines.Add(entry);
             await File.WriteAllLinesAsync(gitignorePath, lines, cancellationToken);
+
+            // Commit the .gitignore change immediately
+            await Task.Run(() =>
+            {
+                using var repo = new Repository(repoPath);
+
+                // Stage the .gitignore file
+                Commands.Stage(repo, ".gitignore");
+
+                // Build signature for commit
+                var signature = repo.Config.BuildSignature(DateTimeOffset.Now)
+                    ?? new Signature("User", "user@localhost", DateTimeOffset.Now);
+
+                // Commit the change
+                repo.Commit($"Add {entry.TrimEnd('/')} to .gitignore", signature, signature);
+            }, cancellationToken);
         }
     }
 

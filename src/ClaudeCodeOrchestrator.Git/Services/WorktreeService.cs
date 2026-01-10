@@ -43,6 +43,7 @@ public sealed class WorktreeService : IWorktreeService
         var worktreesDir = Path.Combine(repoPath, WorktreesDirectoryName);
         Directory.CreateDirectory(worktreesDir);
         await _gitService.EnsureGitIgnoreEntryAsync(repoPath, WorktreesDirectoryName, cancellationToken);
+        await _gitService.EnsureGitIgnoreEntryAsync(repoPath, MetadataFileName, cancellationToken);
 
         // Create worktree path
         var worktreeId = Guid.NewGuid().ToString("N")[..8];
