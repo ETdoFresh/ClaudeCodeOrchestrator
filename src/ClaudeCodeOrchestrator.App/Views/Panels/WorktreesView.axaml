@@ -95,6 +95,13 @@
                                         <Ellipse Stroke="#007ACC"
                                                  StrokeThickness="2" />
                                     </Panel>
+                                    <!-- Session duration -->
+                                    <TextBlock Text="{Binding SessionDurationText}"
+                                               FontSize="10"
+                                               Foreground="#858585"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding SessionDurationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                               ToolTip.Tip="Session duration" />
                                     <!-- Status badge -->
                                     <Border Padding="6,2" CornerRadius="2"
                                             Background="{Binding DisplayStatus, Converter={x:Static local:WorktreesView.DisplayStatusToBrushConverter}}">
@@ -112,14 +119,6 @@
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                                    <!-- Session duration -->
-                                    <TextBlock Text="{Binding SessionDurationText}"
-                                               FontSize="10"
-                                               Foreground="#858585"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,4,0"
-                                               IsVisible="{Binding SessionDurationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                               ToolTip.Tip="Session duration" />
                                     <Button Command="{Binding RunCommand}"
                                             Content="▶"
                                             Padding="4,2"
