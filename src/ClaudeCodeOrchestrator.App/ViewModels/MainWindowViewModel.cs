@@ -54,6 +54,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (_factory != null)
             {
                 _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
+                _factory.SessionDocumentClosed -= OnSessionDocumentClosed;
             }
 
             _factory = value;
@@ -62,6 +63,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (_factory != null)
             {
                 _factory.AutoSplitLayoutChanged += OnAutoSplitLayoutChanged;
+                _factory.SessionDocumentClosed += OnSessionDocumentClosed;
                 UpdateAutoSplitLayoutText(_factory.AutoSplitLayout);
             }
         }
@@ -1494,6 +1496,46 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _dispatcher.Post(() => UpdateAutoSplitLayoutText(layout));
     }
 
+    private void OnSessionDocumentClosed(object? sender, Views.Docking.SessionDocumentClosedEventArgs e)
+    {
+        _dispatcher.Post(async () =>
+        {
+            // Find the worktree and clear its active session state
+            var worktree = Worktrees.FirstOrDefault(w => w.Id == e.WorktreeId);
+            if (worktree != null)
+            {
+                // Save the accumulated duration before clearing state
+                try
+                {
+                    var durationMs = (long)worktree.AccumulatedDuration.TotalMilliseconds;
+                    if (durationMs > 0)
+                    {
+                        await _worktreeService.UpdateAccumulatedDurationAsync(worktree.Path, durationMs);
+                    }
+                }
+                catch
+                {
+                    // Ignore errors - not critical
+                }
+
+                worktree.HasActiveSession = false;
+                worktree.ActiveSessionId = null;
+                worktree.IsProcessing = false;
+                // Don't reset the timer - keep the accumulated duration visible
+            }
+
+            // End the session in the session service
+            try
+            {
+                await _sessionService.EndSessionAsync(e.SessionId);
+            }
+            catch
+            {
+                // Session may already be ended, ignore errors
+            }
+        });
+    }
+
     private void UpdateAutoSplitLayoutText(SplitLayout layout)
     {
         AutoSplitLayoutText = layout switch
@@ -1564,6 +1606,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (_factory != null)
         {
             _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
+            _factory.SessionDocumentClosed -= OnSessionDocumentClosed;
         }
     }
 }

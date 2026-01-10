@@ -10,6 +10,22 @@ using CommunityToolkit.Mvvm.Input;
 namespace ClaudeCodeOrchestrator.App.Views.Docking;
 
 /// <summary>
+/// Event arguments for when a session document is closed.
+/// </summary>
+public class SessionDocumentClosedEventArgs : EventArgs
+{
+    /// <summary>
+    /// The session ID of the closed document.
+    /// </summary>
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// The worktree ID associated with the closed session.
+    /// </summary>
+    public required string WorktreeId { get; init; }
+}
+
+/// <summary>
 /// Layout orientation for splitting tabs.
 /// </summary>
 public enum SplitLayout
@@ -64,6 +80,11 @@ public class DockFactory : Factory
     /// Event raised when the auto-split layout mode changes.
     /// </summary>
     public event EventHandler<SplitLayout>? AutoSplitLayoutChanged;
+
+    /// <summary>
+    /// Event raised when a session document is closed.
+    /// </summary>
+    public event EventHandler<SessionDocumentClosedEventArgs>? SessionDocumentClosed;
 
     public DockFactory(object context, ISettingsService settingsService)
     {
@@ -827,7 +848,17 @@ public class DockFactory : Factory
     {
         base.OnDockableRemoved(dockable);
 
-        // Only handle document removals
+        // Notify when a session document is closed
+        if (dockable is SessionDocumentViewModel sessionDoc)
+        {
+            SessionDocumentClosed?.Invoke(this, new SessionDocumentClosedEventArgs
+            {
+                SessionId = sessionDoc.SessionId,
+                WorktreeId = sessionDoc.WorktreeId
+            });
+        }
+
+        // Only handle document removals for split pane cleanup
         if (dockable is not DocumentViewModelBase)
             return;
 
