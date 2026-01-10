@@ -66,7 +66,8 @@
                           AutomationProperties.AutomationId="RecentRepositoriesMenuItem"
                           ItemsSource="{Binding RecentRepositories}">
                     <MenuItem.ItemContainerTheme>
-                        <ControlTheme TargetType="MenuItem" x:DataType="vm:RecentRepositoryItem">
+                        <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}"
+                                      x:DataType="vm:RecentRepositoryItem">
                             <Setter Property="Header" Value="{Binding DisplayName}" />
                             <Setter Property="Command" Value="{Binding OpenCommand}" />
                             <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
