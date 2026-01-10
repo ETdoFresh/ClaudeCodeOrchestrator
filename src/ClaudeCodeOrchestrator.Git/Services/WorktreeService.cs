@@ -189,6 +189,80 @@ public sealed class WorktreeService : IWorktreeService
                 // Access denied (often due to file locks on Windows), wait and retry
                 await Task.Delay(delays[Math.Min(attempt, delays.Length - 1)], cancellationToken);
             }
+            catch (IOException)
+            {
+                // Final attempt failed, try aggressive cleanup
+                await AggressiveDeleteAsync(path, cancellationToken);
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Final attempt failed, try aggressive cleanup
+                await AggressiveDeleteAsync(path, cancellationToken);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Aggressively deletes a directory by deleting files first, then empty directories bottom-up.
+    /// </summary>
+    private static async Task AggressiveDeleteAsync(string path, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        // First, delete all files we can
+        foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+            catch
+            {
+                // Ignore files we can't delete
+            }
+        }
+
+        // Small delay to let file handles release
+        await Task.Delay(100, cancellationToken);
+
+        // Delete directories bottom-up (deepest first)
+        var directories = Directory.GetDirectories(path, "*", SearchOption.AllDirectories)
+            .OrderByDescending(d => d.Length) // Longer paths = deeper directories
+            .ToList();
+
+        foreach (var dir in directories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                {
+                    Directory.Delete(dir, false);
+                }
+            }
+            catch
+            {
+                // Ignore directories we can't delete
+            }
+        }
+
+        // Finally try to delete the root directory
+        try
+        {
+            if (Directory.Exists(path) && !Directory.EnumerateFileSystemEntries(path).Any())
+            {
+                Directory.Delete(path, false);
+            }
+        }
+        catch
+        {
+            // If we still can't delete the root, give up silently
+            // The directory should at least be empty now
         }
     }
 
