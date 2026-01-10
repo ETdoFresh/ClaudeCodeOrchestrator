@@ -88,7 +88,6 @@
                             <!-- Row 2: Branch info and actions -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Text="🌿" FontSize="10" VerticalAlignment="Center" />
                                     <TextBlock Text="{Binding BranchName}"
                                                FontSize="10" Foreground="#569CD6"
                                                TextTrimming="CharacterEllipsis"
