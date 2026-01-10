@@ -204,14 +204,17 @@
                                                                         CornerRadius="4"
                                                                         Padding="0"
                                                                         MaxHeight="150">
-                                                                    <html:HtmlLabel>
-                                                                        <html:HtmlLabel.Text>
-                                                                            <MultiBinding Converter="{StaticResource DiffToHtml}">
-                                                                                <Binding Path="OldString" />
-                                                                                <Binding Path="NewString" />
-                                                                            </MultiBinding>
-                                                                        </html:HtmlLabel.Text>
-                                                                    </html:HtmlLabel>
+                                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                                                  VerticalScrollBarVisibility="Auto">
+                                                                        <html:HtmlLabel>
+                                                                            <html:HtmlLabel.Text>
+                                                                                <MultiBinding Converter="{StaticResource DiffToHtml}">
+                                                                                    <Binding Path="OldString" />
+                                                                                    <Binding Path="NewString" />
+                                                                                </MultiBinding>
+                                                                            </html:HtmlLabel.Text>
+                                                                        </html:HtmlLabel>
+                                                                    </ScrollViewer>
                                                                 </Border>
 
                                                                 <!-- Content preview for Write operations -->
@@ -221,7 +224,10 @@
                                                                         CornerRadius="4"
                                                                         Padding="0"
                                                                         MaxHeight="150">
-                                                                    <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}" />
+                                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                                                  VerticalScrollBarVisibility="Auto">
+                                                                        <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}" />
+                                                                    </ScrollViewer>
                                                                 </Border>
 
                                                                 <!-- Todo list display for TodoWrite operations -->
