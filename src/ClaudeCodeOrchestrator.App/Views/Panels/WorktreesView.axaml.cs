@@ -70,6 +70,7 @@ public partial class WorktreesView : UserControl
             {
                 await vm.OnCreateTaskWithInputRequested(taskInput);
                 NewTaskInput.Clear();
+                NewTaskInput.FocusInput();
             }
         }
         catch (Exception ex)
