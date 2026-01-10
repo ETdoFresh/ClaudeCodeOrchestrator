@@ -152,6 +152,17 @@
     </Style>
 
     <!-- Arc spinner using a partial border effect -->
+    <!--
+         IMPORTANT: We use an Ellipse with StrokeDashArray instead of Arc because:
+         - Arc geometry bounds are asymmetric (only contain the actual arc path)
+         - This causes RenderTransformOrigin="0.5,0.5" to rotate around the geometry center, not visual center
+         - Ellipse has symmetric bounds, ensuring proper center rotation
+
+         StrokeDashArray calculation for 270° arc on 14x14 ellipse:
+         - Circumference = π * diameter ≈ 3.14159 * 10 (inner diameter with 2px stroke) ≈ 31.4
+         - For 75% (270°/360°) visible: dash=23.6, gap=7.9
+         - Using approximate values that work well visually
+    -->
     <Style Selector="Panel.arc-spinner">
         <Setter Property="Width" Value="14" />
         <Setter Property="Height" Value="14" />
@@ -171,11 +182,22 @@
         </Style.Animations>
     </Style>
 
-    <!-- Arc within spinner - Fill ensures arc geometry fills the exact bounds for centered rotation -->
+    <!-- Ellipse within spinner - symmetric bounds ensure proper center rotation -->
+    <Style Selector="Panel.arc-spinner > Ellipse">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <!-- StrokeDashArray: ~75% visible (270°), ~25% gap (90°) of circumference -->
+        <Setter Property="StrokeDashArray" Value="23.6,7.9" />
+        <Setter Property="StrokeDashOffset" Value="0" />
+    </Style>
+
+    <!-- Legacy Arc support - keeping for backwards compatibility but deprecated -->
     <Style Selector="Panel.arc-spinner > Arc">
         <Setter Property="Width" Value="14" />
         <Setter Property="Height" Value="14" />
-        <Setter Property="Stretch" Value="Fill" />
+        <Setter Property="Stretch" Value="Uniform" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <!-- Small arc spinner (10x10) for inline use -->
@@ -198,11 +220,23 @@
         </Style.Animations>
     </Style>
 
-    <!-- Arc within small spinner -->
+    <!-- Ellipse within small spinner - symmetric bounds ensure proper center rotation -->
+    <Style Selector="Panel.arc-spinner-small > Ellipse">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <!-- StrokeDashArray: ~75% visible (270°), ~25% gap (90°) of circumference for 10x10 -->
+        <!-- Circumference = π * ~7 (inner diameter) ≈ 22, so dash=16.5, gap=5.5 -->
+        <Setter Property="StrokeDashArray" Value="16.5,5.5" />
+        <Setter Property="StrokeDashOffset" Value="0" />
+    </Style>
+
+    <!-- Legacy Arc support for small spinner - keeping for backwards compatibility -->
     <Style Selector="Panel.arc-spinner-small > Arc">
         <Setter Property="Width" Value="10" />
         <Setter Property="Height" Value="10" />
-        <Setter Property="Stretch" Value="Fill" />
+        <Setter Property="Stretch" Value="Uniform" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <!-- ToolTabStrip styling for left panel tabs (Worktrees/Explorer) -->

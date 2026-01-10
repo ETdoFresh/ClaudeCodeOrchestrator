@@ -62,7 +62,7 @@
                 <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}"
                           AutomationProperties.AutomationId="OpenRepositoryMenuItem" />
                 <MenuItem Header="_Recent Repositories"
-                          IsVisible="{Binding RecentRepositories.Count}"
+                          IsVisible="{Binding HasRecentRepositories}"
                           AutomationProperties.AutomationId="RecentRepositoriesMenuItem"
                           ItemsSource="{Binding RecentRepositories}">
                     <MenuItem.ItemContainerTheme>
