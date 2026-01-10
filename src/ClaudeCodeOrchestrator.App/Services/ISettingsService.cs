@@ -16,6 +16,16 @@ public interface ISettingsService
     void SetLastRepositoryPath(string? path);
 
     /// <summary>
+    /// Gets the list of recently opened repository paths (up to 4).
+    /// </summary>
+    IReadOnlyList<string> RecentRepositories { get; }
+
+    /// <summary>
+    /// Adds a repository path to the recent repositories list.
+    /// </summary>
+    void AddRecentRepository(string path);
+
+    /// <summary>
     /// Gets or sets whether to show confirmation dialog before merging worktrees.
     /// </summary>
     bool ShowMergeConfirmation { get; set; }

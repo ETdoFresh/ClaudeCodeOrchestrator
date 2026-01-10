@@ -28,6 +28,35 @@ public class SettingsService : ISettingsService
         RaiseSettingChanged(nameof(LastRepositoryPath), oldValue, path);
     }
 
+    private const int MaxRecentRepositories = 4;
+
+    public IReadOnlyList<string> RecentRepositories => _settings.RecentRepositories.AsReadOnly();
+
+    public void AddRecentRepository(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        // Normalize path for comparison
+        var normalizedPath = Path.GetFullPath(path);
+
+        // Remove if already exists (to move it to the front)
+        _settings.RecentRepositories.RemoveAll(p =>
+            string.Equals(Path.GetFullPath(p), normalizedPath, StringComparison.OrdinalIgnoreCase));
+
+        // Add to the front
+        _settings.RecentRepositories.Insert(0, path);
+
+        // Keep only the most recent entries
+        if (_settings.RecentRepositories.Count > MaxRecentRepositories)
+        {
+            _settings.RecentRepositories.RemoveRange(MaxRecentRepositories,
+                _settings.RecentRepositories.Count - MaxRecentRepositories);
+        }
+
+        Save();
+        RaiseSettingChanged(nameof(RecentRepositories), null, _settings.RecentRepositories);
+    }
+
     public bool ShowMergeConfirmation
     {
         get => _settings.ShowMergeConfirmation;
@@ -191,6 +220,7 @@ public class SettingsService : ISettingsService
     private class AppSettings
     {
         public string? LastRepositoryPath { get; set; }
+        public List<string> RecentRepositories { get; set; } = new();
         public bool ShowMergeConfirmation { get; set; } = true;
         public bool ShowDeleteConfirmation { get; set; } = true;
         public bool ShowCloseSessionConfirmation { get; set; } = true;
