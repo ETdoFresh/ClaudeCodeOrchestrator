@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using ClaudeCodeOrchestrator.SDK.Messages;
 using ClaudeCodeOrchestrator.SDK.Options;
@@ -10,6 +11,151 @@ namespace ClaudeCodeOrchestrator.SDK;
 /// </summary>
 public static class ClaudeAgent
 {
+    /// <summary>
+    /// Executes a simple one-off query and returns the text response.
+    /// This is optimized for quick, single-turn requests that don't need streaming or tool use.
+    /// Uses --print mode for minimal overhead.
+    /// </summary>
+    /// <param name="prompt">The prompt to send to Claude Code.</param>
+    /// <param name="options">Optional configuration options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The text response from Claude, or null if the query failed.</returns>
+    public static async Task<string?> QueryOnceAsync(
+        string prompt,
+        ClaudeAgentOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        options ??= new ClaudeAgentOptions();
+        var claudePath = FindClaudeExecutable(options);
+        var args = BuildPrintArguments(prompt, options);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = claudePath,
+            Arguments = args,
+            UseShellExecute = false,
+            RedirectStandardInput = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = options.Cwd ?? Environment.CurrentDirectory
+        };
+
+        if (options.Environment != null)
+        {
+            foreach (var (key, value) in options.Environment)
+            {
+                startInfo.Environment[key] = value;
+            }
+        }
+
+        using var process = new Process { StartInfo = startInfo };
+
+        try
+        {
+            if (!process.Start())
+            {
+                return null;
+            }
+
+            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+            await process.WaitForExitAsync(cancellationToken);
+
+            var output = await outputTask;
+            var error = await errorTask;
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                Console.Error.WriteLine($"[SDK QueryOnce] stderr: {error}");
+            }
+
+            if (process.ExitCode != 0)
+            {
+                Console.Error.WriteLine($"[SDK QueryOnce] Exit code: {process.ExitCode}");
+                return null;
+            }
+
+            return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SDK QueryOnce] Error: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static string FindClaudeExecutable(ClaudeAgentOptions options)
+    {
+        if (!string.IsNullOrEmpty(options.PathToClaudeCodeExecutable))
+        {
+            return options.PathToClaudeCodeExecutable;
+        }
+
+        var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? [];
+        foreach (var path in paths)
+        {
+            var claudePath = Path.Combine(path, "claude");
+            if (File.Exists(claudePath))
+            {
+                return claudePath;
+            }
+
+            if (OperatingSystem.IsWindows())
+            {
+                var claudeCmd = Path.Combine(path, "claude.cmd");
+                if (File.Exists(claudeCmd)) return claudeCmd;
+
+                var claudeExe = Path.Combine(path, "claude.exe");
+                if (File.Exists(claudeExe)) return claudeExe;
+            }
+        }
+
+        return "claude";
+    }
+
+    private static string BuildPrintArguments(string prompt, ClaudeAgentOptions options)
+    {
+        var args = new List<string> { "--print" };
+
+        if (!string.IsNullOrEmpty(options.Model))
+        {
+            args.Add("--model");
+            args.Add(options.Model);
+        }
+
+        if (options.MaxTurns.HasValue)
+        {
+            args.Add("--max-turns");
+            args.Add(options.MaxTurns.Value.ToString());
+        }
+
+        if (options.PermissionMode == PermissionMode.Plan)
+        {
+            args.Add("--allowedTools");
+            args.Add("\"[]\"");
+        }
+        else if (options.PermissionMode == PermissionMode.AcceptAll)
+        {
+            args.Add("--dangerously-skip-permissions");
+        }
+
+        // Escape prompt for shell
+        var escapedPrompt = prompt.Replace("\"", "\\\"");
+        args.Add($"\"{escapedPrompt}\"");
+
+        return string.Join(" ", args);
+    }
+
     /// <summary>
     /// Creates an async enumerable that streams messages from Claude Code.
     /// This is a convenience method for simple one-shot queries.
