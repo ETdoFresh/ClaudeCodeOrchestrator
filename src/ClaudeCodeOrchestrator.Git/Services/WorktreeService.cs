@@ -734,4 +734,26 @@ public sealed class WorktreeService : IWorktreeService
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }
+
+    /// <summary>
+    /// Updates the title for a worktree.
+    /// </summary>
+    public async Task UpdateTitleAsync(
+        string worktreePath,
+        string title,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { Title = title };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
 }

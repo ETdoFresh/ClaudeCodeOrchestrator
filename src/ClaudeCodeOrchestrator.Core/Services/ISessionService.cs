@@ -133,6 +133,16 @@ public interface ISessionService
     /// Raised when a Claude session ID is received (from init message).
     /// </summary>
     event EventHandler<ClaudeSessionIdReceivedEventArgs>? ClaudeSessionIdReceived;
+
+    /// <summary>
+    /// Raised when a session's title is updated (after async title generation completes).
+    /// </summary>
+    event EventHandler<SessionTitleUpdatedEventArgs>? SessionTitleUpdated;
+
+    /// <summary>
+    /// Updates the title of a session.
+    /// </summary>
+    void UpdateSessionTitle(string sessionId, string newTitle);
 }
 
 /// <summary>
@@ -179,4 +189,13 @@ public sealed class ClaudeSessionIdReceivedEventArgs : EventArgs
     public required string SessionId { get; init; }
     public required string WorktreeId { get; init; }
     public required string ClaudeSessionId { get; init; }
+}
+
+/// <summary>
+/// Event args for session title updated.
+/// </summary>
+public sealed class SessionTitleUpdatedEventArgs : EventArgs
+{
+    public required string SessionId { get; init; }
+    public required string NewTitle { get; init; }
 }

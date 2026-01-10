@@ -59,8 +59,9 @@ public sealed class Session
 
     /// <summary>
     /// Generated title for display (if available).
+    /// Can be updated after session creation when async title generation completes.
     /// </summary>
-    public string? GeneratedTitle { get; init; }
+    public string? GeneratedTitle { get; set; }
 
     /// <summary>
     /// The task description from the worktree (used for display when no initial prompt).

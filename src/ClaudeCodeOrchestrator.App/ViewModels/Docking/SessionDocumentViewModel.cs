@@ -241,7 +241,19 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             _sessionService.MessageReceived += OnMessageReceived;
             _sessionService.SessionStateChanged += OnSessionStateChanged;
+            _sessionService.SessionTitleUpdated += OnSessionTitleUpdated;
         }
+    }
+
+    private void OnSessionTitleUpdated(object? sender, SessionTitleUpdatedEventArgs e)
+    {
+        if (e.SessionId != SessionId) return;
+
+        _dispatcher?.Post(() =>
+        {
+            // Update the document title (truncate if needed)
+            Title = e.NewTitle.Length > 30 ? e.NewTitle[..27] + "..." : e.NewTitle;
+        });
     }
 
     private void OnMessageReceived(object? sender, SessionMessageEventArgs e)
@@ -631,6 +643,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             _sessionService.MessageReceived -= OnMessageReceived;
             _sessionService.SessionStateChanged -= OnSessionStateChanged;
+            _sessionService.SessionTitleUpdated -= OnSessionTitleUpdated;
         }
     }
 }

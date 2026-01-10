@@ -29,6 +29,7 @@ public sealed class SessionService : ISessionService, IDisposable
     public event EventHandler<SessionStateChangedEventArgs>? SessionStateChanged;
     public event EventHandler<SessionEndedEventArgs>? SessionEnded;
     public event EventHandler<ClaudeSessionIdReceivedEventArgs>? ClaudeSessionIdReceived;
+    public event EventHandler<SessionTitleUpdatedEventArgs>? SessionTitleUpdated;
 
     public Task<Session> CreateSessionAsync(
         WorktreeInfo worktree,
@@ -421,6 +422,20 @@ public sealed class SessionService : ISessionService, IDisposable
                 SessionId = context.Session.Id,
                 FinalState = context.Session.State,
                 EndedAt = context.Session.EndedAt.Value
+            });
+        }
+    }
+
+    public void UpdateSessionTitle(string sessionId, string newTitle)
+    {
+        if (_sessions.TryGetValue(sessionId, out var context))
+        {
+            context.Session.GeneratedTitle = newTitle;
+
+            SessionTitleUpdated?.Invoke(this, new SessionTitleUpdatedEventArgs
+            {
+                SessionId = sessionId,
+                NewTitle = newTitle
             });
         }
     }

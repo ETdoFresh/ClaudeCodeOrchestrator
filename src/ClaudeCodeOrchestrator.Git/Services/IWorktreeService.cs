@@ -88,4 +88,12 @@ public interface IWorktreeService
         string worktreePath,
         long durationMs,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the title for a worktree.
+    /// </summary>
+    Task UpdateTitleAsync(
+        string worktreePath,
+        string title,
+        CancellationToken cancellationToken = default);
 }

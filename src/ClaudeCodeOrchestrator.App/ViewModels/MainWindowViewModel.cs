@@ -387,16 +387,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             throw new InvalidOperationException("Please open a repository first.");
         }
 
-        // Generate title and branch name
-        var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
-        var title = generated.Title;
-        var branchName = generated.BranchName;
+        // Use placeholder title immediately so user can start typing right away
+        const string placeholderTitle = "Generating...";
 
-        // Create worktree with the generated title and branch name
+        // Generate a quick local branch name synchronously for immediate worktree creation
+        var localGenerated = _titleGeneratorService.GenerateTitleSync(taskInput.Text);
+        var branchName = localGenerated.BranchName;
+
+        // Create worktree with the placeholder title immediately
         var worktree = await _worktreeService.CreateWorktreeAsync(
             CurrentRepositoryPath,
             taskInput.Text,
-            title: title,
+            title: placeholderTitle,
             branchName: branchName);
 
         // Add to list
@@ -407,14 +409,53 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Sync to dock panel
         Factory?.AddWorktree(vm);
 
-        // Create session for the worktree with images
-        // Create a new TaskInput with the generated title/branch
+        // Create session for the worktree with images using placeholder title
         var fullTaskInput = TaskInput.Create(
             taskInput.Text,
             taskInput.Images.ToList(),
-            title,
+            placeholderTitle,
             branchName);
         await CreateSessionForWorktreeAsync(worktree, fullTaskInput);
+
+        // Start async title generation in background
+        // When complete, update the session and worktree with the real title
+        _ = GenerateTitleInBackgroundAsync(worktree, vm, taskInput.Text);
+    }
+
+    /// <summary>
+    /// Generates title asynchronously and updates the session/worktree when complete.
+    /// </summary>
+    private async Task GenerateTitleInBackgroundAsync(
+        Git.Models.WorktreeInfo worktree,
+        WorktreeViewModel worktreeVm,
+        string promptText)
+    {
+        try
+        {
+            var generated = await _titleGeneratorService.GenerateTitleAsync(promptText);
+            var title = generated.Title;
+
+            // Update worktree metadata on disk
+            await _worktreeService.UpdateTitleAsync(worktree.Path, title);
+
+            // Update worktree view model
+            _dispatcher.Post(() =>
+            {
+                worktreeVm.Title = title;
+            });
+
+            // Update the session title (if session exists)
+            var session = _sessionService.GetSessionByWorktreeId(worktree.Id);
+            if (session != null)
+            {
+                _sessionService.UpdateSessionTitle(session.Id, title);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainWindowViewModel] Background title generation failed: {ex.Message}");
+            // Keep the placeholder title on failure
+        }
     }
 
     [RelayCommand]
