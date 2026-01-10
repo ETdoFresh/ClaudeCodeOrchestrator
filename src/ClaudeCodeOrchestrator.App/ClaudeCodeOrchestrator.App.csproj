@@ -12,6 +12,12 @@
     <ApplicationIcon>..\..\icons\orchestrator-wand.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- macOS bundle configuration -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <CFBundleName>Claude Code Orchestrator</CFBundleName>
+    <CFBundleIconFile>orchestrator-wand.icns</CFBundleIconFile>
+  </PropertyGroup>
+
   <!-- Get git commit count for version -->
   <Target Name="SetGitVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo">
     <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low">
@@ -50,6 +56,65 @@
 
   <ItemGroup>
     <AvaloniaResource Include="..\..\icons\orchestrator-wand.ico" Link="icons\orchestrator-wand.ico" />
+    <AvaloniaResource Include="..\..\icons\orchestrator-wand.icns" Link="icons\orchestrator-wand.icns" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
   </ItemGroup>
+
+  <!-- Create macOS app bundle after publish -->
+  <Target Name="CreateMacOSBundle" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('OSX')) And $(RuntimeIdentifier.StartsWith('osx'))">
+    <PropertyGroup>
+      <AppBundleName>Claude Code Orchestrator</AppBundleName>
+      <AppBundleDir>$(PublishDir)$(AppBundleName).app</AppBundleDir>
+      <AppBundleContentsDir>$(AppBundleDir)/Contents</AppBundleContentsDir>
+      <AppBundleMacOSDir>$(AppBundleContentsDir)/MacOS</AppBundleMacOSDir>
+      <AppBundleResourcesDir>$(AppBundleContentsDir)/Resources</AppBundleResourcesDir>
+    </PropertyGroup>
+
+    <!-- Create bundle directory structure -->
+    <MakeDir Directories="$(AppBundleDir)" />
+    <MakeDir Directories="$(AppBundleContentsDir)" />
+    <MakeDir Directories="$(AppBundleMacOSDir)" />
+    <MakeDir Directories="$(AppBundleResourcesDir)" />
+
+    <!-- Copy executable and libraries to MacOS folder -->
+    <ItemGroup>
+      <PublishFiles Include="$(PublishDir)*.*" Exclude="$(PublishDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PublishFiles)" DestinationFolder="$(AppBundleMacOSDir)" />
+
+    <!-- Copy icon to Resources -->
+    <Copy SourceFiles="..\..\icons\orchestrator-wand.icns" DestinationFolder="$(AppBundleResourcesDir)" />
+
+    <!-- Create Info.plist -->
+    <WriteLinesToFile File="$(AppBundleContentsDir)/Info.plist" Overwrite="true" Lines="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;
+&lt;plist version=&quot;1.0&quot;&gt;
+&lt;dict&gt;
+    &lt;key&gt;CFBundleName&lt;/key&gt;
+    &lt;string&gt;Claude Code Orchestrator&lt;/string&gt;
+    &lt;key&gt;CFBundleDisplayName&lt;/key&gt;
+    &lt;string&gt;Claude Code Orchestrator&lt;/string&gt;
+    &lt;key&gt;CFBundleIdentifier&lt;/key&gt;
+    &lt;string&gt;com.claudecode.orchestrator&lt;/string&gt;
+    &lt;key&gt;CFBundleVersion&lt;/key&gt;
+    &lt;string&gt;$(Version)&lt;/string&gt;
+    &lt;key&gt;CFBundleShortVersionString&lt;/key&gt;
+    &lt;string&gt;$(Version)&lt;/string&gt;
+    &lt;key&gt;CFBundlePackageType&lt;/key&gt;
+    &lt;string&gt;APPL&lt;/string&gt;
+    &lt;key&gt;CFBundleExecutable&lt;/key&gt;
+    &lt;string&gt;ClaudeCodeOrchestrator.App&lt;/string&gt;
+    &lt;key&gt;CFBundleIconFile&lt;/key&gt;
+    &lt;string&gt;orchestrator-wand&lt;/string&gt;
+    &lt;key&gt;LSMinimumSystemVersion&lt;/key&gt;
+    &lt;string&gt;10.15&lt;/string&gt;
+    &lt;key&gt;NSHighResolutionCapable&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;NSPrincipalClass&lt;/key&gt;
+    &lt;string&gt;NSApplication&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;" />
+
+    <Message Importance="high" Text="Created macOS app bundle at $(AppBundleDir)" />
+  </Target>
 
 </Project>
