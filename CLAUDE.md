@@ -1,5 +1,21 @@
 # Claude Code Instructions
 
+## IMPORTANT: Tool Usage Restrictions
+
+### Build Commands (.NET Build and Restore)
+
+**ALWAYS** run `dotnet build` or `dotnet restore` in the background and poll the status:
+
+1. Run the command in background mode using `run_in_background: true`
+2. Use `TaskOutput` with `block: false` to poll the status periodically
+3. This prevents long builds from blocking the conversation and allows monitoring progress
+
+### test-app Skill and Chrome DevTools MCP
+
+**Do NOT** automatically use the `test-app` skill or Chrome DevTools MCP tools. Only use these features when the user **explicitly** asks for them. These tools should not be invoked proactively.
+
+---
+
 ## Project Structure
 
 This is a .NET 8 Avalonia desktop application for orchestrating Claude Code sessions with git worktree support.
@@ -45,18 +61,3 @@ ClaudeCodeOrchestrator/
 - **Git** → (standalone, uses LibGit2Sharp)
 - **SDK** → (standalone, handles Claude Code CLI communication)
 
-## Tool Usage Restrictions
-
-### test-app Skill and Chrome DevTools MCP
-
-Do NOT automatically use the `test-app` skill or Chrome DevTools MCP tools. Only use these features when the user explicitly asks for them. These tools should not be invoked proactively.
-
-## Build Commands
-
-### .NET Build and Restore
-
-When running `dotnet build` or `dotnet restore`, always run them in the background and poll the status:
-
-1. Run the command in background mode using `run_in_background: true`
-2. Use `TaskOutput` with `block: false` to poll the status periodically
-3. This prevents long builds from blocking the conversation and allows monitoring progress
