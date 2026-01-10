@@ -32,8 +32,8 @@ public partial class WorktreesView : UserControl
     public static FuncValueConverter<int, bool> PositiveNumberConverter { get; } =
         new(value => value > 0);
 
-    private DateTime _lastSelectionTime;
-    private DateTime _lastDoubleClickTime;
+    private CancellationTokenSource? _previewCts;
+    private readonly object _clickLock = new();
     private const int DoubleClickThresholdMs = 300;
 
     public WorktreesView()
@@ -95,35 +95,38 @@ public partial class WorktreesView : UserControl
         if (e.AddedItems.Count == 0) return;
         if (e.AddedItems[0] is not WorktreeViewModel worktree) return;
 
-        // Record selection time to detect double-clicks
-        var selectionTime = DateTime.UtcNow;
-        _lastSelectionTime = selectionTime;
-
-        // Delay briefly to see if this is part of a double-click
-        await Task.Delay(DoubleClickThresholdMs + 50); // Add buffer for timing variance
-
-        // Check if a double-click happened during our delay
-        // If _lastDoubleClickTime is more recent than our selection, skip preview
-        if (_lastDoubleClickTime > selectionTime)
+        // Cancel any pending preview operation (from previous selection or if double-click happens)
+        CancellationTokenSource cts;
+        lock (_clickLock)
         {
-            return;
+            _previewCts?.Cancel();
+            _previewCts = cts = new CancellationTokenSource();
         }
 
-        // Also check if another selection happened (user clicked elsewhere)
-        if (_lastSelectionTime != selectionTime)
+        try
         {
-            return;
-        }
+            // Delay briefly to see if this is part of a double-click
+            await Task.Delay(DoubleClickThresholdMs + 50, cts.Token);
 
-        vm.SelectWorktreeCommand.Execute(worktree);
+            // If we got here without cancellation, this was a single-click - open preview
+            vm.SelectWorktreeCommand.Execute(worktree);
+        }
+        catch (OperationCanceledException)
+        {
+            // Double-click happened or another selection occurred - don't open preview
+        }
     }
 
     private void OnDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not WorktreesViewModel vm) return;
 
-        // Record double-click time to signal pending selection handlers to abort
-        _lastDoubleClickTime = DateTime.UtcNow;
+        // Cancel any pending preview operation
+        lock (_clickLock)
+        {
+            _previewCts?.Cancel();
+            _previewCts = null;
+        }
 
         if (vm.SelectedWorktree is WorktreeViewModel worktree)
         {

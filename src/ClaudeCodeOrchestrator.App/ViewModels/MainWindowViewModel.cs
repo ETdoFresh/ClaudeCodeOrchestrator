@@ -1383,8 +1383,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task CreateIdleSessionWithHistoryAsync(WorktreeInfo worktree, string claudeSessionId)
     {
         // Load the history FIRST before creating the session
+        // Use a timeout to prevent hanging on large session files
         var historyService = new SessionHistoryService();
-        var history = await historyService.ReadSessionHistoryAsync(worktree.Path, claudeSessionId);
+        IReadOnlyList<SessionHistoryMessage> history;
+        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+        {
+            try
+            {
+                history = await historyService.ReadSessionHistoryAsync(worktree.Path, claudeSessionId, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // History loading timed out - create session without history
+                history = Array.Empty<SessionHistoryMessage>();
+            }
+        }
 
         // Convert history to SDK messages
         var historyMessages = new List<SDK.Messages.ISDKMessage>();

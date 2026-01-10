@@ -82,6 +82,22 @@
         <!-- Messages area -->
         <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" Padding="12,8,12,0" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,0,60">
+            <!-- Empty state message -->
+            <Border IsVisible="{Binding ShowEmptyState}"
+                    Margin="0,40,0,0"
+                    HorizontalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" Spacing="8">
+                    <TextBlock Text="Ready for input"
+                               FontSize="16"
+                               Foreground="#858585"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Type a message below to start a conversation"
+                               FontSize="12"
+                               Foreground="#666666"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vmBase:MessageViewModel}">
