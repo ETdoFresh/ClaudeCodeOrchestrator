@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IWorktreeService _worktreeService;
     private readonly ISessionService _sessionService;
     private readonly ISettingsService _settingsService;
+    private readonly IRepositorySettingsService _repositorySettingsService;
     private readonly IDispatcher _dispatcher;
     private readonly ITitleGeneratorService _titleGeneratorService;
 
@@ -69,8 +70,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _worktreeService = ServiceLocator.GetRequiredService<IWorktreeService>();
         _sessionService = ServiceLocator.GetRequiredService<ISessionService>();
         _settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
+        _repositorySettingsService = ServiceLocator.GetRequiredService<IRepositorySettingsService>();
         _dispatcher = ServiceLocator.GetRequiredService<IDispatcher>();
         _titleGeneratorService = ServiceLocator.GetRequiredService<ITitleGeneratorService>();
+
+        // Subscribe to repository settings changes to update CanRun on worktrees
+        _repositorySettingsService.SettingsChanged += OnRepositorySettingsChanged;
 
         // Subscribe to session events
         _sessionService.SessionCreated += OnSessionCreated;
@@ -290,6 +295,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         SetRepository(path);
 
+        // Load per-repository settings
+        _repositorySettingsService.Load(path);
+
         // Save as last opened repository and add to recent repositories
         _settingsService.SetLastRepositoryPath(path);
         _settingsService.AddRecentRepository(path);
@@ -495,6 +503,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowTitle = "Claude Code Orchestrator";
         GitHubUrl = null;
 
+        // Clear per-repository settings
+        _repositorySettingsService.Clear();
+
         // Update file browser to clear file list
         Factory?.UpdateFileBrowser(null);
 
@@ -608,6 +619,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task OpenRepositorySettingsAsync()
+    {
+        var result = await _dialogService.ShowRepositorySettingsAsync(_repositorySettingsService.Settings?.Executable);
+        if (result != null)
+        {
+            _repositorySettingsService.SetExecutable(result);
+        }
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
@@ -679,6 +700,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         vm.OnOpenSessionRequested = OnOpenSessionRequestedAsync;
         vm.OnMergeRequested = OnMergeRequestedAsync;
         vm.OnDeleteRequested = OnDeleteRequestedAsync;
+        vm.OnRunRequested = OnRunRequestedAsync;
+        vm.CanRun = _repositorySettingsService.HasExecutable;
     }
 
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
@@ -962,6 +985,61 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             await _dialogService.ShowErrorAsync("Error Deleting",
                 $"Failed to delete worktree: {ex.Message}");
         }
+    }
+
+    private async Task OnRunRequestedAsync(WorktreeViewModel worktree)
+    {
+        if (!_repositorySettingsService.HasExecutable) return;
+
+        try
+        {
+            var success = await _repositorySettingsService.RunExecutableAsync(worktree.Path);
+            if (!success)
+            {
+                await _dialogService.ShowErrorAsync("Run Failed",
+                    "Failed to run the configured executable. Check the executable path in Repository Settings.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Run Failed",
+                $"Failed to run executable: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Runs the configured executable for a worktree by its ID. Called from SessionDocumentViewModel.
+    /// </summary>
+    public async Task RunExecutableByWorktreeIdAsync(string worktreeId)
+    {
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            await OnRunRequestedAsync(worktree);
+        }
+    }
+
+    private void OnRepositorySettingsChanged(object? sender, EventArgs e)
+    {
+        _dispatcher.Post(() =>
+        {
+            // Update CanRun on all worktrees
+            var canRun = _repositorySettingsService.HasExecutable;
+            foreach (var worktree in Worktrees)
+            {
+                worktree.CanRun = canRun;
+            }
+
+            // Update CanRun on all open session documents
+            UpdateSessionDocumentsCanRun(canRun);
+        });
+    }
+
+    private void UpdateSessionDocumentsCanRun(bool canRun)
+    {
+        // Update all session documents' CanRun property using the factory method
+        // This is called when repository settings change
+        Factory?.UpdateSessionDocumentsMergeState(Worktrees);
     }
 
     private async Task CreateSessionForWorktreeAsync(WorktreeInfo worktree, string prompt, bool isPreview = false)
@@ -1346,6 +1424,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _sessionService.SessionEnded -= OnSessionEnded;
         _sessionService.SessionStateChanged -= OnSessionStateChanged;
         _sessionService.ClaudeSessionIdReceived -= OnClaudeSessionIdReceived;
+
+        // Unsubscribe from repository settings events
+        _repositorySettingsService.SettingsChanged -= OnRepositorySettingsChanged;
 
         // Unsubscribe from factory events
         if (_factory != null)

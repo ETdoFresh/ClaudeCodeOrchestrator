@@ -106,6 +106,17 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     /// </summary>
     public Func<WorktreeViewModel, Task>? OnDeleteRequested { get; set; }
 
+    /// <summary>
+    /// Callback for running the configured executable in this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnRunRequested { get; set; }
+
+    /// <summary>
+    /// Whether the run button should be visible (executable is configured).
+    /// </summary>
+    [ObservableProperty]
+    private bool _canRun;
+
     public string StatusText => Status switch
     {
         WorktreeStatus.Active => "Active",
@@ -143,6 +154,13 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         if (OnDeleteRequested != null)
             await OnDeleteRequested(this);
+    }
+
+    [RelayCommand]
+    private async Task RunAsync()
+    {
+        if (OnRunRequested != null)
+            await OnRunRequested(this);
     }
 
     /// <summary>

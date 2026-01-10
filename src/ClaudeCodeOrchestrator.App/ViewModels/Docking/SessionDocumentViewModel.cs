@@ -39,6 +39,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public Func<string, Task>? OnMergeRequested { get; set; }
 
+    /// <summary>
+    /// Callback to run the configured executable in this session's worktree.
+    /// </summary>
+    public Func<string, Task>? OnRunRequested { get; set; }
+
     public string SessionId
     {
         get => _sessionId;
@@ -143,6 +148,17 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                 MergeCommand.NotifyCanExecuteChanged();
             }
         }
+    }
+
+    private bool _canRun;
+
+    /// <summary>
+    /// Whether the run button should be visible (executable is configured).
+    /// </summary>
+    public bool CanRun
+    {
+        get => _canRun;
+        set => SetProperty(ref _canRun, value);
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -408,6 +424,15 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     private bool CanMerge() => IsReadyToMerge && !IsProcessing;
+
+    [RelayCommand]
+    private async Task RunAsync()
+    {
+        if (OnRunRequested != null && !string.IsNullOrEmpty(WorktreeId))
+        {
+            await OnRunRequested(WorktreeId);
+        }
+    }
 
     /// <summary>
     /// Adds a user message to the UI from an external source (e.g., conflict resolution).

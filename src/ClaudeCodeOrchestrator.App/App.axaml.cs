@@ -88,5 +88,8 @@ public partial class App : Application
 
         // Core services
         services.AddSingleton<ISessionService, SessionService>();
+
+        // Repository settings service (per-repo configuration)
+        services.AddSingleton<IRepositorySettingsService, RepositorySettingsService>();
     }
 }

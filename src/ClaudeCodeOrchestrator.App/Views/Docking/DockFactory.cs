@@ -165,12 +165,14 @@ public class DockFactory : Factory
         {
             document.OnSessionCompleted = () => mainVm.RefreshWorktreesAsync();
             document.OnMergeRequested = mainVm.MergeWorktreeByIdAsync;
+            document.OnRunRequested = mainVm.RunExecutableByWorktreeIdAsync;
 
             // Set initial IsReadyToMerge state based on worktree status
             var worktree = mainVm.Worktrees.FirstOrDefault(w => w.Id == document.WorktreeId);
             if (worktree != null)
             {
                 document.IsReadyToMerge = worktree.IsReadyToMerge;
+                document.CanRun = worktree.CanRun;
             }
         }
 
@@ -317,7 +319,7 @@ public class DockFactory : Factory
     {
         if (_rootProportional is null) return;
 
-        var worktreeLookup = worktrees.ToDictionary(w => w.Id, w => w.IsReadyToMerge);
+        var worktreeLookup = worktrees.ToDictionary(w => w.Id, w => (w.IsReadyToMerge, w.CanRun));
 
         var documentDocks = new List<IDocumentDock>();
         CollectAllDocumentDocks(_rootProportional, documentDocks);
@@ -328,9 +330,10 @@ public class DockFactory : Factory
 
             foreach (var doc in docDock.VisibleDockables.OfType<SessionDocumentViewModel>())
             {
-                if (worktreeLookup.TryGetValue(doc.WorktreeId, out var isReady))
+                if (worktreeLookup.TryGetValue(doc.WorktreeId, out var state))
                 {
-                    doc.IsReadyToMerge = isReady;
+                    doc.IsReadyToMerge = state.IsReadyToMerge;
+                    doc.CanRun = state.CanRun;
                 }
             }
         }

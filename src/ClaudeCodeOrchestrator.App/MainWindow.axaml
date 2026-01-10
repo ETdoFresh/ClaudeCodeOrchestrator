@@ -143,6 +143,23 @@
                            FontSize="12"
                            Margin="0,0,12,0"
                            AutomationProperties.AutomationId="AutoSplitIndicator" />
+                <!-- Repo Settings Button (cog icon, only visible when repository is open) -->
+                <Button Content="⚙"
+                        Command="{Binding OpenRepositorySettingsCommand}"
+                        IsVisible="{Binding IsRepositoryOpen}"
+                        Background="Transparent"
+                        Foreground="#808080"
+                        FontSize="14"
+                        Padding="8,4"
+                        Cursor="Hand"
+                        ToolTip.Tip="Repository Settings"
+                        AutomationProperties.AutomationId="RepoSettingsButton">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#CCCCCC" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
                 <!-- Repo Link (only visible for GitHub repositories) -->
                 <Button Content="Repo"
                         Command="{Binding OpenRepoCommand}"

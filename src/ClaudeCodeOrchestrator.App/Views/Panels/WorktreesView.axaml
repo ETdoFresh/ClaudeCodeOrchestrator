@@ -103,6 +103,14 @@
                                                Margin="0,0,4,0"
                                                IsVisible="{Binding SessionDurationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                                ToolTip.Tip="Session duration" />
+                                    <Button Command="{Binding RunCommand}"
+                                            Content="▶"
+                                            Padding="4,2"
+                                            FontSize="8"
+                                            ToolTip.Tip="Run application"
+                                            Foreground="#4EC9B0"
+                                            IsVisible="{Binding CanRun}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='RunWorktree_{0}'}" />
                                     <Button Command="{Binding MergeCommand}"
                                             Content="↗"
                                             Padding="4,2"

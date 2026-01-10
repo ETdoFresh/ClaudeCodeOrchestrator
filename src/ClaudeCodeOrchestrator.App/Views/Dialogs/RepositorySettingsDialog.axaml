@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ClaudeCodeOrchestrator.App.Views.Dialogs.RepositorySettingsDialog"
+        AutomationProperties.AutomationId="RepositorySettingsDialog"
+        Title="Repository Settings"
+        Width="450" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Background="#2D2D30">
+
+    <Grid RowDefinitions="*,Auto" Margin="20">
+        <StackPanel Grid.Row="0" Spacing="12">
+            <TextBlock Text="Run Configuration"
+                       AutomationProperties.AutomationId="RepoSettingsTitle"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="#CCCCCC" />
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="Executable"
+                           FontSize="13"
+                           Foreground="#D4D4D4"/>
+                <TextBox x:Name="ExecutableTextBox"
+                         AutomationProperties.AutomationId="ExecutableTextBox"
+                         Watermark="e.g., dotnet run, ./build.sh, index.html"
+                         Background="#3C3C3C"
+                         BorderBrush="#474747"
+                         Foreground="#CCCCCC"
+                         Padding="8,6" />
+                <TextBlock Text="Enter a command (e.g., 'dotnet run'), executable path with args, or a file to open with the OS default handler."
+                           FontSize="11"
+                           Foreground="#808080"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="Cancel" Click="Cancel_Click"
+                    AutomationProperties.AutomationId="RepoSettingsCancelButton"
+                    Width="80"
+                    Background="#3C3C3C" Foreground="#CCCCCC" />
+            <Button Content="Save" Click="Save_Click"
+                    AutomationProperties.AutomationId="RepoSettingsSaveButton"
+                    Width="80"
+                    Background="#0E639C" Foreground="White" />
+        </StackPanel>
+    </Grid>
+</Window>

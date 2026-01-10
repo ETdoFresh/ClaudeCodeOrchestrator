@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="600"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.RepositorySettingsView"
+             x:DataType="vm:RepositorySettingsViewModel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
+             Background="#252526">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="12">
+        <StackPanel Spacing="16">
+            <!-- No Repository Message -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12"
+                    IsVisible="{Binding !HasRepository}">
+                <TextBlock Text="Open a repository to configure settings"
+                           FontSize="13"
+                           Foreground="#808080"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center" />
+            </Border>
+
+            <!-- Run Configuration Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12"
+                    IsVisible="{Binding HasRepository}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Run Configuration"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Executable"
+                                   FontSize="13"
+                                   Foreground="#D4D4D4"/>
+                        <TextBox Text="{Binding Executable}"
+                                 Watermark="e.g., dotnet run, ./build.sh, index.html"
+                                 Background="#3C3C3C"
+                                 BorderBrush="#474747"
+                                 Foreground="#CCCCCC"
+                                 Padding="8,6" />
+                        <TextBlock Text="Enter a command (e.g., 'dotnet run'), executable path with args, or a file to open with the OS default handler."
+                                   FontSize="11"
+                                   Foreground="#808080"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Footer -->
+            <TextBlock Text="Settings are saved automatically"
+                       FontSize="11"
+                       Foreground="#606060"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding HasRepository}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

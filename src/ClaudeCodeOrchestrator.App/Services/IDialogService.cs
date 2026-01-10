@@ -46,4 +46,11 @@ public interface IDialogService
     /// Shows the About dialog with application information.
     /// </summary>
     Task ShowAboutAsync();
+
+    /// <summary>
+    /// Shows the repository settings dialog.
+    /// </summary>
+    /// <param name="currentExecutable">The current executable setting.</param>
+    /// <returns>The new executable setting if saved, or null if cancelled.</returns>
+    Task<string?> ShowRepositorySettingsAsync(string? currentExecutable);
 }

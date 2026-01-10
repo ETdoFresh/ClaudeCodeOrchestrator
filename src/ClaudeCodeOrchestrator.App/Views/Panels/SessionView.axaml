@@ -47,21 +47,37 @@
                         <Run Text="{Binding TotalCost, StringFormat=N4}" />
                     </TextBlock>
                 </StackPanel>
-                <!-- Merge button - shown when ready to merge -->
-                <Button Grid.Column="1"
-                        Command="{Binding MergeCommand}"
-                        Padding="10,4"
-                        FontSize="12"
-                        Background="#4CAF50"
-                        Foreground="White"
-                        ToolTip.Tip="Merge to base branch"
-                        IsVisible="{Binding IsReadyToMerge}"
-                        AutomationProperties.AutomationId="MergeButton">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="↗" />
-                        <TextBlock Text="Merge" />
-                    </StackPanel>
-                </Button>
+                <!-- Action buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <!-- Run button - shown when executable is configured -->
+                    <Button Command="{Binding RunCommand}"
+                            Padding="10,4"
+                            FontSize="12"
+                            Background="#4EC9B0"
+                            Foreground="White"
+                            ToolTip.Tip="Run application"
+                            IsVisible="{Binding CanRun}"
+                            AutomationProperties.AutomationId="RunButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="▶" />
+                            <TextBlock Text="Run" />
+                        </StackPanel>
+                    </Button>
+                    <!-- Merge button - shown when ready to merge -->
+                    <Button Command="{Binding MergeCommand}"
+                            Padding="10,4"
+                            FontSize="12"
+                            Background="#4CAF50"
+                            Foreground="White"
+                            ToolTip.Tip="Merge to base branch"
+                            IsVisible="{Binding IsReadyToMerge}"
+                            AutomationProperties.AutomationId="MergeButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="↗" />
+                            <TextBlock Text="Merge" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

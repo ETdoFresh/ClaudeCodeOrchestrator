@@ -19,7 +19,7 @@ public partial class MainWindow : Window
         _viewModel = new MainWindowViewModel();
         DataContext = _viewModel;
 
-        // Get settings service
+        // Get services
         var settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
 
         // Create dock factory and layout

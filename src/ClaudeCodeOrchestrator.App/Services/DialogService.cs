@@ -85,4 +85,17 @@ public sealed class DialogService : IDialogService
         var dialog = new AboutDialog();
         await dialog.ShowDialog(window);
     }
+
+    /// <inheritdoc />
+    public async Task<string?> ShowRepositorySettingsAsync(string? currentExecutable)
+    {
+        var window = GetMainWindow();
+        if (window is null) return null;
+
+        var dialog = new RepositorySettingsDialog();
+        dialog.SetExecutable(currentExecutable);
+        await dialog.ShowDialog(window);
+
+        return dialog.WasSaved ? dialog.Executable : null;
+    }
 }
