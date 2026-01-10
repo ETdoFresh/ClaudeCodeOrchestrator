@@ -48,6 +48,9 @@ public partial class NewTaskInputControl : UserControl
 
         // Subscribe to paste event on the task description box
         TaskDescriptionBox.PastingFromClipboard += TaskDescriptionBox_PastingFromClipboard;
+
+        // Use tunneling (Preview) to intercept Enter before TextBox handles it
+        TaskDescriptionBox.AddHandler(KeyDownEvent, TaskDescriptionBox_KeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
     }
 
     /// <summary>

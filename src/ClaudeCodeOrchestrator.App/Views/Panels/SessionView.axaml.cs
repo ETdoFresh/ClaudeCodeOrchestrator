@@ -35,6 +35,9 @@ public partial class SessionView : UserControl
         // Subscribe to paste event on the message input - this is the proper way to intercept paste in Avalonia
         MessageInput.PastingFromClipboard += MessageInput_PastingFromClipboard;
 
+        // Use tunneling (Preview) to intercept Enter before TextBox handles it
+        MessageInput.AddHandler(KeyDownEvent, MessageInput_KeyDown, RoutingStrategies.Tunnel);
+
         // Subscribe to DataContext changes to track when session changes
         DataContextChanged += OnDataContextChanged;
     }
@@ -91,20 +94,37 @@ public partial class SessionView : UserControl
 
     private void MessageInput_KeyDown(object? sender, KeyEventArgs e)
     {
-        // Only handle Enter key without modifiers (Shift+Enter should still add newlines)
-        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None)
+        if (e.Key != Key.Enter)
+            return;
+
+        // Ctrl+Enter (or Cmd+Enter on macOS) submits from anywhere in the text
+        if (e.KeyModifiers == KeyModifiers.Control || e.KeyModifiers == KeyModifiers.Meta)
+        {
+            ExecuteSendOrQueue();
+            e.Handled = true;
+            return;
+        }
+
+        // Plain Enter only submits when cursor is at the end of text
+        // (Shift+Enter should still add newlines)
+        if (e.KeyModifiers != KeyModifiers.None)
             return;
 
         if (sender is not TextBox textBox)
             return;
 
-        // Check if cursor is at the end of the text
         var text = textBox.Text ?? string.Empty;
         var caretIndex = textBox.CaretIndex;
 
         if (caretIndex != text.Length)
             return;
 
+        ExecuteSendOrQueue();
+        e.Handled = true;
+    }
+
+    private void ExecuteSendOrQueue()
+    {
         // Get the view model and execute the appropriate command
         if (DataContext is not SessionDocumentViewModel viewModel)
             return;
@@ -113,12 +133,10 @@ public partial class SessionView : UserControl
         if (viewModel.SendMessageCommand.CanExecute(null))
         {
             viewModel.SendMessageCommand.Execute(null);
-            e.Handled = true;
         }
         else if (viewModel.QueueMessageCommand.CanExecute(null))
         {
             viewModel.QueueMessageCommand.Execute(null);
-            e.Handled = true;
         }
     }
 

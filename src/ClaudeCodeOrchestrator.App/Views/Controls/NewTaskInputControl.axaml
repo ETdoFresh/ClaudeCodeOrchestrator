@@ -20,7 +20,6 @@
                      BorderBrush="#3F3F46"
                      CaretBrush="#CCCCCC"
                      FontSize="12"
-                     KeyDown="TaskDescriptionBox_KeyDown"
                      AutomationProperties.AutomationId="InlineTaskDescriptionInput" />
 
             <!-- Image attachments area -->

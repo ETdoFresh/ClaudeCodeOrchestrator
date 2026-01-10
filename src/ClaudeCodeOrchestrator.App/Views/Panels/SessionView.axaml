@@ -332,7 +332,6 @@
                              Background="#3C3C3C"
                              BorderBrush="#474747"
                              Foreground="#CCCCCC"
-                             KeyDown="MessageInput_KeyDown"
                              AutomationProperties.AutomationId="MessageInput" />
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="4">
