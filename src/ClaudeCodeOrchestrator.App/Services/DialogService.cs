@@ -2,9 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
-using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Views.Dialogs;
-using ClaudeCodeOrchestrator.Core.Services;
 
 namespace ClaudeCodeOrchestrator.App.Services;
 
@@ -13,19 +11,11 @@ namespace ClaudeCodeOrchestrator.App.Services;
 /// </summary>
 public sealed class DialogService : IDialogService
 {
-    private ITitleGeneratorService? _titleGeneratorService;
-
     private Window? GetMainWindow()
     {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             return desktop.MainWindow;
         return null;
-    }
-
-    /// <inheritdoc />
-    public void SetTitleGeneratorService(ITitleGeneratorService titleGeneratorService)
-    {
-        _titleGeneratorService = titleGeneratorService;
     }
 
     /// <inheritdoc />
@@ -44,16 +34,6 @@ public sealed class DialogService : IDialogService
         });
 
         return result.Count > 0 ? result[0].Path.LocalPath : null;
-    }
-
-    /// <inheritdoc />
-    public async Task<TaskInput?> ShowNewTaskDialogAsync()
-    {
-        var window = GetMainWindow();
-        if (window is null) return null;
-
-        var dialog = new NewTaskDialog(_titleGeneratorService);
-        return await dialog.ShowDialog<TaskInput?>(window);
     }
 
     /// <inheritdoc />

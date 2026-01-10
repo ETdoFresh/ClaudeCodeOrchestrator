@@ -370,58 +370,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         return null;
     }
 
-    [RelayCommand]
-    private async Task CreateTaskAsync()
-    {
-        if (string.IsNullOrEmpty(CurrentRepositoryPath))
-        {
-            await _dialogService.ShowErrorAsync("No Repository",
-                "Please open a repository first.");
-            return;
-        }
-
-        try
-        {
-            var taskInput = await _dialogService.ShowNewTaskDialogAsync();
-            if (taskInput is null) return;
-
-            // Use title and branch from dialog (user already saw/edited them)
-            // Fall back to generating if not provided (shouldn't happen normally)
-            var title = taskInput.GeneratedTitle;
-            var branchName = taskInput.GeneratedBranch;
-
-            if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(branchName))
-            {
-                var generated = await _titleGeneratorService.GenerateTitleAsync(taskInput.Text);
-                title ??= generated.Title;
-                branchName ??= generated.BranchName;
-            }
-
-            // Create worktree with the title and branch name from the dialog
-            var worktree = await _worktreeService.CreateWorktreeAsync(
-                CurrentRepositoryPath,
-                taskInput.Text,
-                title: title,
-                branchName: branchName);
-
-            // Add to list
-            var vm = WorktreeViewModel.FromModel(worktree);
-            SetupWorktreeCallbacks(vm);
-            Worktrees.Insert(0, vm);
-
-            // Sync to dock panel
-            Factory?.AddWorktree(vm);
-
-            // Create session for the worktree with images
-            await CreateSessionForWorktreeAsync(worktree, taskInput);
-        }
-        catch (Exception ex)
-        {
-            await _dialogService.ShowErrorAsync("Error Creating Task",
-                $"Failed to create task: {ex.Message}");
-        }
-    }
-
     /// <summary>
     /// Creates a task from the provided input (called from inline input control).
     /// Title and branch name will be generated automatically.
@@ -489,6 +437,29 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await _dialogService.ShowErrorAsync("Push Failed",
                 $"Failed to push branches: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task PullAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            await _dialogService.ShowErrorAsync("No Repository",
+                "Please open a repository first.");
+            return;
+        }
+
+        try
+        {
+            await _gitService.PullAsync(CurrentRepositoryPath);
+            // Refresh to update worktrees after pull
+            await RefreshWorktreesAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Pull Failed",
+                $"Failed to pull changes: {ex.Message}");
         }
     }
 

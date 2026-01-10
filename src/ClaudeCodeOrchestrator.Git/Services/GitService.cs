@@ -330,6 +330,33 @@ public sealed class GitService : IGitService
         }
     }
 
+    public async Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "pull",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start git process");
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode != 0)
+        {
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+            throw new InvalidOperationException($"Failed to pull: {error}");
+        }
+    }
+
     private static string GetDefaultBranch(Repository repo)
     {
         // Try common default branch names

@@ -318,7 +318,7 @@ EXAMPLES:
     ClaudeCodeOrchestrator.App --pid 12345 --elements Button
 
     # Wait for a dialog to appear
-    ClaudeCodeOrchestrator.App --pid 12345 --wait --for NewTaskDialog --timeout 10000
+    ClaudeCodeOrchestrator.App --pid 12345 --wait --for ConfirmDialog --timeout 10000
 
     # Check if application is running
     ClaudeCodeOrchestrator.App --pid 12345 --ping

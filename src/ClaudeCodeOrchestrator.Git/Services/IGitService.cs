@@ -87,6 +87,13 @@ public interface IGitService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Pulls changes from the remote for the current branch.
+    /// </summary>
+    Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the diff entries between two directory paths by comparing file contents.
     /// </summary>
     /// <param name="basePath">The base directory path (e.g., local repository).</param>

@@ -58,12 +58,6 @@ public partial class WorktreesViewModel : ToolViewModelBase
     }
 
     /// <summary>
-    /// Callback to invoke when the user requests to create a new task (legacy, from button).
-    /// This is wired up by the DockFactory to call MainWindowViewModel.CreateTaskAsync.
-    /// </summary>
-    public Func<Task>? OnCreateTaskRequested { get; set; }
-
-    /// <summary>
     /// Callback to invoke when the user requests to create a new task with input (from inline control).
     /// The TaskInput contains the description and images, title/branch will be generated.
     /// </summary>
@@ -91,13 +85,6 @@ public partial class WorktreesViewModel : ToolViewModelBase
     {
         Id = "Worktrees";
         Title = "Worktrees";
-    }
-
-    [RelayCommand]
-    private async Task CreateTaskAsync()
-    {
-        if (OnCreateTaskRequested != null)
-            await OnCreateTaskRequested();
     }
 
     [RelayCommand]

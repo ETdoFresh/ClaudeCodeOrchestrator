@@ -70,13 +70,8 @@ public partial class App : Application
         services.AddSingleton<ITitleGeneratorService>(sp =>
             new TitleGeneratorService(sp.GetRequiredService<HttpClient>()));
 
-        // Dialog service (with title generator for new task dialog)
-        services.AddSingleton<IDialogService>(sp =>
-        {
-            var dialogService = new DialogService();
-            dialogService.SetTitleGeneratorService(sp.GetRequiredService<ITitleGeneratorService>());
-            return dialogService;
-        });
+        // Dialog service
+        services.AddSingleton<IDialogService, DialogService>();
 
         // Git services
         services.AddSingleton<IGitService, GitService>();

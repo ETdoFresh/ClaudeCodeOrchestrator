@@ -104,7 +104,6 @@ public class DockFactory : Factory
         // Wire up callbacks if context is MainWindowViewModel
         if (_context is ViewModels.MainWindowViewModel mainVm)
         {
-            _worktreesViewModel.OnCreateTaskRequested = () => mainVm.CreateTaskCommand.ExecuteAsync(null);
             _worktreesViewModel.OnCreateTaskWithInputRequested = taskInput => mainVm.CreateTaskFromInputAsync(taskInput);
             _worktreesViewModel.OnRefreshRequested = () => mainVm.RefreshWorktreesAsync();
             _worktreesViewModel.OnPushRequested = () => mainVm.PushAllBranchesCommand.ExecuteAsync(null);

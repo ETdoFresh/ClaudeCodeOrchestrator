@@ -1,6 +1,3 @@
-using ClaudeCodeOrchestrator.App.Models;
-using ClaudeCodeOrchestrator.Core.Services;
-
 namespace ClaudeCodeOrchestrator.App.Services;
 
 /// <summary>
@@ -9,23 +6,11 @@ namespace ClaudeCodeOrchestrator.App.Services;
 public interface IDialogService
 {
     /// <summary>
-    /// Sets the title generator service for use in dialogs.
-    /// </summary>
-    void SetTitleGeneratorService(ITitleGeneratorService titleGeneratorService);
-
-    /// <summary>
     /// Shows a folder picker dialog.
     /// </summary>
     /// <param name="title">The dialog title.</param>
     /// <returns>The selected folder path, or null if cancelled.</returns>
     Task<string?> ShowFolderPickerAsync(string title);
-
-    /// <summary>
-    /// Shows the new task dialog to get a task description with optional images.
-    /// The user can generate and preview/edit the title and branch name before creating.
-    /// </summary>
-    /// <returns>The task input with text, images, and generated title/branch, or null if cancelled.</returns>
-    Task<TaskInput?> ShowNewTaskDialogAsync();
 
     /// <summary>
     /// Shows an error dialog.
