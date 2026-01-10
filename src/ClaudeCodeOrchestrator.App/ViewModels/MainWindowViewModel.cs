@@ -376,7 +376,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
-        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>(), 0);
+        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>(), 0, false);
 
         // Clear saved repository path
         _settingsService.SetLastRepositoryPath(null);
@@ -482,6 +482,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var mainRepoUnpushedCommits = await _gitService.GetCommitsAheadOfRemoteAsync(
                 CurrentRepositoryPath, mainBranch);
 
+            // Check if the repository has a remote configured
+            var hasRemote = await _gitService.HasRemoteAsync(CurrentRepositoryPath);
+
             await _dispatcher.InvokeAsync(() =>
             {
                 // Preserve active session state from existing worktrees
@@ -509,8 +512,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     Worktrees.Add(vm);
                 }
 
-                // Sync to dock panel with main repo's unpushed count for badge
-                Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits);
+                // Sync to dock panel with main repo's unpushed count for badge and remote status
+                Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits, hasRemote);
 
                 // Update merge state on any open session documents
                 Factory?.UpdateSessionDocumentsMergeState(Worktrees);

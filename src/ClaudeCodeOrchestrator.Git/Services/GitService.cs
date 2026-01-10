@@ -568,4 +568,15 @@ public sealed class GitService : IGitService
             return (0, 0);
         }
     }
+
+    public Task<bool> HasRemoteAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            using var repo = new Repository(repoPath);
+            return repo.Network.Remotes.Any();
+        }, cancellationToken);
+    }
 }

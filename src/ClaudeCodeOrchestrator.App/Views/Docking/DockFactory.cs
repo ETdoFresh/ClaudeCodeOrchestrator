@@ -473,7 +473,8 @@ public class DockFactory : Factory
     /// </summary>
     /// <param name="worktrees">The worktrees to display.</param>
     /// <param name="mainRepoUnpushedCommits">Number of unpushed commits in the main repository.</param>
-    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees, int mainRepoUnpushedCommits)
+    /// <param name="hasRemote">Whether the repository has a remote configured.</param>
+    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees, int mainRepoUnpushedCommits, bool hasRemote)
     {
         if (_worktreesViewModel is null) return;
 
@@ -485,6 +486,9 @@ public class DockFactory : Factory
 
         // Update the badge with main repo count
         _worktreesViewModel.SetMainRepoUnpushedCommits(mainRepoUnpushedCommits);
+
+        // Update whether the repository has a remote
+        _worktreesViewModel.SetHasRemote(hasRemote);
 
         // Cache the badge count for next startup
         _settingsService.CachedPushBadgeCount = mainRepoUnpushedCommits;
