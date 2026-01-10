@@ -88,14 +88,12 @@
                                            TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                    <!-- Active session spinner -->
+                                    <!-- Active session spinner - uses Ellipse with StrokeDashArray for centered rotation -->
                                     <Panel Classes="arc-spinner"
                                            IsVisible="{Binding HasActiveSession}"
                                            ToolTip.Tip="Session is active">
-                                        <Arc Stroke="#007ACC"
-                                             StrokeThickness="2"
-                                             StartAngle="0"
-                                             SweepAngle="270" />
+                                        <Ellipse Stroke="#007ACC"
+                                                 StrokeThickness="2" />
                                     </Panel>
                                     <!-- Status badge -->
                                     <Border Padding="6,2" CornerRadius="2"
