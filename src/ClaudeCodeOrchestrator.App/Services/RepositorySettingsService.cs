@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using ClaudeCodeOrchestrator.App.Models;
+using ClaudeCodeOrchestrator.Git.Services;
 
 namespace ClaudeCodeOrchestrator.App.Services;
 
@@ -11,9 +12,15 @@ public class RepositorySettingsService : IRepositorySettingsService
 {
     private const string SettingsFileName = ".claude-repo-config.json";
 
+    private readonly IGitService _gitService;
     private RepositorySettings? _settings;
     private string? _repositoryPath;
     private string? _settingsFilePath;
+
+    public RepositorySettingsService(IGitService gitService)
+    {
+        _gitService = gitService;
+    }
 
     public RepositorySettings? Settings => _settings;
 
@@ -51,21 +58,101 @@ public class RepositorySettingsService : IRepositorySettingsService
 
     public void Save()
     {
-        if (_settingsFilePath is null || _settings is null)
+        if (_settingsFilePath is null || _settings is null || _repositoryPath is null)
             return;
 
         try
         {
+            var isNewFile = !File.Exists(_settingsFilePath);
+
             var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
 
             File.WriteAllText(_settingsFilePath, json);
+
+            // Auto-commit the settings file
+            _ = CommitSettingsFileAsync(isNewFile);
         }
         catch
         {
             // Ignore errors saving settings
+        }
+    }
+
+    private async Task CommitSettingsFileAsync(bool isNewFile)
+    {
+        if (_repositoryPath is null)
+            return;
+
+        try
+        {
+            // Stage and commit the settings file using git command
+            var addPsi = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"add \"{SettingsFileName}\"",
+                WorkingDirectory = _repositoryPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var addProcess = Process.Start(addPsi);
+            if (addProcess != null)
+            {
+                await addProcess.WaitForExitAsync();
+                if (addProcess.ExitCode != 0)
+                    return;
+            }
+
+            // Check if there are staged changes to commit
+            var diffPsi = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = "diff --cached --quiet",
+                WorkingDirectory = _repositoryPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var diffProcess = Process.Start(diffPsi);
+            if (diffProcess != null)
+            {
+                await diffProcess.WaitForExitAsync();
+                // Exit code 0 means no changes, 1 means there are changes
+                if (diffProcess.ExitCode == 0)
+                    return; // Nothing to commit
+            }
+
+            var commitMessage = isNewFile
+                ? $"Add {SettingsFileName}"
+                : $"Update {SettingsFileName}";
+
+            var commitPsi = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"commit -m \"{commitMessage}\"",
+                WorkingDirectory = _repositoryPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var commitProcess = Process.Start(commitPsi);
+            if (commitProcess != null)
+            {
+                await commitProcess.WaitForExitAsync();
+            }
+        }
+        catch
+        {
+            // Ignore errors committing settings
         }
     }
 

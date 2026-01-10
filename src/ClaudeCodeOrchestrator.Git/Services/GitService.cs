@@ -72,8 +72,7 @@ public sealed class GitService : IGitService
         }, cancellationToken);
 
         // Ensure .worktrees directory and metadata file are in .gitignore from the start
-        await EnsureGitIgnoreEntryAsync(path, WorktreesDirectoryName, cancellationToken);
-        await EnsureGitIgnoreEntryAsync(path, MetadataFileName, cancellationToken);
+        await EnsureGitIgnoreEntriesAsync(path, [WorktreesDirectoryName, MetadataFileName], cancellationToken);
 
         return repoInfo;
     }
@@ -144,6 +143,14 @@ public sealed class GitService : IGitService
         string entry,
         CancellationToken cancellationToken = default)
     {
+        await EnsureGitIgnoreEntriesAsync(repoPath, [entry], cancellationToken);
+    }
+
+    public async Task EnsureGitIgnoreEntriesAsync(
+        string repoPath,
+        IEnumerable<string> entries,
+        CancellationToken cancellationToken = default)
+    {
         var gitignorePath = Path.Combine(repoPath, ".gitignore");
         var lines = new List<string>();
 
@@ -152,24 +159,36 @@ public sealed class GitService : IGitService
             lines.AddRange(await File.ReadAllLinesAsync(gitignorePath, cancellationToken));
         }
 
-        // Check if entry already exists (with or without trailing slash)
-        var normalizedEntry = entry.TrimEnd('/');
-        var entryExists = lines.Any(line =>
-        {
-            var normalizedLine = line.Trim().TrimEnd('/');
-            return normalizedLine.Equals(normalizedEntry, StringComparison.OrdinalIgnoreCase);
-        });
+        var addedEntries = new List<string>();
 
-        if (!entryExists)
+        foreach (var entry in entries)
         {
-            // Add entry with trailing slash for directories (entries without file extensions)
-            var isDirectory = !Path.HasExtension(entry) && !entry.EndsWith('/');
-            if (isDirectory)
+            // Check if entry already exists (with or without trailing slash)
+            var normalizedEntry = entry.TrimEnd('/');
+            var entryExists = lines.Any(line =>
             {
-                entry += "/";
-            }
+                var normalizedLine = line.Trim().TrimEnd('/');
+                return normalizedLine.Equals(normalizedEntry, StringComparison.OrdinalIgnoreCase);
+            });
 
-            lines.Add(entry);
+            if (!entryExists)
+            {
+                // Add entry with trailing slash for directories (entries without file extensions)
+                var finalEntry = entry;
+                var isDirectory = !Path.HasExtension(entry) && !entry.EndsWith('/');
+                if (isDirectory)
+                {
+                    finalEntry += "/";
+                }
+
+                lines.Add(finalEntry);
+                addedEntries.Add(finalEntry.TrimEnd('/'));
+            }
+        }
+
+        // Only write and commit if we actually added entries
+        if (addedEntries.Count > 0)
+        {
             await File.WriteAllLinesAsync(gitignorePath, lines, cancellationToken);
 
             // Commit the .gitignore change immediately
@@ -184,8 +203,13 @@ public sealed class GitService : IGitService
                 var signature = repo.Config.BuildSignature(DateTimeOffset.Now)
                     ?? new Signature("User", "user@localhost", DateTimeOffset.Now);
 
+                // Build commit message
+                var commitMessage = addedEntries.Count == 1
+                    ? $"Add {addedEntries[0]} to .gitignore"
+                    : $"Add {string.Join(", ", addedEntries)} to .gitignore";
+
                 // Commit the change
-                repo.Commit($"Add {entry.TrimEnd('/')} to .gitignore", signature, signature);
+                repo.Commit(commitMessage, signature, signature);
             }, cancellationToken);
         }
     }
