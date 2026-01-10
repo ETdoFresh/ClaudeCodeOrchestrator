@@ -59,6 +59,14 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsReadyToMerge))]
     private bool _hasActiveSession;
 
+    /// <summary>
+    /// Indicates whether the session is currently processing (Claude is working).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(DisplayStatus))]
+    private bool _isProcessing;
+
     [ObservableProperty]
     private string? _activeSessionId;
 
@@ -117,15 +125,42 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _canRun;
 
-    public string StatusText => Status switch
+    public string StatusText => DisplayStatus.Text;
+
+    /// <summary>
+    /// Gets the display status based on processing state and git status.
+    /// Priority: Processing > Ready (has commits) > Complete (no commits, not processing)
+    /// </summary>
+    public (string Text, string Color) DisplayStatus
     {
-        WorktreeStatus.Active => "Active",
-        WorktreeStatus.HasChanges => "Active",
-        WorktreeStatus.ReadyToMerge => "Ready",
-        WorktreeStatus.Merged => "Complete",
-        WorktreeStatus.Locked => "Locked",
-        _ => "Unknown"
-    };
+        get
+        {
+            // If processing, always show Processing
+            if (IsProcessing)
+                return ("Processing", "#007ACC"); // Blue
+
+            // If has commits ahead, show Ready (ready to merge)
+            if (Status == WorktreeStatus.ReadyToMerge)
+                return ("Ready", "#4CAF50"); // Green
+
+            // If session completed but no commits, show Complete
+            if (HasActiveSession || Status == WorktreeStatus.Active || Status == WorktreeStatus.HasChanges)
+            {
+                // Has active session but not processing = Complete
+                if (HasActiveSession)
+                    return ("Complete", "#9E9E9E"); // Gray
+
+                return ("Active", "#FF9800"); // Orange
+            }
+
+            return Status switch
+            {
+                WorktreeStatus.Merged => ("Merged", "#9E9E9E"),
+                WorktreeStatus.Locked => ("Locked", "#F44336"),
+                _ => ("Active", "#FF9800")
+            };
+        }
+    }
 
     /// <summary>
     /// Indicates if the worktree is ready to merge (session complete and status is ReadyToMerge).

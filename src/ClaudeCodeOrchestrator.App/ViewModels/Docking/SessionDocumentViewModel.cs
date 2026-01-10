@@ -35,6 +35,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     public Func<Task>? OnSessionCompleted { get; set; }
 
     /// <summary>
+    /// Callback when processing state changes, passing (worktreeId, isProcessing).
+    /// </summary>
+    public Action<string, bool>? OnProcessingStateChanged { get; set; }
+
+    /// <summary>
     /// Callback to merge this worktree.
     /// </summary>
     public Func<string, Task>? OnMergeRequested { get; set; }
@@ -91,6 +96,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                 OnPropertyChanged(nameof(ShowStopButton));
                 OnPropertyChanged(nameof(ShowQueueButton));
                 OnPropertyChanged(nameof(ActionButtonText));
+
+                // Notify worktree of processing state change
+                if (!string.IsNullOrEmpty(WorktreeId))
+                {
+                    OnProcessingStateChanged?.Invoke(WorktreeId, value);
+                }
             }
         }
     }

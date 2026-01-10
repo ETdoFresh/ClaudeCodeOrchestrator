@@ -23,6 +23,12 @@ public partial class WorktreesView : UserControl
             _ => new SolidColorBrush(Color.Parse("#666666"))
         });
 
+    /// <summary>
+    /// Converts DisplayStatus tuple color to brush.
+    /// </summary>
+    public static FuncValueConverter<(string Text, string Color), IBrush> DisplayStatusToBrushConverter { get; } =
+        new(status => new SolidColorBrush(Color.Parse(status.Color)));
+
     public static FuncValueConverter<int, bool> PositiveNumberConverter { get; } =
         new(value => value > 0);
 

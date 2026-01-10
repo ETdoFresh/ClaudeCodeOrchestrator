@@ -667,7 +667,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     .Where(w => w.HasActiveSession)
                     .ToDictionary(
                         w => w.Path,
-                        w => (w.ActiveSessionId, w.SessionStartedAt, w.SessionDuration));
+                        w => (w.ActiveSessionId, w.SessionStartedAt, w.SessionDuration, w.IsProcessing));
 
                 Worktrees.Clear();
                 foreach (var wt in worktrees)
@@ -682,6 +682,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                         vm.ActiveSessionId = sessionState.ActiveSessionId;
                         vm.SessionStartedAt = sessionState.SessionStartedAt;
                         vm.SessionDuration = sessionState.SessionDuration;
+                        vm.IsProcessing = sessionState.IsProcessing;
                     }
 
                     Worktrees.Add(vm);
@@ -879,6 +880,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update UI to show session is active again
             worktree.HasActiveSession = true;
             worktree.ActiveSessionId = sessionId;
+            worktree.IsProcessing = true;
 
             // Activate the session document so user can watch the merge
             Factory?.ActivateSessionDocument(sessionId);
@@ -893,6 +895,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update worktree with active session
             worktree.HasActiveSession = true;
             worktree.ActiveSessionId = sessionId;
+            worktree.IsProcessing = true;
             // New session - document will be created and activated by OnSessionCreated
         }
 
@@ -1068,6 +1071,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 worktreeVm.HasActiveSession = true;
                 worktreeVm.ActiveSessionId = session.Id;
+                worktreeVm.IsProcessing = true;
             }
         }
         catch (Exception ex)
@@ -1117,6 +1121,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 worktree.HasActiveSession = false;
                 worktree.ActiveSessionId = null;
+                worktree.IsProcessing = false;
 
                 // Stop the session timer and record the end time
                 worktree.StopSessionTimer(e.EndedAt);
@@ -1150,10 +1155,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 or Core.Models.SessionState.Starting)
             {
                 var worktree = Worktrees.FirstOrDefault(w => w.Id == e.Session.WorktreeId);
-                if (worktree != null && !worktree.HasActiveSession)
+                if (worktree != null)
                 {
-                    worktree.HasActiveSession = true;
-                    worktree.ActiveSessionId = e.Session.Id;
+                    if (!worktree.HasActiveSession)
+                    {
+                        worktree.HasActiveSession = true;
+                        worktree.ActiveSessionId = e.Session.Id;
+                    }
+                    worktree.IsProcessing = true;
                 }
 
                 // Persist that session is active so we can restore on app restart
