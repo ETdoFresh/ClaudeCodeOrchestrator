@@ -68,6 +68,11 @@ public interface ISessionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Ends all active sessions. Used when closing a repository or shutting down the app.
+    /// </summary>
+    Task EndAllSessionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sends a message to a session.
     /// </summary>
     Task SendMessageAsync(

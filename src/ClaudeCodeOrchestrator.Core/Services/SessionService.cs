@@ -199,6 +199,19 @@ public sealed class SessionService : ISessionService, IDisposable
         }
     }
 
+    public async Task EndAllSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        // Get all session IDs to end
+        var sessionIds = _sessions.Keys.ToList();
+
+        // End all sessions concurrently
+        var tasks = sessionIds.Select(id => EndSessionAsync(id, cancellationToken));
+        await Task.WhenAll(tasks);
+
+        // Clear all sessions from the dictionary
+        _sessions.Clear();
+    }
+
     public async Task SendMessageAsync(
         string sessionId,
         string message,

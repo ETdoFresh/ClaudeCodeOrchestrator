@@ -212,6 +212,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     internal async Task OpenRepositoryAtPathAsync(string path)
     {
+        // Close the current repository first if one is open (handles switching repositories)
+        if (IsRepositoryOpen)
+        {
+            await CloseRepositoryAsync();
+        }
+
         try
         {
             // Validate it's a git repository
@@ -368,18 +374,43 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void CloseRepository()
+    private async Task CloseRepositoryAsync()
     {
+        // End all active sessions (kills all Claude Code subprocesses)
+        await _sessionService.EndAllSessionsAsync();
+
+        // Close all document tabs (disposes session documents, file documents, etc.)
+        Factory?.CloseAllDocuments();
+
+        // Dispose and clear worktrees (stops timers, releases resources)
+        foreach (var worktree in Worktrees)
+        {
+            worktree.Dispose();
+        }
+
+        // Clear collections
+        Sessions.Clear();
+        Worktrees.Clear();
+
+        // Clear UI state
         CurrentRepositoryPath = null;
         IsRepositoryOpen = false;
         WindowTitle = "Claude Code Orchestrator";
-        Sessions.Clear();
-        Worktrees.Clear();
+
+        // Update file browser to clear file list
         Factory?.UpdateFileBrowser(null);
-        Factory?.UpdateWorktrees(Enumerable.Empty<WorktreeViewModel>(), 0);
+
+        // Clear worktrees panel
+        Factory?.ClearWorktrees();
 
         // Clear saved repository path
         _settingsService.SetLastRepositoryPath(null);
+
+        // Clear any pending merge retries
+        _pendingMergeRetries.Clear();
+
+        // Clear pending session preview states
+        _pendingSessionPreviewStates.Clear();
     }
 
     [RelayCommand]

@@ -1419,4 +1419,85 @@ public class DockFactory : Factory
             _documentDock.Proportion = 0.75;
         }
     }
+
+    /// <summary>
+    /// Closes all documents and disposes them. Used when closing a repository or shutting down the app.
+    /// </summary>
+    public void CloseAllDocuments()
+    {
+        if (_rootProportional is null) return;
+
+        // Collect all document docks (handles split layouts)
+        var documentDocks = new List<IDocumentDock>();
+        CollectAllDocumentDocks(_rootProportional, documentDocks);
+
+        // Collect all documents to dispose
+        var documentsToDispose = new List<IDisposable>();
+
+        foreach (var docDock in documentDocks)
+        {
+            if (docDock.VisibleDockables is null) continue;
+
+            // Collect disposable documents
+            foreach (var doc in docDock.VisibleDockables)
+            {
+                if (doc is IDisposable disposable)
+                {
+                    documentsToDispose.Add(disposable);
+                }
+            }
+
+            // Clear the dock
+            docDock.VisibleDockables.Clear();
+        }
+
+        // Dispose all documents
+        foreach (var disposable in documentsToDispose)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+
+        // Collapse any split layouts back to a single empty document dock
+        if (CanCollapseSplitDocuments)
+        {
+            CollapseSplitDocuments();
+        }
+
+        // Disable auto-split
+        AutoSplitLayout = SplitLayout.None;
+    }
+
+    /// <summary>
+    /// Clears the worktrees panel.
+    /// </summary>
+    public void ClearWorktrees()
+    {
+        if (_worktreesViewModel is null) return;
+
+        // Dispose each worktree view model
+        foreach (var worktree in _worktreesViewModel.Worktrees)
+        {
+            if (worktree is IDisposable disposable)
+            {
+                try
+                {
+                    disposable.Dispose();
+                }
+                catch
+                {
+                    // Ignore disposal errors
+                }
+            }
+        }
+
+        _worktreesViewModel.Worktrees.Clear();
+        _worktreesViewModel.SetMainRepoUnpushedCommits(0);
+    }
 }

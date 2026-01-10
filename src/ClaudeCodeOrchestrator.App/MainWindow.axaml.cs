@@ -53,8 +53,17 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
+        // Close all documents (disposes session documents, file documents, etc.)
+        _viewModel?.Factory?.CloseAllDocuments();
+
+        // Clear worktrees (stops timers, releases resources)
+        _viewModel?.Factory?.ClearWorktrees();
+
         // Dispose view model to unsubscribe from events
         _viewModel?.Dispose();
+
+        // Note: SessionService.Dispose() is called via _serviceProvider.Dispose() in App.axaml.cs
+        // which ends all sessions and kills all Claude Code subprocesses
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
