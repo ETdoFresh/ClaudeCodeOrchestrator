@@ -124,14 +124,31 @@
             </MenuItem>
         </Menu>
 
-            <!-- Window Title Display -->
-            <TextBlock Grid.Column="1"
-                       Text="{Binding WindowTitle}"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Foreground="#999999"
-                       FontSize="13"
-                       Margin="0,0,100,0" />
+            <!-- Window Title Display with Cog -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,100,0">
+                <TextBlock Text="{Binding WindowTitle}"
+                           VerticalAlignment="Center"
+                           Foreground="#999999"
+                           FontSize="13" />
+                <!-- Repo Settings Button (cog icon, only visible when repository is open) -->
+                <Button Content="⚙"
+                        Command="{Binding OpenRepositorySettingsCommand}"
+                        IsVisible="{Binding IsRepositoryOpen}"
+                        Background="Transparent"
+                        Foreground="#808080"
+                        FontSize="12"
+                        Padding="4,2"
+                        Margin="6,0,0,0"
+                        Cursor="Hand"
+                        ToolTip.Tip="Repository Settings"
+                        AutomationProperties.AutomationId="RepoSettingsButton">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#CCCCCC" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </StackPanel>
 
             <!-- Right Side Items -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,12,0">
@@ -143,23 +160,6 @@
                            FontSize="12"
                            Margin="0,0,12,0"
                            AutomationProperties.AutomationId="AutoSplitIndicator" />
-                <!-- Repo Settings Button (cog icon, only visible when repository is open) -->
-                <Button Content="⚙"
-                        Command="{Binding OpenRepositorySettingsCommand}"
-                        IsVisible="{Binding IsRepositoryOpen}"
-                        Background="Transparent"
-                        Foreground="#808080"
-                        FontSize="14"
-                        Padding="8,4"
-                        Cursor="Hand"
-                        ToolTip.Tip="Repository Settings"
-                        AutomationProperties.AutomationId="RepoSettingsButton">
-                    <Button.Styles>
-                        <Style Selector="Button:pointerover">
-                            <Setter Property="Foreground" Value="#CCCCCC" />
-                        </Style>
-                    </Button.Styles>
-                </Button>
                 <!-- Repo Link (only visible for GitHub repositories) -->
                 <Button Content="Repo"
                         Command="{Binding OpenRepoCommand}"
