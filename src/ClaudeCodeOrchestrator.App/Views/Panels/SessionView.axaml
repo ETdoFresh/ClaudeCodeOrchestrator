@@ -93,7 +93,7 @@
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
                                     <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6">
                                         <Grid ColumnDefinitions="*,Auto">
-                                            <StackPanel Grid.Column="0">
+                                            <StackPanel Grid.Column="0" HorizontalAlignment="Stretch">
                                                 <!-- Image attachments -->
                                                 <ItemsControl ItemsSource="{Binding Images}"
                                                               IsVisible="{Binding HasImages}"
@@ -119,7 +119,8 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
                                                 <!-- Text content -->
-                                                <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}" />
+                                                <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}"
+                                                                MaxWidth="{Binding $parent[ScrollViewer].Bounds.Width}" />
                                             </StackPanel>
                                             <Button Grid.Column="1" x:Name="CopyButton"
                                                     Command="{Binding CopyCommand}"
@@ -157,9 +158,11 @@
                                                 <Setter Property="Opacity" Value="1" />
                                             </Style>
                                         </Border.Styles>
-                                        <StackPanel>
+                                        <StackPanel HorizontalAlignment="Stretch">
                                             <Grid ColumnDefinitions="*,Auto">
-                                                <html:HtmlLabel Grid.Column="0" Text="{Binding TextContent, Converter={StaticResource MarkdownToHtml}}" />
+                                                <html:HtmlLabel Grid.Column="0"
+                                                                Text="{Binding TextContent, Converter={StaticResource MarkdownToHtml}}"
+                                                                MaxWidth="{Binding $parent[ScrollViewer].Bounds.Width}" />
                                                 <Button Grid.Column="1" x:Name="CopyButton"
                                                         Command="{Binding CopyCommand}"
                                                         Content="📋"
@@ -203,8 +206,9 @@
                                                                         Background="#1A1A1A"
                                                                         CornerRadius="4"
                                                                         Padding="0"
-                                                                        MaxHeight="150">
-                                                                    <html:HtmlLabel>
+                                                                        MaxHeight="150"
+                                                                        ClipToBounds="True">
+                                                                    <html:HtmlLabel MaxWidth="{Binding $parent[ScrollViewer].Bounds.Width}">
                                                                         <html:HtmlLabel.Text>
                                                                             <MultiBinding Converter="{StaticResource DiffToHtml}">
                                                                                 <Binding Path="OldString" />
@@ -220,8 +224,10 @@
                                                                         Background="#1A1A1A"
                                                                         CornerRadius="4"
                                                                         Padding="0"
-                                                                        MaxHeight="150">
-                                                                    <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}" />
+                                                                        MaxHeight="150"
+                                                                        ClipToBounds="True">
+                                                                    <html:HtmlLabel Text="{Binding WriteContent, Converter={StaticResource CodePreview}}"
+                                                                                    MaxWidth="{Binding $parent[ScrollViewer].Bounds.Width}" />
                                                                 </Border>
 
                                                                 <!-- Todo list display for TodoWrite operations -->
