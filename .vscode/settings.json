@@ -1,0 +1,124 @@
+{
+    "workbench.colorCustomizations": {
+        // Editor
+        "editor.background": "#1a2332",
+        "editor.foreground": "#d4d7de",
+        "editor.lineHighlightBackground": "#232f42",
+        "editor.selectionBackground": "#ff950033",
+        "editor.selectionHighlightBackground": "#ff950022",
+        "editor.wordHighlightBackground": "#ff950025",
+        "editor.findMatchBackground": "#ff950055",
+        "editor.findMatchHighlightBackground": "#ff950033",
+        "editorCursor.foreground": "#ff9500",
+        "editorLineNumber.foreground": "#4a5568",
+        "editorLineNumber.activeForeground": "#ff9500",
+        "editorIndentGuide.background1": "#2d3a4f",
+        "editorIndentGuide.activeBackground1": "#ff950066",
+        "editorBracketMatch.background": "#ff950033",
+        "editorBracketMatch.border": "#ff9500",
+
+        // Sidebar
+        "sideBar.background": "#151c28",
+        "sideBar.foreground": "#a0aec0",
+        "sideBarTitle.foreground": "#ff9500",
+        "sideBarSectionHeader.background": "#1a2332",
+        "sideBarSectionHeader.foreground": "#ff9500",
+
+        // Activity Bar
+        "activityBar.background": "#0f1419",
+        "activityBar.foreground": "#ff9500",
+        "activityBar.inactiveForeground": "#4a5568",
+        "activityBarBadge.background": "#ff9500",
+        "activityBarBadge.foreground": "#0f1419",
+
+        // Title Bar
+        "titleBar.activeBackground": "#0f1419",
+        "titleBar.activeForeground": "#d4d7de",
+        "titleBar.inactiveBackground": "#0f1419",
+        "titleBar.inactiveForeground": "#4a5568",
+
+        // Tabs
+        "tab.activeBackground": "#1a2332",
+        "tab.activeForeground": "#ffffff",
+        "tab.activeBorderTop": "#ff9500",
+        "tab.inactiveBackground": "#151c28",
+        "tab.inactiveForeground": "#6b7280",
+        "tab.border": "#0f1419",
+        "editorGroupHeader.tabsBackground": "#151c28",
+
+        // Status Bar
+        "statusBar.background": "#0f1419",
+        "statusBar.foreground": "#a0aec0",
+        "statusBar.debuggingBackground": "#ff9500",
+        "statusBar.debuggingForeground": "#0f1419",
+        "statusBar.noFolderBackground": "#1a2332",
+        "statusBarItem.hoverBackground": "#ff950033",
+        "statusBarItem.remoteBackground": "#ff9500",
+        "statusBarItem.remoteForeground": "#0f1419",
+
+        // Terminal
+        "terminal.background": "#0f1419",
+        "terminal.foreground": "#d4d7de",
+        "terminalCursor.foreground": "#ff9500",
+
+        // Input & Dropdown
+        "input.background": "#0f1419",
+        "input.foreground": "#d4d7de",
+        "input.border": "#2d3a4f",
+        "input.placeholderForeground": "#4a5568",
+        "inputOption.activeBorder": "#ff9500",
+        "dropdown.background": "#151c28",
+        "dropdown.border": "#2d3a4f",
+
+        // Lists
+        "list.activeSelectionBackground": "#ff950033",
+        "list.activeSelectionForeground": "#ffffff",
+        "list.hoverBackground": "#232f42",
+        "list.focusBackground": "#ff950022",
+        "list.highlightForeground": "#ff9500",
+
+        // Buttons
+        "button.background": "#ff9500",
+        "button.foreground": "#0f1419",
+        "button.hoverBackground": "#ffaa33",
+
+        // Scrollbar
+        "scrollbar.shadow": "#00000055",
+        "scrollbarSlider.background": "#4a556844",
+        "scrollbarSlider.hoverBackground": "#ff950066",
+        "scrollbarSlider.activeBackground": "#ff9500",
+
+        // Panel
+        "panel.background": "#151c28",
+        "panel.border": "#2d3a4f",
+        "panelTitle.activeBorder": "#ff9500",
+        "panelTitle.activeForeground": "#ff9500",
+        "panelTitle.inactiveForeground": "#6b7280",
+
+        // Peek View
+        "peekView.border": "#ff9500",
+        "peekViewEditor.background": "#151c28",
+        "peekViewResult.background": "#0f1419",
+        "peekViewTitle.background": "#1a2332",
+
+        // Git Decorations
+        "gitDecoration.modifiedResourceForeground": "#ff9500",
+        "gitDecoration.addedResourceForeground": "#48bb78",
+        "gitDecoration.deletedResourceForeground": "#f56565",
+        "gitDecoration.untrackedResourceForeground": "#68d391",
+
+        // Minimap
+        "minimap.selectionHighlight": "#ff950066",
+        "minimap.findMatchHighlight": "#ff9500"
+    },
+
+    "editor.tokenColorCustomizations": {
+        "comments": "#546e7a",
+        "strings": "#c3e88d",
+        "keywords": "#ff9500",
+        "numbers": "#f78c6c",
+        "functions": "#82aaff",
+        "variables": "#d4d7de",
+        "types": "#ffcb6b"
+    }
+}
