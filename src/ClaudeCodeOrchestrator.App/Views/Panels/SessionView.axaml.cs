@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.App.Views.Controls;
@@ -486,5 +487,56 @@ public partial class SessionView : UserControl
     {
         _attachments.Clear();
         UpdateAttachmentsDisplay();
+    }
+
+    /// <summary>
+    /// Shows the copy button when pointer enters a message bubble.
+    /// </summary>
+    private void MessageBorder_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            var copyButton = FindCopyButton(border);
+            if (copyButton != null)
+                copyButton.Opacity = 1;
+        }
+    }
+
+    /// <summary>
+    /// Hides the copy button when pointer exits a message bubble.
+    /// Only hides if pointer actually left the border bounds.
+    /// </summary>
+    private void MessageBorder_PointerExited(object? sender, PointerEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            // Check if pointer is still within the border bounds
+            var position = e.GetPosition(border);
+            var bounds = border.Bounds;
+
+            // If pointer is still inside the border, don't hide
+            if (position.X >= 0 && position.X <= bounds.Width &&
+                position.Y >= 0 && position.Y <= bounds.Height)
+            {
+                return;
+            }
+
+            var copyButton = FindCopyButton(border);
+            if (copyButton != null)
+                copyButton.Opacity = 0;
+        }
+    }
+
+    /// <summary>
+    /// Finds the CopyButton within a message border.
+    /// </summary>
+    private static Button? FindCopyButton(Control parent)
+    {
+        foreach (var child in parent.GetVisualDescendants())
+        {
+            if (child is Button button && button.Name == "CopyButton")
+                return button;
+        }
+        return null;
     }
 }

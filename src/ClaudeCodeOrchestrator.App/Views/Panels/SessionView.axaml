@@ -47,6 +47,22 @@
                 </StackPanel>
                 <!-- Action buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <!-- Copy Chat button -->
+                    <Button Command="{Binding CopyChatCommand}"
+                            Padding="8,4"
+                            FontSize="12"
+                            Background="Transparent"
+                            Foreground="#CCCCCC"
+                            BorderThickness="1"
+                            BorderBrush="#3C3C3C"
+                            CornerRadius="4"
+                            ToolTip.Tip="Copy entire conversation to clipboard"
+                            AutomationProperties.AutomationId="CopyChatButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="📋" />
+                            <TextBlock Text="Copy Chat" />
+                        </StackPanel>
+                    </Button>
                     <!-- Run button - shown when executable is configured -->
                     <Button Command="{Binding RunCommand}"
                             Padding="10,4"
@@ -105,7 +121,9 @@
                             <ContentControl.DataTemplates>
                                 <!-- User message - light grey box style -->
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
-                                    <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6">
+                                    <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6"
+                                            PointerEntered="MessageBorder_PointerEntered"
+                                            PointerExited="MessageBorder_PointerExited">
                                         <Grid ColumnDefinitions="*,Auto">
                                             <StackPanel Grid.Column="0" HorizontalAlignment="Stretch">
                                                 <!-- Image attachments -->
@@ -132,9 +150,13 @@
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <!-- Text content -->
-                                                <html:HtmlLabel Text="{Binding Content, Converter={StaticResource MarkdownToHtml}}"
-                                                                MaxWidth="{Binding $parent[ScrollViewer].Bounds.Width}" />
+                                                <!-- Text content - SelectableTextBlock for text selection and Ctrl/Cmd+C support -->
+                                                <SelectableTextBlock Text="{Binding Content}"
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="#CCCCCC"
+                                                                     FontSize="13"
+                                                                     FontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                                                                     LineHeight="19.5" />
                                             </StackPanel>
                                             <Button Grid.Column="1" x:Name="CopyButton"
                                                     Command="{Binding CopyCommand}"
@@ -142,36 +164,29 @@
                                                     ToolTip.Tip="Copy message"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
-                                                    Margin="0,-4,-4,0"
-                                                    Padding="4,2"
+                                                    Margin="8,0,20,0"
+                                                    Padding="6,4"
                                                     FontSize="12"
-                                                    Background="Transparent"
+                                                    Background="#3D3D40"
                                                     BorderThickness="0"
+                                                    CornerRadius="4"
                                                     Opacity="0"
                                                     Cursor="Hand">
                                                 <Button.Styles>
                                                     <Style Selector="Button:pointerover">
-                                                        <Setter Property="Background" Value="#3D3D40" />
+                                                        <Setter Property="Background" Value="#4D4D50" />
                                                     </Style>
                                                 </Button.Styles>
                                             </Button>
                                         </Grid>
-                                        <Border.Styles>
-                                            <Style Selector="Border:pointerover > Grid > Button#CopyButton">
-                                                <Setter Property="Opacity" Value="1" />
-                                            </Style>
-                                        </Border.Styles>
                                     </Border>
                                 </DataTemplate>
 
                                 <!-- Assistant message -->
                                 <DataTemplate DataType="{x:Type vmBase:AssistantMessageViewModel}">
-                                    <Border x:Name="AssistantMessageBorder" Margin="0,0" Padding="12,0" Background="Transparent" CornerRadius="6">
-                                        <Border.Styles>
-                                            <Style Selector="Border:pointerover > StackPanel > Grid > Button#CopyButton">
-                                                <Setter Property="Opacity" Value="1" />
-                                            </Style>
-                                        </Border.Styles>
+                                    <Border x:Name="AssistantMessageBorder" Margin="0,0" Padding="12,0" Background="Transparent" CornerRadius="6"
+                                            PointerEntered="MessageBorder_PointerEntered"
+                                            PointerExited="MessageBorder_PointerExited">
                                         <StackPanel HorizontalAlignment="Stretch">
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <html:HtmlLabel Grid.Column="0"
@@ -183,16 +198,17 @@
                                                         ToolTip.Tip="Copy message"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Top"
-                                                        Margin="0,-4,-4,0"
-                                                        Padding="4,2"
+                                                        Margin="8,0,20,0"
+                                                        Padding="6,4"
                                                         FontSize="12"
-                                                        Background="Transparent"
+                                                        Background="#3D3D40"
                                                         BorderThickness="0"
+                                                        CornerRadius="4"
                                                         Opacity="0"
                                                         Cursor="Hand">
                                                     <Button.Styles>
                                                         <Style Selector="Button:pointerover">
-                                                            <Setter Property="Background" Value="#3D3D40" />
+                                                            <Setter Property="Background" Value="#4D4D50" />
                                                         </Style>
                                                     </Button.Styles>
                                                 </Button>

@@ -1,5 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using System.Text.Json;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.Input;
 using ClaudeCodeOrchestrator.App.Models;
 using ClaudeCodeOrchestrator.App.Services;
@@ -456,6 +461,62 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             await OnRunRequested(WorktreeId);
         }
+    }
+
+    [RelayCommand]
+    private async Task CopyChatAsync()
+    {
+        var clipboard = GetClipboard();
+        if (clipboard == null) return;
+
+        var sb = new StringBuilder();
+        var lastWasAssistant = false;
+
+        foreach (var message in Messages)
+        {
+            switch (message)
+            {
+                case UserMessageViewModel user:
+                    var userContent = user.Content?.Trim();
+                    if (!string.IsNullOrEmpty(userContent))
+                    {
+                        sb.AppendLine("## User");
+                        sb.AppendLine(userContent);
+                        sb.AppendLine();
+                        lastWasAssistant = false;
+                    }
+                    break;
+
+                case AssistantMessageViewModel assistant:
+                    var assistantContent = assistant.TextContent?.Trim();
+                    if (!string.IsNullOrEmpty(assistantContent))
+                    {
+                        // Combine consecutive assistant messages
+                        if (lastWasAssistant)
+                        {
+                            sb.AppendLine(assistantContent);
+                            sb.AppendLine();
+                        }
+                        else
+                        {
+                            sb.AppendLine("## Assistant");
+                            sb.AppendLine(assistantContent);
+                            sb.AppendLine();
+                        }
+                        lastWasAssistant = true;
+                    }
+                    break;
+            }
+        }
+
+        await clipboard.SetTextAsync(sb.ToString().TrimEnd());
+    }
+
+    private static IClipboard? GetClipboard()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            return TopLevel.GetTopLevel(desktop.MainWindow)?.Clipboard;
+        return null;
     }
 
     /// <summary>
