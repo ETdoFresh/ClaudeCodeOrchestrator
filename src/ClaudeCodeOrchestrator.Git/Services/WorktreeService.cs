@@ -142,14 +142,83 @@ public sealed class WorktreeService : IWorktreeService
         // Remove worktree using git command
         await RemoveWorktreeViaGitAsync(repoPath, worktree.Path, force, cancellationToken);
 
-        // Delete the directory if it still exists
+        // Delete the directory if it still exists, with retry logic for Windows file locking
         if (Directory.Exists(worktree.Path))
         {
-            Directory.Delete(worktree.Path, recursive: true);
+            await DeleteDirectoryWithRetryAsync(worktree.Path, cancellationToken);
         }
 
         // Optionally delete the branch
         // For now, we'll keep the branch in case user wants to reference it
+    }
+
+    /// <summary>
+    /// Deletes a directory with retry logic to handle Windows file locking issues.
+    /// </summary>
+    private static async Task DeleteDirectoryWithRetryAsync(
+        string path,
+        CancellationToken cancellationToken,
+        int maxRetries = 5)
+    {
+        var delays = new[] { 100, 200, 500, 1000, 2000 }; // Exponential backoff in ms
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                // Force garbage collection to release any managed file handles
+                if (attempt > 0)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                }
+
+                // Clear read-only attributes that might prevent deletion
+                ClearReadOnlyAttributes(path);
+
+                Directory.Delete(path, recursive: true);
+                return; // Success
+            }
+            catch (IOException) when (attempt < maxRetries)
+            {
+                // File is locked, wait and retry
+                await Task.Delay(delays[Math.Min(attempt, delays.Length - 1)], cancellationToken);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries)
+            {
+                // Access denied (often due to file locks on Windows), wait and retry
+                await Task.Delay(delays[Math.Min(attempt, delays.Length - 1)], cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recursively clears read-only attributes from all files in a directory.
+    /// </summary>
+    private static void ClearReadOnlyAttributes(string path)
+    {
+        try
+        {
+            foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    var attributes = File.GetAttributes(file);
+                    if ((attributes & FileAttributes.ReadOnly) != 0)
+                    {
+                        File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+                    }
+                }
+                catch
+                {
+                    // Ignore individual file errors
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors when enumerating
+        }
     }
 
     public async Task<MergeResultModel> MergeWorktreeAsync(
