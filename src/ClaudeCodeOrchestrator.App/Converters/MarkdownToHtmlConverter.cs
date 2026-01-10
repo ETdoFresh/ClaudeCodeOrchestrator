@@ -12,7 +12,7 @@ public class MarkdownToHtmlConverter : IValueConverter
         .Build();
 
     private const string DarkThemeCss = @"
-        body {
+        html, body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
             color: #CCCCCC;
@@ -22,6 +22,15 @@ public class MarkdownToHtmlConverter : IValueConverter
             line-height: 1.5;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        p {
+            margin: 0 0 0.5em 0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
         h1, h2, h3, h4, h5, h6 {
             color: #569CD6;
