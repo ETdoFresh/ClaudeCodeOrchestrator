@@ -1113,18 +1113,28 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         _dispatcher.Post(async () =>
         {
-            // Update worktree to show no active session
+            // Update worktree processing state
             var worktree = Worktrees.FirstOrDefault(w =>
                 w.ActiveSessionId == e.SessionId);
 
             if (worktree != null)
             {
-                worktree.HasActiveSession = false;
-                worktree.ActiveSessionId = null;
+                // Always stop processing when turn ends
                 worktree.IsProcessing = false;
 
-                // Stop the session timer and record the end time
-                worktree.StopSessionTimer(e.EndedAt);
+                // Set error/interrupted flags based on final state
+                worktree.HasError = e.FinalState == Core.Models.SessionState.Error;
+                worktree.WasInterrupted = e.FinalState == Core.Models.SessionState.Cancelled;
+
+                // Only clear active session for cancelled/error states
+                // For completed sessions, keep HasActiveSession true until user closes the document
+                if (e.FinalState is Core.Models.SessionState.Cancelled or Core.Models.SessionState.Error)
+                {
+                    worktree.HasActiveSession = false;
+                    worktree.ActiveSessionId = null;
+                    // Stop the session timer for non-normal endings
+                    worktree.StopSessionTimer(e.EndedAt);
+                }
 
                 // Clear the SessionWasActive flag since session ended normally
                 try
@@ -1163,6 +1173,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                         worktree.ActiveSessionId = e.Session.Id;
                     }
                     worktree.IsProcessing = true;
+                    // Clear error/interrupted flags when processing starts
+                    worktree.HasError = false;
+                    worktree.WasInterrupted = false;
                 }
 
                 // Persist that session is active so we can restore on app restart

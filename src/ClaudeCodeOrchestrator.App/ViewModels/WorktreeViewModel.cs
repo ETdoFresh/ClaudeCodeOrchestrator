@@ -67,6 +67,22 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(DisplayStatus))]
     private bool _isProcessing;
 
+    /// <summary>
+    /// Indicates whether the session ended with an error.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(DisplayStatus))]
+    private bool _hasError;
+
+    /// <summary>
+    /// Indicates whether the session was interrupted/cancelled.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(DisplayStatus))]
+    private bool _wasInterrupted;
+
     [ObservableProperty]
     private string? _activeSessionId;
 
@@ -129,7 +145,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// Gets the display status based on processing state and git status.
-    /// Priority: Processing > Ready (has commits) > Complete (no commits, not processing)
+    /// States: Processing > Mergable (has commits) > Completed > Failed > Interrupted
     /// </summary>
     public (string Text, string Color) DisplayStatus
     {
@@ -139,26 +155,20 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             if (IsProcessing)
                 return ("Processing", "#007ACC"); // Blue
 
-            // If has commits ahead, show Ready (ready to merge)
+            // If has commits ahead, show Mergable (ready to merge)
             if (Status == WorktreeStatus.ReadyToMerge)
-                return ("Ready", "#4CAF50"); // Green
+                return ("Mergable", "#4CAF50"); // Green
 
-            // If session completed but no commits, show Complete
-            if (HasActiveSession || Status == WorktreeStatus.Active || Status == WorktreeStatus.HasChanges)
-            {
-                // Has active session but not processing = Complete
-                if (HasActiveSession)
-                    return ("Complete", "#9E9E9E"); // Gray
+            // If session had an error, show Failed
+            if (HasError)
+                return ("Failed", "#F44336"); // Red
 
-                return ("Active", "#FF9800"); // Orange
-            }
+            // If session was interrupted/cancelled, show Interrupted
+            if (WasInterrupted)
+                return ("Interrupted", "#FF9800"); // Orange
 
-            return Status switch
-            {
-                WorktreeStatus.Merged => ("Merged", "#9E9E9E"),
-                WorktreeStatus.Locked => ("Locked", "#F44336"),
-                _ => ("Active", "#FF9800")
-            };
+            // Default to Completed (session done or waiting)
+            return ("Completed", "#9E9E9E"); // Gray
         }
     }
 

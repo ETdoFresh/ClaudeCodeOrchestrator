@@ -7,17 +7,23 @@ description: Run integration tests on the Claude Code Orchestrator app. Use this
 
 This skill allows you to interact with the running Claude Code Orchestrator application for integration testing.
 
+**IMPORTANT:** This is a native desktop Avalonia app, NOT a web app. Do NOT use Chrome DevTools MCP or any browser-based tools. Use the app's built-in CLI automation commands described below.
+
 ## Prerequisites
 
 The app must be running. Start it with:
 ```bash
-cd /Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App
-dotnet run &
+cd ./src/ClaudeCodeOrchestrator.App && dotnet run
 ```
 
-Or if already built:
+Or if already built (Windows):
 ```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
+./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App.exe
+```
+
+Or on macOS/Linux:
+```bash
+./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App
 ```
 
 ## Targeting a Specific Instance (Required)
@@ -26,22 +32,14 @@ Since multiple instances of the app can run simultaneously, you **must** specify
 
 ### Finding the PID
 
-If you started the app yourself, capture the PID:
-```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
-APP_PID=$!
-echo "App started with PID: $APP_PID"
+On Windows:
+```powershell
+Get-Process -Name "ClaudeCodeOrchestrator.App" | Select-Object Id
 ```
 
-If you need to find running instances:
+On macOS/Linux:
 ```bash
 pgrep -f "ClaudeCodeOrchestrator.App"
-```
-
-If no instance is running, start one and capture the PID:
-```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App &
-APP_PID=$!
 ```
 
 ### Using the PID
@@ -50,74 +48,83 @@ All CLI commands require the `--pid` flag to target a specific instance:
 ```bash
 $APP --pid $APP_PID --ping
 $APP --pid $APP_PID --click FileMenu
-$APP --pid $APP_PID --screenshot /tmp/test.png
+$APP --pid $APP_PID --screenshot ./test.png
 ```
 
 ## CLI Commands
 
-The app binary supports automation commands when passed CLI arguments:
+The app binary supports automation commands when passed CLI arguments.
+
+Set up the APP variable first:
+```bash
+# Windows
+APP="./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App.exe"
+
+# macOS/Linux
+APP="./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App"
+```
 
 ### Check if app is running
 ```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --ping
+$APP --pid $APP_PID --ping
 ```
 
 ### Click an element
 ```bash
 # By automation ID
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --click FileMenu
+$APP --pid $APP_PID --click FileMenu
 
 # By coordinates
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --click --x 100 --y 50
+$APP --pid $APP_PID --click --x 100 --y 50
 ```
 
 ### Type text
 ```bash
 # Into focused element
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --type "Hello World"
+$APP --pid $APP_PID --type "Hello World"
 
 # Into specific element
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --type "Task description" --id TaskDescriptionInput
+$APP --pid $APP_PID --type "Task description" --id TaskDescriptionInput
 ```
 
 ### Press keys
 ```bash
 # Single key
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --key Enter
+$APP --pid $APP_PID --key Enter
 
 # Key combination
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --key Ctrl+S
+$APP --pid $APP_PID --key Ctrl+S
 ```
 
 ### Take screenshot
 ```bash
 # Save to file
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --screenshot /tmp/test-screenshot.png
+$APP --pid $APP_PID --screenshot ./test-screenshot.png
 
 # Get base64 (for inline viewing)
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --screenshot
+$APP --pid $APP_PID --screenshot
 ```
 
 ### List elements with automation IDs
 ```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --elements
+$APP --pid $APP_PID --elements
 
 # Filter by type
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --elements Button
+$APP --pid $APP_PID --elements Button
 ```
 
 ### Wait
 ```bash
 # Wait for duration
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --wait 1000
+$APP --pid $APP_PID --wait 1000
 
 # Wait for element to appear
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --wait --for NewTaskDialog --timeout 5000
+$APP --pid $APP_PID --wait --for NewTaskDialog --timeout 5000
 ```
 
 ### Focus element
 ```bash
-/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App --focus TaskDescriptionInput
+$APP --pid $APP_PID --focus TaskDescriptionInput
 ```
 
 ## Available Automation IDs
@@ -149,11 +156,11 @@ The app binary supports automation commands when passed CLI arguments:
 
 ### Test: Open a repository
 ```bash
-APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App
+# Set up APP variable (adjust for your OS)
+APP="./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App.exe"
 
-# Start a new instance and capture the PID (or use existing PID)
-$APP &
-APP_PID=$!
+# Find running instance PID
+APP_PID=$(pgrep -f "ClaudeCodeOrchestrator.App" | head -1)
 
 # Verify app is running
 $APP --pid $APP_PID --ping
@@ -165,17 +172,13 @@ $APP --pid $APP_PID --click FileMenu
 $APP --pid $APP_PID --click OpenRepositoryMenuItem
 
 # Take screenshot to verify dialog opened
-$APP --pid $APP_PID --screenshot /tmp/open-repo-dialog.png
+$APP --pid $APP_PID --screenshot ./open-repo-dialog.png
 ```
 
 ### Test: Create a new task (requires open repository)
 ```bash
-APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App
-
-# Use existing PID or start new instance
-# APP_PID=<your_pid> or:
-# $APP &
-# APP_PID=$!
+APP="./src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App.exe"
+APP_PID=$(pgrep -f "ClaudeCodeOrchestrator.App" | head -1)
 
 # Click Task menu
 $APP --pid $APP_PID --click TaskMenu
@@ -200,5 +203,5 @@ $APP --pid $APP_PID --click TaskCreateButton
 3. Use `--screenshot` to capture state for verification
 4. Use `--wait --for <id>` when expecting dialogs to appear
 5. Menu items need the menu to be open first (click FileMenu, then click OpenRepositoryMenuItem)
-6. The binary path can be shortened with an alias: `APP=/Users/etgarcia/code/claude-code-orchestrator/src/ClaudeCodeOrchestrator.App/bin/Debug/net8.0/ClaudeCodeOrchestrator.App`
-7. Use `pgrep -f "ClaudeCodeOrchestrator.App"` to find all running instances and their PIDs
+6. On Windows, use `.exe` extension for the binary path
+7. Use relative paths from the repository root for portability

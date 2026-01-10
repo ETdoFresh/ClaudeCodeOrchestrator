@@ -324,12 +324,13 @@ public class DockFactory : Factory
 
     /// <summary>
     /// Updates IsReadyToMerge on all session documents based on their worktree's current state.
+    /// Also syncs IsProcessing from session documents back to worktrees.
     /// </summary>
     public void UpdateSessionDocumentsMergeState(IEnumerable<ViewModels.WorktreeViewModel> worktrees)
     {
         if (_rootProportional is null) return;
 
-        var worktreeLookup = worktrees.ToDictionary(w => w.Id, w => (w.IsReadyToMerge, w.CanRun));
+        var worktreeLookup = worktrees.ToDictionary(w => w.Id, w => w);
 
         var documentDocks = new List<IDocumentDock>();
         CollectAllDocumentDocks(_rootProportional, documentDocks);
@@ -340,10 +341,14 @@ public class DockFactory : Factory
 
             foreach (var doc in docDock.VisibleDockables.OfType<SessionDocumentViewModel>())
             {
-                if (worktreeLookup.TryGetValue(doc.WorktreeId, out var state))
+                if (worktreeLookup.TryGetValue(doc.WorktreeId, out var worktree))
                 {
-                    doc.IsReadyToMerge = state.IsReadyToMerge;
-                    doc.CanRun = state.CanRun;
+                    // Sync from worktree to document
+                    doc.IsReadyToMerge = worktree.IsReadyToMerge;
+                    doc.CanRun = worktree.CanRun;
+
+                    // Sync from document to worktree (processing state)
+                    worktree.IsProcessing = doc.IsProcessing;
                 }
             }
         }
