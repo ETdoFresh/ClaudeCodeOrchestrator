@@ -78,6 +78,14 @@ public partial class NewTaskInputControl : UserControl
         IsCreating = false;
     }
 
+    /// <summary>
+    /// Focuses the task description input box.
+    /// </summary>
+    public void FocusInput()
+    {
+        TaskDescriptionBox.Focus();
+    }
+
     private async void TaskDescriptionBox_PastingFromClipboard(object? sender, RoutedEventArgs e)
     {
         var pastedImage = await TryPasteImageFromClipboard();
