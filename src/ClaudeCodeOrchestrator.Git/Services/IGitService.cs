@@ -117,4 +117,25 @@ public interface IGitService
     Task<bool> HasRemoteAsync(
         string repoPath,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the number of commits behind the remote tracking branch (commits to pull).
+    /// </summary>
+    /// <param name="repoPath">Path to the repository.</param>
+    /// <param name="branch">The branch name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of commits behind the remote, or 0 if no remote or error.</returns>
+    Task<int> GetCommitsBehindRemoteAsync(
+        string repoPath,
+        string branch,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pulls changes from the remote repository.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
 }

@@ -173,6 +173,19 @@ public class SettingsService : ISettingsService
         }
     }
 
+    public string? OpenRouterApiKey
+    {
+        get => _settings.OpenRouterApiKey;
+        set
+        {
+            if (_settings.OpenRouterApiKey == value) return;
+            var oldValue = _settings.OpenRouterApiKey;
+            _settings.OpenRouterApiKey = value;
+            Save();
+            RaiseSettingChanged(nameof(OpenRouterApiKey), oldValue, value);
+        }
+    }
+
     private void RaiseSettingChanged(string propertyName, object? oldValue, object? newValue)
     {
         SettingChanged?.Invoke(this, new SettingChangedEventArgs(propertyName, oldValue, newValue));
@@ -230,5 +243,6 @@ public class SettingsService : ISettingsService
         public bool ShowWorktreeStatusBadges { get; set; } = true;
         public bool AutoSaveSessionHistory { get; set; } = true;
         public int CachedPushBadgeCount { get; set; } = 0;
+        public string? OpenRouterApiKey { get; set; }
     }
 }

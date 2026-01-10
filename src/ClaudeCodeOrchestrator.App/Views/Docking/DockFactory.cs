@@ -108,6 +108,7 @@ public class DockFactory : Factory
             _worktreesViewModel.OnCreateTaskWithInputRequested = taskInput => mainVm.CreateTaskFromInputAsync(taskInput);
             _worktreesViewModel.OnRefreshRequested = () => mainVm.RefreshWorktreesAsync();
             _worktreesViewModel.OnPushRequested = () => mainVm.PushAllBranchesCommand.ExecuteAsync(null);
+            _worktreesViewModel.OnPullRequested = () => mainVm.PullCommand.ExecuteAsync(null);
             _worktreesViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
             _diffBrowser.OnDiffFileSelected = (localPath, worktreePath, relativePath, isPreview) =>
@@ -513,7 +514,8 @@ public class DockFactory : Factory
     /// <param name="worktrees">The worktrees to display.</param>
     /// <param name="mainRepoUnpushedCommits">Number of unpushed commits in the main repository.</param>
     /// <param name="hasRemote">Whether the repository has a remote configured.</param>
-    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees, int mainRepoUnpushedCommits, bool hasRemote)
+    /// <param name="mainRepoCommitsToPull">Number of commits to pull in the main repository.</param>
+    public void UpdateWorktrees(IEnumerable<ViewModels.WorktreeViewModel> worktrees, int mainRepoUnpushedCommits, bool hasRemote, int mainRepoCommitsToPull = 0)
     {
         if (_worktreesViewModel is null) return;
 
@@ -525,6 +527,9 @@ public class DockFactory : Factory
 
         // Update the badge with main repo count
         _worktreesViewModel.SetMainRepoUnpushedCommits(mainRepoUnpushedCommits);
+
+        // Update the pull badge count
+        _worktreesViewModel.SetMainRepoCommitsToPull(mainRepoCommitsToPull);
 
         // Update whether the repository has a remote
         _worktreesViewModel.SetHasRemote(hasRemote);

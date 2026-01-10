@@ -2,7 +2,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ClaudeCodeOrchestrator.SDK;
-using ClaudeCodeOrchestrator.SDK.Messages;
 using ClaudeCodeOrchestrator.SDK.Options;
 
 namespace ClaudeCodeOrchestrator.Core.Services;
@@ -158,6 +157,7 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
 
     /// <summary>
     /// Try Claude SDK for title generation (uses local Claude Code installation).
+    /// Uses the lightweight one-off query method for minimal overhead.
     /// </summary>
     private async Task<GeneratedTitle?> TryClaudeSdkAsync(string prompt, CancellationToken cancellationToken)
     {
@@ -172,23 +172,8 @@ public sealed partial class TitleGeneratorService : ITitleGeneratorService
                 PermissionMode = PermissionMode.Plan // No tool use needed
             };
 
-            string? responseContent = null;
-
-            await foreach (var message in ClaudeAgent.QueryAsync(titlePrompt, options, cancellationToken))
-            {
-                if (message is SDKAssistantMessage assistantMsg)
-                {
-                    // Extract text from content blocks
-                    foreach (var block in assistantMsg.Message.Content)
-                    {
-                        if (block is TextContentBlock textBlock)
-                        {
-                            responseContent = textBlock.Text;
-                            break;
-                        }
-                    }
-                }
-            }
+            // Use the lightweight one-off query method instead of streaming
+            var responseContent = await ClaudeAgent.QueryOnceAsync(titlePrompt, options, cancellationToken);
 
             if (!string.IsNullOrEmpty(responseContent))
             {

@@ -153,6 +153,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public ObservableCollection<RecentRepositoryItem> RecentRepositories { get; } = new();
 
     /// <summary>
+    /// Gets whether there are any recent repositories to display.
+    /// </summary>
+    public bool HasRecentRepositories => RecentRepositories.Count > 0;
+
+    /// <summary>
     /// Initializes the view model, restoring last opened repository if valid.
     /// </summary>
     public async Task InitializeAsync()
@@ -276,6 +281,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 RecentRepositories.Add(new RecentRepositoryItem(path, OpenRecentRepositoryCommand));
             }
         }
+        OnPropertyChanged(nameof(HasRecentRepositories));
     }
 
     internal async Task OpenRepositoryAtPathAsync(string path)
@@ -493,6 +499,29 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task PullAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath))
+        {
+            await _dialogService.ShowErrorAsync("No Repository",
+                "Please open a repository first.");
+            return;
+        }
+
+        try
+        {
+            await _gitService.PullAsync(CurrentRepositoryPath);
+            // Refresh to update the badge count after successful pull
+            await RefreshWorktreesAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Pull Failed",
+                $"Failed to pull changes: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
     private async Task CloseRepositoryAsync()
     {
         // End all active sessions (kills all Claude Code subprocesses)
@@ -698,6 +727,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var mainRepoUnpushedCommits = await _gitService.GetCommitsAheadOfRemoteAsync(
                 CurrentRepositoryPath, mainBranch);
 
+            // Get commits behind remote for the main repository (for Pull button badge)
+            var mainRepoCommitsToPull = await _gitService.GetCommitsBehindRemoteAsync(
+                CurrentRepositoryPath, mainBranch);
+
             // Check if the repository has a remote configured
             var hasRemote = await _gitService.HasRemoteAsync(CurrentRepositoryPath);
 
@@ -735,8 +768,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     Worktrees.Add(vm);
                 }
 
-                // Sync to dock panel with main repo's unpushed count for badge and remote status
-                Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits, hasRemote);
+                // Sync to dock panel with main repo's unpushed count for badge, remote status, and pull count
+                Factory?.UpdateWorktrees(Worktrees, mainRepoUnpushedCommits, hasRemote, mainRepoCommitsToPull);
 
                 // Update merge state on any open session documents
                 Factory?.UpdateSessionDocumentsMergeState(Worktrees);
