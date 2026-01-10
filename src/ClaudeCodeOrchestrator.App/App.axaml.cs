@@ -66,9 +66,13 @@ public partial class App : Application
         // HTTP client for API calls
         services.AddSingleton<HttpClient>();
 
-        // Title generator service
+        // Title generator service (with API key resolution fallback chain)
         services.AddSingleton<ITitleGeneratorService>(sp =>
-            new TitleGeneratorService(sp.GetRequiredService<HttpClient>()));
+        {
+            var settingsService = sp.GetRequiredService<ISettingsService>();
+            var apiKey = ApiKeyResolver.ResolveOpenRouterApiKey(settingsService);
+            return new TitleGeneratorService(sp.GetRequiredService<HttpClient>(), apiKey);
+        });
 
         // Dialog service (with title generator for new task dialog)
         services.AddSingleton<IDialogService>(sp =>

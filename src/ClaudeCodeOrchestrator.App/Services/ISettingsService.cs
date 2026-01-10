@@ -71,6 +71,12 @@ public interface ISettingsService
     int CachedPushBadgeCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the OpenRouter API key for title generation.
+    /// When set, this takes priority over .env file and environment variables.
+    /// </summary>
+    string? OpenRouterApiKey { get; set; }
+
+    /// <summary>
     /// Loads settings from storage.
     /// </summary>
     void Load();
