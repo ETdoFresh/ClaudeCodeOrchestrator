@@ -97,4 +97,24 @@ public interface IGitService
         string basePath,
         string comparePath,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the remote URL for the origin remote.
+    /// </summary>
+    /// <param name="repoPath">The repository path.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The remote URL, or null if no origin remote is configured.</returns>
+    Task<string?> GetRemoteUrlAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if the repository has any configured remotes.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the repository has at least one remote configured.</returns>
+    Task<bool> HasRemoteAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
 }

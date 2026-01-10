@@ -21,10 +21,21 @@ public partial class WorktreesViewModel : ToolViewModelBase
     private int _mainRepoUnpushedCommits;
 
     /// <summary>
+    /// Whether the repository has a remote configured.
+    /// </summary>
+    private bool _hasRemote;
+
+    /// <summary>
     /// Gets the number of unpushed commits in the main repository.
     /// This is what gets displayed in the Push button badge.
     /// </summary>
     public int TotalCommitsToPush => _mainRepoUnpushedCommits;
+
+    /// <summary>
+    /// Gets whether the repository has a remote configured.
+    /// Used to show/hide the Push button.
+    /// </summary>
+    public bool HasRemote => _hasRemote;
 
     /// <summary>
     /// Sets the unpushed commits count for the main repository.
@@ -34,6 +45,16 @@ public partial class WorktreesViewModel : ToolViewModelBase
         if (_mainRepoUnpushedCommits == count) return;
         _mainRepoUnpushedCommits = count;
         OnPropertyChanged(nameof(TotalCommitsToPush));
+    }
+
+    /// <summary>
+    /// Sets whether the repository has a remote configured.
+    /// </summary>
+    public void SetHasRemote(bool hasRemote)
+    {
+        if (_hasRemote == hasRemote) return;
+        _hasRemote = hasRemote;
+        OnPropertyChanged(nameof(HasRemote));
     }
 
     /// <summary>
