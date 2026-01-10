@@ -66,8 +66,8 @@
         </Border>
 
         <!-- Messages area -->
-        <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" Padding="12,8,12,24">
-            <StackPanel>
+        <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" Padding="12,8,12,0">
+            <StackPanel Margin="0,0,0,60">
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vmBase:MessageViewModel}">
