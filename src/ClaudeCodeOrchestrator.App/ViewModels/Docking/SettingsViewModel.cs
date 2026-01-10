@@ -34,6 +34,9 @@ public partial class SettingsViewModel : ToolViewModelBase
     [ObservableProperty]
     private bool _autoSaveSessionHistory;
 
+    [ObservableProperty]
+    private string? _openRouterApiKey;
+
     public SettingsViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
@@ -53,6 +56,7 @@ public partial class SettingsViewModel : ToolViewModelBase
         CompactWorktreeList = _settingsService.CompactWorktreeList;
         ShowWorktreeStatusBadges = _settingsService.ShowWorktreeStatusBadges;
         AutoSaveSessionHistory = _settingsService.AutoSaveSessionHistory;
+        OpenRouterApiKey = _settingsService.OpenRouterApiKey;
     }
 
     partial void OnShowMergeConfirmationChanged(bool value)
@@ -93,5 +97,10 @@ public partial class SettingsViewModel : ToolViewModelBase
     partial void OnAutoSaveSessionHistoryChanged(bool value)
     {
         _settingsService.AutoSaveSessionHistory = value;
+    }
+
+    partial void OnOpenRouterApiKeyChanged(string? value)
+    {
+        _settingsService.OpenRouterApiKey = value;
     }
 }

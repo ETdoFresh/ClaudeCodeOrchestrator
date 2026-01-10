@@ -146,6 +146,37 @@
                 </StackPanel>
             </Border>
 
+            <!-- API Keys Section -->
+            <Border Background="#2D2D30" CornerRadius="4" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="API Keys"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               Margin="0,0,0,4"/>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="OpenRouter API Key"
+                                   FontSize="13"
+                                   Foreground="#D4D4D4"/>
+                        <TextBox Text="{Binding OpenRouterApiKey}"
+                                 Watermark="Enter your OpenRouter API key"
+                                 PasswordChar="●"
+                                 FontSize="13"
+                                 Padding="8,6"
+                                 Background="#1E1E1E"
+                                 Foreground="#D4D4D4"
+                                 BorderBrush="#3F3F46"
+                                 BorderThickness="1"
+                                 CornerRadius="3"/>
+                        <TextBlock Text="Used for title generation. Takes priority over environment variables."
+                                   FontSize="11"
+                                   Foreground="#808080"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Footer -->
             <TextBlock Text="Settings are saved automatically"
                        FontSize="11"
