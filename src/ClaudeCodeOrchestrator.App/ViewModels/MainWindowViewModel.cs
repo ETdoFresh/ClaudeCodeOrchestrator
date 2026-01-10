@@ -30,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isRepositoryOpen;
     private bool _disposed;
     private string? _autoSplitLayoutText;
+    private string? _gitHubUrl;
 
     // Track pending preview states for sessions being created
     private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
@@ -116,15 +117,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _autoSplitLayoutText, value);
     }
 
+    /// <summary>
+    /// Gets the GitHub URL for the current repository, if it's a GitHub repository.
+    /// Returns null if no repository is open or the remote is not GitHub.
+    /// </summary>
+    public string? GitHubUrl
+    {
+        get => _gitHubUrl;
+        private set => SetProperty(ref _gitHubUrl, value);
+    }
+
     public ObservableCollection<SessionViewModel> Sessions { get; } = new();
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
+
+    public ObservableCollection<RecentRepositoryItem> RecentRepositories { get; } = new();
 
     /// <summary>
     /// Initializes the view model, restoring last opened repository if valid.
     /// </summary>
     public async Task InitializeAsync()
     {
+        // Load recent repositories
+        RefreshRecentRepositories();
+
         var lastPath = _settingsService.LastRepositoryPath;
         if (string.IsNullOrEmpty(lastPath)) return;
 
@@ -210,6 +226,39 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task OpenRecentRepositoryAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            await OpenRepositoryAtPathAsync(path);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
+        {
+            // Don't show error - it was handled in OpenRepositoryAtPathAsync
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Repository",
+                $"Failed to open repository: {ex.Message}");
+        }
+    }
+
+    private void RefreshRecentRepositories()
+    {
+        RecentRepositories.Clear();
+        foreach (var path in _settingsService.RecentRepositories)
+        {
+            // Only include paths that still exist
+            if (Directory.Exists(path))
+            {
+                RecentRepositories.Add(new RecentRepositoryItem(path, OpenRecentRepositoryCommand));
+            }
+        }
+    }
+
     internal async Task OpenRepositoryAtPathAsync(string path)
     {
         try
@@ -235,14 +284,62 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         SetRepository(path);
 
-        // Save as last opened repository
+        // Save as last opened repository and add to recent repositories
         _settingsService.SetLastRepositoryPath(path);
+        _settingsService.AddRecentRepository(path);
+        RefreshRecentRepositories();
+
+        // Fetch remote URL and set GitHubUrl if it's a GitHub repository
+        await UpdateGitHubUrlAsync(path);
 
         // Load worktrees
         await RefreshWorktreesAsync();
 
         // Update file browser
         Factory?.UpdateFileBrowser(path);
+    }
+
+    private async Task UpdateGitHubUrlAsync(string path)
+    {
+        try
+        {
+            var remoteUrl = await _gitService.GetRemoteUrlAsync(path);
+            GitHubUrl = ConvertToGitHubUrl(remoteUrl);
+        }
+        catch
+        {
+            GitHubUrl = null;
+        }
+    }
+
+    private static string? ConvertToGitHubUrl(string? remoteUrl)
+    {
+        if (string.IsNullOrEmpty(remoteUrl))
+            return null;
+
+        // Handle SSH URLs: git@github.com:user/repo.git
+        if (remoteUrl.StartsWith("git@github.com:"))
+        {
+            var path = remoteUrl["git@github.com:".Length..];
+            if (path.EndsWith(".git"))
+                path = path[..^4];
+            return $"https://github.com/{path}";
+        }
+
+        // Handle HTTPS URLs: https://github.com/user/repo.git
+        if (remoteUrl.StartsWith("https://github.com/") || remoteUrl.StartsWith("http://github.com/"))
+        {
+            var url = remoteUrl;
+            if (url.EndsWith(".git"))
+                url = url[..^4];
+            // Ensure it uses https
+            if (url.StartsWith("http://"))
+                url = "https://" + url[7..];
+            return url;
+        }
+
+        // Not a GitHub URL
+        return null;
     }
 
     [RelayCommand]
@@ -373,6 +470,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         CurrentRepositoryPath = null;
         IsRepositoryOpen = false;
         WindowTitle = "Claude Code Orchestrator";
+        GitHubUrl = null;
         Sessions.Clear();
         Worktrees.Clear();
         Factory?.UpdateFileBrowser(null);
@@ -451,6 +549,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Silently fail if browser can't be opened
+        }
+    }
+
+    [RelayCommand]
+    private void OpenRepo()
+    {
+        if (string.IsNullOrEmpty(GitHubUrl)) return;
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = GitHubUrl,
                 UseShellExecute = true
             });
         }
@@ -1204,5 +1321,24 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
         }
+    }
+}
+
+/// <summary>
+/// Represents a recent repository item for display in the File menu.
+/// </summary>
+public class RecentRepositoryItem
+{
+    public string Path { get; }
+    public string DisplayName { get; }
+    public IAsyncRelayCommand<string> OpenCommand { get; }
+
+    public RecentRepositoryItem(string path, IAsyncRelayCommand<string> openCommand)
+    {
+        Path = path;
+        DisplayName = System.IO.Path.GetFileName(path.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar));
+        OpenCommand = openCommand;
     }
 }

@@ -412,6 +412,12 @@ internal sealed class ProcessStreamHandler : IAsyncDisposable
         {
             args.Add("--dangerously-skip-permissions");
         }
+        else if (options.PermissionMode == PermissionMode.Plan)
+        {
+            // Plan mode disables all tools - Claude can only respond with text
+            args.Add("--allowedTools");
+            args.Add("\"[]\"");
+        }
 
         if (options.AdditionalDirectories != null)
         {
