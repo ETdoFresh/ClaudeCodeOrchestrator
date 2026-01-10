@@ -96,6 +96,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                 OnPropertyChanged(nameof(ShowStopButton));
                 OnPropertyChanged(nameof(ShowQueueButton));
                 OnPropertyChanged(nameof(ActionButtonText));
+                OnPropertyChanged(nameof(ShowEmptyState));
 
                 // Notify worktree of processing state change
                 if (!string.IsNullOrEmpty(WorktreeId))
@@ -175,6 +176,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     /// <summary>
+    /// True when the session has no messages and is not processing.
+    /// Used to show a welcome/empty state message.
+    /// </summary>
+    public bool ShowEmptyState => Messages.Count == 0 && !IsProcessing;
+
+    /// <summary>
     /// Sets the pending image attachments for the next message.
     /// </summary>
     public void SetAttachments(List<ImageAttachment> attachments)
@@ -196,6 +203,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         Title = "New Session";
         CanClose = true;
         CanFloat = true;
+
+        // Subscribe to collection changes for ShowEmptyState
+        Messages.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowEmptyState));
     }
 
     /// <summary>
@@ -210,6 +220,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         WorktreeBranch = worktreeBranch;
         CanClose = true;
         CanFloat = true;
+
+        // Subscribe to collection changes for ShowEmptyState
+        Messages.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowEmptyState));
 
         // If this is a new active session, it starts in processing state
         IsProcessing = isActiveSession;
