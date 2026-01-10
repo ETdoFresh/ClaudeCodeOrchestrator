@@ -124,7 +124,7 @@
             </MenuItem>
         </Menu>
 
-            <!-- Window Title Display with Cog -->
+            <!-- Window Title Display with Play and Cog -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,100,0">
                 <TextBlock Text="{Binding WindowTitle}"
                            VerticalAlignment="Center"
@@ -145,6 +145,24 @@
                     <Button.Styles>
                         <Style Selector="Button:pointerover">
                             <Setter Property="Foreground" Value="#CCCCCC" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+                <!-- Run Main Repo Button (play icon, only visible when executable is configured) -->
+                <Button Content="▶"
+                        Command="{Binding RunMainRepoCommand}"
+                        IsVisible="{Binding CanRunMainRepo}"
+                        Background="Transparent"
+                        Foreground="#4EC9B0"
+                        FontSize="10"
+                        Padding="8,4"
+                        Margin="6,0,0,0"
+                        Cursor="Hand"
+                        ToolTip.Tip="Run application in main repository"
+                        AutomationProperties.AutomationId="RunMainRepoButton">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#6FFFDF" />
                         </Style>
                     </Button.Styles>
                 </Button>

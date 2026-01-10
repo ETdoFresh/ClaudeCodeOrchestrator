@@ -135,6 +135,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _gitHubUrl, value);
     }
 
+    /// <summary>
+    /// Gets whether the run button for the main repository should be visible.
+    /// True when a repository is open and an executable is configured.
+    /// </summary>
+    public bool CanRunMainRepo => IsRepositoryOpen && _repositorySettingsService.HasExecutable;
+
     public ObservableCollection<SessionViewModel> Sessions { get; } = new();
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
@@ -526,6 +532,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Clear worktrees opening session lock
         _worktreesOpeningSession.Clear();
+
+        // Notify CanRunMainRepo since IsRepositoryOpen changed
+        OnPropertyChanged(nameof(CanRunMainRepo));
     }
 
     [RelayCommand]
@@ -635,6 +644,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task RunMainRepoAsync()
+    {
+        if (!_repositorySettingsService.HasExecutable || string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            var success = await _repositorySettingsService.RunExecutableAsync(CurrentRepositoryPath);
+            if (!success)
+            {
+                await _dialogService.ShowErrorAsync("Run Failed",
+                    "Failed to run the configured executable. Check the executable path in Repository Settings.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Run Failed",
+                $"Failed to run executable: {ex.Message}");
+        }
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
@@ -642,6 +672,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // TrimEnd to handle paths with trailing slashes
         var repoName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         WindowTitle = $"Claude Code Orchestrator - {repoName}";
+
+        // Notify CanRunMainRepo since IsRepositoryOpen changed
+        OnPropertyChanged(nameof(CanRunMainRepo));
     }
 
     public async Task RefreshWorktreesAsync()
@@ -1041,6 +1074,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             // Update CanRun on all open session documents
             UpdateSessionDocumentsCanRun(canRun);
+
+            // Update CanRunMainRepo for the top bar button
+            OnPropertyChanged(nameof(CanRunMainRepo));
         });
     }
 
