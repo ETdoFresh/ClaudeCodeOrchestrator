@@ -644,4 +644,104 @@ public sealed class GitService : IGitService
             return repo.Network.Remotes.Any();
         }, cancellationToken);
     }
+
+    public async Task<int> GetCommitsBehindRemoteAsync(
+        string repoPath,
+        string branch,
+        CancellationToken cancellationToken = default)
+    {
+        // First fetch to get latest remote state
+        var fetchPsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "fetch --quiet",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var fetchProcess = System.Diagnostics.Process.Start(fetchPsi);
+        if (fetchProcess != null)
+        {
+            await fetchProcess.WaitForExitAsync(cancellationToken);
+            // Ignore fetch errors - we'll still try to count commits
+        }
+
+        // Check if remote tracking branch exists
+        var checkPsi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"rev-parse --verify origin/{branch}",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var checkProcess = System.Diagnostics.Process.Start(checkPsi);
+        if (checkProcess == null)
+            return 0;
+
+        await checkProcess.WaitForExitAsync(cancellationToken);
+
+        if (checkProcess.ExitCode != 0)
+        {
+            // Remote tracking branch doesn't exist (new branch not on remote yet)
+            return 0;
+        }
+
+        // Count commits behind the remote
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"rev-list --count {branch}..origin/{branch}",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process == null)
+            return 0;
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode != 0)
+            return 0;
+
+        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        return int.TryParse(output.Trim(), out var count) ? count : 0;
+    }
+
+    public async Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "pull",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start git process");
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        if (process.ExitCode != 0)
+        {
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+            throw new InvalidOperationException($"Failed to pull: {error}");
+        }
+    }
 }
