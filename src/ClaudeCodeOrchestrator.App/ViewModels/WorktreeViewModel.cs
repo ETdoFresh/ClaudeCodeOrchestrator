@@ -11,6 +11,22 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
 {
     private System.Timers.Timer? _durationTimer;
     private bool _disposed;
+    private TimeSpan _accumulatedDuration = TimeSpan.Zero;
+    private DateTime? _currentTurnStartedAt;
+
+    /// <summary>
+    /// Gets or sets the accumulated active duration (for state preservation during worktree refresh).
+    /// </summary>
+    public TimeSpan AccumulatedDuration
+    {
+        get => _accumulatedDuration;
+        set => _accumulatedDuration = value;
+    }
+
+    /// <summary>
+    /// Gets or sets whether a turn is currently active (for state preservation during worktree refresh).
+    /// </summary>
+    public bool IsTurnActive => _currentTurnStartedAt != null;
 
     [ObservableProperty]
     private string _id = string.Empty;
@@ -87,12 +103,6 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     private string? _activeSessionId;
 
     [ObservableProperty]
-    private DateTime? _sessionStartedAt;
-
-    [ObservableProperty]
-    private DateTime? _sessionEndedAt;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SessionDurationText))]
     private TimeSpan _sessionDuration;
 
@@ -103,10 +113,10 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         get
         {
-            if (SessionStartedAt == null)
+            var duration = SessionDuration;
+            if (duration == TimeSpan.Zero && _accumulatedDuration == TimeSpan.Zero && _currentTurnStartedAt == null)
                 return null;
 
-            var duration = SessionDuration;
             if (duration.TotalHours >= 1)
                 return $"{(int)duration.TotalHours}h {duration.Minutes}m";
             if (duration.TotalMinutes >= 1)
@@ -215,33 +225,52 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
         : (TaskDescription.Length > 50 ? TaskDescription[..47] + "..." : TaskDescription);
 
     /// <summary>
-    /// Starts tracking session duration with a timer.
+    /// Starts tracking a new turn (when Claude begins processing).
     /// </summary>
-    public void StartSessionTimer(DateTime startedAt)
+    public void StartTurn()
     {
-        SessionStartedAt = startedAt;
-        SessionEndedAt = null;
+        if (_currentTurnStartedAt != null) return; // Already in a turn
+
+        _currentTurnStartedAt = DateTime.UtcNow;
         UpdateDuration();
 
-        // Start timer to update duration every second
-        _durationTimer?.Dispose();
-        _durationTimer = new System.Timers.Timer(1000);
-        _durationTimer.Elapsed += OnDurationTimerElapsed;
-        _durationTimer.AutoReset = true;
-        _durationTimer.Start();
+        // Start/restart the display timer if not running
+        if (_durationTimer == null)
+        {
+            _durationTimer = new System.Timers.Timer(1000);
+            _durationTimer.Elapsed += OnDurationTimerElapsed;
+            _durationTimer.AutoReset = true;
+            _durationTimer.Start();
+        }
     }
 
     /// <summary>
-    /// Stops the session timer and records the end time.
+    /// Ends the current turn and accumulates the elapsed time.
     /// </summary>
-    public void StopSessionTimer(DateTime? endedAt = null)
+    public void EndTurn()
+    {
+        if (_currentTurnStartedAt == null) return;
+
+        // Accumulate time from this turn
+        _accumulatedDuration += DateTime.UtcNow - _currentTurnStartedAt.Value;
+        _currentTurnStartedAt = null;
+
+        UpdateDuration(); // Update display with final accumulated value
+        // Note: Timer keeps running to show stable duration
+    }
+
+    /// <summary>
+    /// Resets the timer completely (for session end or new session).
+    /// </summary>
+    public void ResetTimer()
     {
         _durationTimer?.Stop();
         _durationTimer?.Dispose();
         _durationTimer = null;
 
-        SessionEndedAt = endedAt ?? DateTime.UtcNow;
-        UpdateDuration();
+        _accumulatedDuration = TimeSpan.Zero;
+        _currentTurnStartedAt = null;
+        SessionDuration = TimeSpan.Zero;
     }
 
     private void OnDurationTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
@@ -251,14 +280,12 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
 
     private void UpdateDuration()
     {
-        if (SessionStartedAt == null)
+        var duration = _accumulatedDuration;
+        if (_currentTurnStartedAt != null)
         {
-            SessionDuration = TimeSpan.Zero;
-            return;
+            duration += DateTime.UtcNow - _currentTurnStartedAt.Value;
         }
-
-        var endTime = SessionEndedAt ?? DateTime.UtcNow;
-        SessionDuration = endTime - SessionStartedAt.Value;
+        SessionDuration = duration;
     }
 
     public static WorktreeViewModel FromModel(WorktreeInfo info)
@@ -285,8 +312,6 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _durationTimer?.Stop();
-        _durationTimer?.Dispose();
-        _durationTimer = null;
+        ResetTimer();
     }
 }

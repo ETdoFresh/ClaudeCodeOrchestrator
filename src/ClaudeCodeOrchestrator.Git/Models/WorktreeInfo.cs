@@ -71,6 +71,12 @@ public sealed record WorktreeInfo
     /// Used to restore sessions on app restart.
     /// </summary>
     public bool SessionWasActive { get; set; }
+
+    /// <summary>
+    /// Accumulated active processing duration in milliseconds.
+    /// This tracks only the time Claude was actively processing, not idle time.
+    /// </summary>
+    public long AccumulatedDurationMs { get; set; }
 }
 
 /// <summary>

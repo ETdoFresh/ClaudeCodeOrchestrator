@@ -80,4 +80,12 @@ public interface IWorktreeService
         string worktreePath,
         bool wasActive,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the accumulated duration for a worktree session.
+    /// </summary>
+    Task UpdateAccumulatedDurationAsync(
+        string worktreePath,
+        long durationMs,
+        CancellationToken cancellationToken = default);
 }

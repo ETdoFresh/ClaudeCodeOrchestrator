@@ -378,7 +378,8 @@ public sealed class WorktreeService : IWorktreeService
                 CommitsAhead = commitsAhead,
                 UnpushedCommits = unpushedCommits,
                 ClaudeSessionId = metadata.ClaudeSessionId,
-                SessionWasActive = metadata.SessionWasActive
+                SessionWasActive = metadata.SessionWasActive,
+                AccumulatedDurationMs = metadata.AccumulatedDurationMs
             };
         }
         catch
@@ -666,6 +667,7 @@ public sealed class WorktreeService : IWorktreeService
         public required DateTime CreatedAt { get; init; }
         public string? ClaudeSessionId { get; init; }
         public bool SessionWasActive { get; init; }
+        public long AccumulatedDurationMs { get; init; }
     }
 
     /// <summary>
@@ -708,6 +710,28 @@ public sealed class WorktreeService : IWorktreeService
             return;
 
         var updatedMetadata = metadata with { SessionWasActive = wasActive };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the accumulated duration for a worktree session.
+    /// </summary>
+    public async Task UpdateAccumulatedDurationAsync(
+        string worktreePath,
+        long durationMs,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { AccumulatedDurationMs = durationMs };
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }

@@ -36,6 +36,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // Track pending preview states for sessions being created
     private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
 
+    // Track pending accumulated durations for sessions being restored with history
+    private readonly ConcurrentDictionary<string, TimeSpan> _pendingAccumulatedDurations = new();
+
     // Track worktrees currently having sessions opened (prevents duplicate tabs from race conditions)
     private readonly ConcurrentDictionary<string, byte> _worktreesOpeningSession = new();
 
@@ -530,6 +533,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Clear pending session preview states
         _pendingSessionPreviewStates.Clear();
 
+        // Clear pending accumulated durations
+        _pendingAccumulatedDurations.Clear();
+
         // Clear worktrees opening session lock
         _worktreesOpeningSession.Clear();
 
@@ -700,7 +706,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     .Where(w => w.HasActiveSession)
                     .ToDictionary(
                         w => w.Path,
-                        w => (w.ActiveSessionId, w.SessionStartedAt, w.SessionDuration, w.IsProcessing));
+                        w => (w.ActiveSessionId, w.AccumulatedDuration, w.SessionDuration, w.IsProcessing, w.IsTurnActive));
 
                 Worktrees.Clear();
                 foreach (var wt in worktrees)
@@ -713,9 +719,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     {
                         vm.HasActiveSession = true;
                         vm.ActiveSessionId = sessionState.ActiveSessionId;
-                        vm.SessionStartedAt = sessionState.SessionStartedAt;
+                        vm.AccumulatedDuration = sessionState.AccumulatedDuration;
                         vm.SessionDuration = sessionState.SessionDuration;
                         vm.IsProcessing = sessionState.IsProcessing;
+
+                        // Restart the turn timer if a turn was active
+                        if (sessionState.IsTurnActive)
+                        {
+                            vm.StartTurn();
+                        }
                     }
 
                     Worktrees.Add(vm);
@@ -1139,9 +1151,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Add to document dock via factory
             Factory?.AddSessionDocument(document, isPreview);
 
-            // Start session timer for the worktree
+            // Find the worktree view model
             var worktree = Worktrees.FirstOrDefault(w => w.Id == e.Session.WorktreeId);
-            worktree?.StartSessionTimer(e.Session.CreatedAt);
+            if (worktree != null)
+            {
+                // Restore accumulated duration from previous sessions if available
+                if (_pendingAccumulatedDurations.TryRemove(e.Session.WorktreeId, out var accumulatedDuration))
+                {
+                    worktree.AccumulatedDuration = accumulatedDuration;
+                    worktree.SessionDuration = accumulatedDuration;
+                }
+
+                // Only start turn timer if session is actively processing (not idle/waiting for input)
+                if (e.Session.State is Core.Models.SessionState.Processing
+                    or Core.Models.SessionState.Active
+                    or Core.Models.SessionState.Starting)
+                {
+                    worktree.StartTurn();
+                }
+            }
         });
     }
 
@@ -1162,20 +1190,34 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 worktree.HasError = e.FinalState == Core.Models.SessionState.Error;
                 worktree.WasInterrupted = e.FinalState == Core.Models.SessionState.Cancelled;
 
+                // End the current turn to accumulate elapsed time
+                worktree.EndTurn();
+
                 // Only clear active session for cancelled/error states
                 // For completed sessions, keep HasActiveSession true until user closes the document
                 if (e.FinalState is Core.Models.SessionState.Cancelled or Core.Models.SessionState.Error)
                 {
                     worktree.HasActiveSession = false;
                     worktree.ActiveSessionId = null;
-                    // Stop the session timer for non-normal endings
-                    worktree.StopSessionTimer(e.EndedAt);
+                    // Reset the timer completely for non-normal endings
+                    worktree.ResetTimer();
                 }
 
                 // Clear the SessionWasActive flag since session ended normally
                 try
                 {
                     await _worktreeService.UpdateSessionWasActiveAsync(worktree.Path, false);
+                }
+                catch
+                {
+                    // Ignore errors - this is not critical
+                }
+
+                // Save accumulated duration to metadata for persistence across app restarts
+                try
+                {
+                    var durationMs = (long)worktree.AccumulatedDuration.TotalMilliseconds;
+                    await _worktreeService.UpdateAccumulatedDurationAsync(worktree.Path, durationMs);
                 }
                 catch
                 {
@@ -1212,6 +1254,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     // Clear error/interrupted flags when processing starts
                     worktree.HasError = false;
                     worktree.WasInterrupted = false;
+
+                    // Start turn timer when processing begins (handles resumed sessions)
+                    worktree.StartTurn();
                 }
 
                 // Persist that session is active so we can restore on app restart
@@ -1409,6 +1454,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Resume = claudeSessionId
         };
+
+        // Store the accumulated duration to be applied when the session document is created
+        if (worktree.AccumulatedDurationMs > 0)
+        {
+            _pendingAccumulatedDurations[worktree.Id] = TimeSpan.FromMilliseconds(worktree.AccumulatedDurationMs);
+        }
 
         // Create session with history messages already populated
         var session = await _sessionService.CreateIdleSessionAsync(worktree, options, historyMessages);
