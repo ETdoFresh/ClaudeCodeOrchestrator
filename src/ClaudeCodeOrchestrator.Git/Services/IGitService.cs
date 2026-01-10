@@ -145,12 +145,4 @@ public interface IGitService
         string branch,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Pulls changes from the remote repository.
-    /// </summary>
-    /// <param name="repoPath">Path to the repository.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task PullAsync(
-        string repoPath,
-        CancellationToken cancellationToken = default);
 }

@@ -741,31 +741,4 @@ public sealed class GitService : IGitService
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
         return int.TryParse(output.Trim(), out var count) ? count : 0;
     }
-
-    public async Task PullAsync(
-        string repoPath,
-        CancellationToken cancellationToken = default)
-    {
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "git",
-            Arguments = "pull",
-            WorkingDirectory = repoPath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        using var process = System.Diagnostics.Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start git process");
-
-        await process.WaitForExitAsync(cancellationToken);
-
-        if (process.ExitCode != 0)
-        {
-            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-            throw new InvalidOperationException($"Failed to pull: {error}");
-        }
-    }
 }
