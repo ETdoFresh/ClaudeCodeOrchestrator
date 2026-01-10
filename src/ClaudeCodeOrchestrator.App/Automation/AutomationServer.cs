@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
 
@@ -8,7 +9,17 @@ namespace ClaudeCodeOrchestrator.App.Automation;
 /// </summary>
 public class AutomationServer : IDisposable
 {
-    public const string PipeName = "ClaudeCodeOrchestrator.Automation";
+    private const string PipeNamePrefix = "ClaudeCodeOrchestrator.Automation";
+
+    /// <summary>
+    /// Gets the pipe name for the current process.
+    /// </summary>
+    public static string PipeName => GetPipeName(Process.GetCurrentProcess().Id);
+
+    /// <summary>
+    /// Gets the pipe name for a specific process ID.
+    /// </summary>
+    public static string GetPipeName(int pid) => $"{PipeNamePrefix}.{pid}";
 
     private readonly AutomationExecutor _executor;
     private readonly CancellationTokenSource _cts = new();

@@ -13,13 +13,16 @@ public static class AutomationClient
     /// <summary>
     /// Sends a command to the running application and returns the response.
     /// </summary>
-    public static async Task<AutomationResponse> SendCommandAsync(AutomationCommand command)
+    /// <param name="command">The automation command to send.</param>
+    /// <param name="pid">The process ID of the target application.</param>
+    public static async Task<AutomationResponse> SendCommandAsync(AutomationCommand command, int pid)
     {
         try
         {
+            var pipeName = AutomationServer.GetPipeName(pid);
             await using var client = new NamedPipeClientStream(
                 ".",
-                AutomationServer.PipeName,
+                pipeName,
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
 
@@ -38,7 +41,7 @@ public static class AutomationClient
         }
         catch (TimeoutException)
         {
-            return AutomationResponse.Fail("Connection timeout - is the application running?");
+            return AutomationResponse.Fail($"Connection timeout - is the application with PID {pid} running?");
         }
         catch (Exception ex)
         {
@@ -47,15 +50,17 @@ public static class AutomationClient
     }
 
     /// <summary>
-    /// Checks if the application is running and accepting commands.
+    /// Checks if the application with the specified PID is running and accepting commands.
     /// </summary>
-    public static async Task<bool> IsAppRunningAsync()
+    /// <param name="pid">The process ID of the target application.</param>
+    public static async Task<bool> IsAppRunningAsync(int pid)
     {
         try
         {
+            var pipeName = AutomationServer.GetPipeName(pid);
             await using var client = new NamedPipeClientStream(
                 ".",
-                AutomationServer.PipeName,
+                pipeName,
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
 

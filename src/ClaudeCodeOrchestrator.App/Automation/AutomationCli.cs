@@ -24,21 +24,63 @@ public static class AutomationCli
             return 1;
         }
 
-        var command = args[0].ToLower();
+        // Parse --pid global option
+        int? pid = null;
+        var remainingArgs = new List<string>();
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i].ToLower() == "--pid" && i + 1 < args.Length)
+            {
+                if (!int.TryParse(args[++i], out var parsedPid))
+                {
+                    Console.Error.WriteLine("Error: --pid requires a valid process ID");
+                    return 1;
+                }
+                pid = parsedPid;
+            }
+            else
+            {
+                remainingArgs.Add(args[i]);
+            }
+        }
+
+        if (remainingArgs.Count == 0)
+        {
+            PrintUsage();
+            return 1;
+        }
+
+        var command = remainingArgs[0].ToLower();
+        var commandArgs = remainingArgs.ToArray();
+
+        // --help doesn't require --pid
+        if (command is "--help" or "-h")
+        {
+            ShowHelp();
+            return 0;
+        }
+
+        // All other commands require --pid
+        if (pid is null)
+        {
+            Console.Error.WriteLine("Error: --pid <process_id> is required");
+            Console.Error.WriteLine("Usage: ClaudeCodeOrchestrator.App --pid <pid> <command> [options]");
+            return 1;
+        }
 
         try
         {
             var result = command switch
             {
-                "--click" => await HandleClickAsync(args),
-                "--type" => await HandleTypeAsync(args),
-                "--key" => await HandleKeyAsync(args),
-                "--screenshot" => await HandleScreenshotAsync(args),
-                "--elements" => await HandleElementsAsync(args),
-                "--wait" => await HandleWaitAsync(args),
-                "--focus" => await HandleFocusAsync(args),
-                "--ping" => await HandlePingAsync(),
-                "--help" or "-h" => ShowHelp(),
+                "--click" => await HandleClickAsync(commandArgs, pid.Value),
+                "--type" => await HandleTypeAsync(commandArgs, pid.Value),
+                "--key" => await HandleKeyAsync(commandArgs, pid.Value),
+                "--screenshot" => await HandleScreenshotAsync(commandArgs, pid.Value),
+                "--elements" => await HandleElementsAsync(commandArgs, pid.Value),
+                "--wait" => await HandleWaitAsync(commandArgs, pid.Value),
+                "--focus" => await HandleFocusAsync(commandArgs, pid.Value),
+                "--ping" => await HandlePingAsync(pid.Value),
                 _ => AutomationResponse.Fail($"Unknown command: {command}")
             };
 
@@ -61,7 +103,7 @@ public static class AutomationCli
         }
     }
 
-    private static async Task<AutomationResponse> HandleClickAsync(string[] args)
+    private static async Task<AutomationResponse> HandleClickAsync(string[] args, int pid)
     {
         var cmd = new ClickCommand();
 
@@ -80,10 +122,10 @@ public static class AutomationCli
                 cmd.AutomationId = args[i]; // Shorthand: --click MyButton
         }
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleTypeAsync(string[] args)
+    private static async Task<AutomationResponse> HandleTypeAsync(string[] args, int pid)
     {
         var cmd = new TypeTextCommand();
 
@@ -101,10 +143,10 @@ public static class AutomationCli
         if (string.IsNullOrEmpty(cmd.Text))
             return AutomationResponse.Fail("Text required. Usage: --type \"text to type\"");
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleKeyAsync(string[] args)
+    private static async Task<AutomationResponse> HandleKeyAsync(string[] args, int pid)
     {
         var cmd = new PressKeyCommand();
 
@@ -128,10 +170,10 @@ public static class AutomationCli
         if (string.IsNullOrEmpty(cmd.Key))
             return AutomationResponse.Fail("Key required. Usage: --key Enter or --key Ctrl+S");
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleScreenshotAsync(string[] args)
+    private static async Task<AutomationResponse> HandleScreenshotAsync(string[] args, int pid)
     {
         var cmd = new ScreenshotCommand();
 
@@ -146,10 +188,10 @@ public static class AutomationCli
                 cmd.OutputPath = args[i]; // Shorthand: --screenshot output.png
         }
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleElementsAsync(string[] args)
+    private static async Task<AutomationResponse> HandleElementsAsync(string[] args, int pid)
     {
         var cmd = new GetElementsCommand();
 
@@ -164,10 +206,10 @@ public static class AutomationCli
                 cmd.TypeFilter = args[i]; // Shorthand: --elements Button
         }
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleWaitAsync(string[] args)
+    private static async Task<AutomationResponse> HandleWaitAsync(string[] args, int pid)
     {
         var cmd = new WaitCommand();
 
@@ -184,10 +226,10 @@ public static class AutomationCli
                 cmd.Milliseconds = ms; // Shorthand: --wait 1000
         }
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandleFocusAsync(string[] args)
+    private static async Task<AutomationResponse> HandleFocusAsync(string[] args, int pid)
     {
         var cmd = new FocusCommand();
 
@@ -198,15 +240,15 @@ public static class AutomationCli
                 cmd.AutomationId = args[i]; // Shorthand: --focus MyTextBox
         }
 
-        return await AutomationClient.SendCommandAsync(cmd);
+        return await AutomationClient.SendCommandAsync(cmd, pid);
     }
 
-    private static async Task<AutomationResponse> HandlePingAsync()
+    private static async Task<AutomationResponse> HandlePingAsync(int pid)
     {
-        var isRunning = await AutomationClient.IsAppRunningAsync();
+        var isRunning = await AutomationClient.IsAppRunningAsync(pid);
         return isRunning
-            ? AutomationResponse.Ok("Application is running")
-            : AutomationResponse.Fail("Application is not running");
+            ? AutomationResponse.Ok($"Application with PID {pid} is running")
+            : AutomationResponse.Fail($"Application with PID {pid} is not running");
     }
 
     private static AutomationResponse ShowHelp()
@@ -221,7 +263,10 @@ public static class AutomationCli
 Claude Code Orchestrator - Automation CLI
 
 USAGE:
-    ClaudeCodeOrchestrator.App [--command] [options]
+    ClaudeCodeOrchestrator.App --pid <process_id> <command> [options]
+
+GLOBAL OPTIONS:
+    --pid <pid>               Target process ID (required for all commands except --help)
 
 COMMANDS:
     --click [id]              Click an element by automation ID
@@ -258,22 +303,25 @@ COMMANDS:
 
 EXAMPLES:
     # Click the Open Repository button
-    ClaudeCodeOrchestrator.App --click OpenRepositoryButton
+    ClaudeCodeOrchestrator.App --pid 12345 --click OpenRepositoryButton
 
     # Type text into a text box
-    ClaudeCodeOrchestrator.App --type ""Hello World"" --id TaskDescriptionInput
+    ClaudeCodeOrchestrator.App --pid 12345 --type ""Hello World"" --id TaskDescriptionInput
 
     # Press Ctrl+S to save
-    ClaudeCodeOrchestrator.App --key Ctrl+S
+    ClaudeCodeOrchestrator.App --pid 12345 --key Ctrl+S
 
     # Take a screenshot
-    ClaudeCodeOrchestrator.App --screenshot ./screenshot.png
+    ClaudeCodeOrchestrator.App --pid 12345 --screenshot ./screenshot.png
 
     # List all buttons
-    ClaudeCodeOrchestrator.App --elements Button
+    ClaudeCodeOrchestrator.App --pid 12345 --elements Button
 
     # Wait for a dialog to appear
-    ClaudeCodeOrchestrator.App --wait --for NewTaskDialog --timeout 10000
+    ClaudeCodeOrchestrator.App --pid 12345 --wait --for NewTaskDialog --timeout 10000
+
+    # Check if application is running
+    ClaudeCodeOrchestrator.App --pid 12345 --ping
 ");
     }
 }
