@@ -36,6 +36,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // Track pending preview states for sessions being created
     private readonly ConcurrentDictionary<string, bool> _pendingSessionPreviewStates = new();
 
+    // Track worktrees currently having sessions opened (prevents duplicate tabs from race conditions)
+    private readonly ConcurrentDictionary<string, byte> _worktreesOpeningSession = new();
+
     /// <summary>
     /// Reference to DockFactory for dynamic document creation.
     /// </summary>
@@ -520,6 +523,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Clear pending session preview states
         _pendingSessionPreviewStates.Clear();
+
+        // Clear worktrees opening session lock
+        _worktreesOpeningSession.Clear();
     }
 
     [RelayCommand]
@@ -1227,42 +1233,59 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            // Store the preview state for when the session is created
-            _pendingSessionPreviewStates[worktree.Id] = isPreview;
-
-            // Get the WorktreeInfo
-            var worktreeInfo = await _worktreeService.GetWorktreeAsync(
-                CurrentRepositoryPath, worktree.Id);
-
-            if (worktreeInfo is null)
+            // Prevent race condition: check if we're already opening a session for this worktree
+            // If another call is in progress, just activate the existing document when it's ready
+            if (!_worktreesOpeningSession.TryAdd(worktree.Id, 0))
             {
-                _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
+                // Session is already being opened for this worktree - skip duplicate creation
                 return;
             }
 
-            // Use the worktree's stored Claude session ID, or find one from disk
-            var claudeSessionId = worktreeInfo.ClaudeSessionId;
-            if (string.IsNullOrEmpty(claudeSessionId))
+            try
             {
-                // Fallback: search for existing sessions on disk
-                var historyService = new SessionHistoryService();
-                claudeSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
-            }
+                // Store the preview state for when the session is created
+                _pendingSessionPreviewStates[worktree.Id] = isPreview;
 
-            if (!string.IsNullOrEmpty(claudeSessionId))
-            {
-                // Create an idle session that will resume from the existing Claude session
-                await CreateIdleSessionWithHistoryAsync(worktreeInfo, claudeSessionId);
+                // Get the WorktreeInfo
+                var worktreeInfo = await _worktreeService.GetWorktreeAsync(
+                    CurrentRepositoryPath, worktree.Id);
+
+                if (worktreeInfo is null)
+                {
+                    _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
+                    return;
+                }
+
+                // Use the worktree's stored Claude session ID, or find one from disk
+                var claudeSessionId = worktreeInfo.ClaudeSessionId;
+                if (string.IsNullOrEmpty(claudeSessionId))
+                {
+                    // Fallback: search for existing sessions on disk
+                    var historyService = new SessionHistoryService();
+                    claudeSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
+                }
+
+                if (!string.IsNullOrEmpty(claudeSessionId))
+                {
+                    // Create an idle session that will resume from the existing Claude session
+                    await CreateIdleSessionWithHistoryAsync(worktreeInfo, claudeSessionId);
+                }
+                else
+                {
+                    // No existing session - create an idle session waiting for user input
+                    await _sessionService.CreateIdleSessionAsync(worktreeInfo);
+                }
             }
-            else
+            finally
             {
-                // No existing session - create an idle session waiting for user input
-                await _sessionService.CreateIdleSessionAsync(worktreeInfo);
+                // Always release the lock when done
+                _worktreesOpeningSession.TryRemove(worktree.Id, out _);
             }
         }
         catch (Exception ex)
         {
             _pendingSessionPreviewStates.TryRemove(worktree.Id, out _);
+            _worktreesOpeningSession.TryRemove(worktree.Id, out _);
             await _dialogService.ShowErrorAsync("Error Opening Session",
                 $"Failed to open session: {ex.Message}");
         }
