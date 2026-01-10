@@ -61,6 +61,19 @@
             <MenuItem Header="_File" AutomationProperties.AutomationId="FileMenu">
                 <MenuItem Header="_Open Repository..." Command="{Binding OpenRepositoryCommand}"
                           AutomationProperties.AutomationId="OpenRepositoryMenuItem" />
+                <MenuItem Header="_Recent Repositories"
+                          IsVisible="{Binding RecentRepositories.Count}"
+                          AutomationProperties.AutomationId="RecentRepositoriesMenuItem"
+                          ItemsSource="{Binding RecentRepositories}">
+                    <MenuItem.ItemContainerTheme>
+                        <ControlTheme TargetType="MenuItem" x:DataType="vm:RecentRepositoryItem">
+                            <Setter Property="Header" Value="{Binding DisplayName}" />
+                            <Setter Property="Command" Value="{Binding OpenCommand}" />
+                            <Setter Property="CommandParameter" Value="{Binding Path}" />
+                            <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
+                        </ControlTheme>
+                    </MenuItem.ItemContainerTheme>
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="_Close Repository" Command="{Binding CloseRepositoryCommand}"
                           IsEnabled="{Binding IsRepositoryOpen}"

@@ -131,11 +131,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
+    public ObservableCollection<RecentRepositoryItem> RecentRepositories { get; } = new();
+
     /// <summary>
     /// Initializes the view model, restoring last opened repository if valid.
     /// </summary>
     public async Task InitializeAsync()
     {
+        // Load recent repositories
+        RefreshRecentRepositories();
+
         var lastPath = _settingsService.LastRepositoryPath;
         if (string.IsNullOrEmpty(lastPath)) return;
 
@@ -221,6 +226,39 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task OpenRecentRepositoryAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            await OpenRepositoryAtPathAsync(path);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
+        {
+            // Don't show error - it was handled in OpenRepositoryAtPathAsync
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Opening Repository",
+                $"Failed to open repository: {ex.Message}");
+        }
+    }
+
+    private void RefreshRecentRepositories()
+    {
+        RecentRepositories.Clear();
+        foreach (var path in _settingsService.RecentRepositories)
+        {
+            // Only include paths that still exist
+            if (Directory.Exists(path))
+            {
+                RecentRepositories.Add(new RecentRepositoryItem(path, OpenRecentRepositoryCommand));
+            }
+        }
+    }
+
     internal async Task OpenRepositoryAtPathAsync(string path)
     {
         try
@@ -246,8 +284,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         SetRepository(path);
 
-        // Save as last opened repository
+        // Save as last opened repository and add to recent repositories
         _settingsService.SetLastRepositoryPath(path);
+        _settingsService.AddRecentRepository(path);
+        RefreshRecentRepositories();
 
         // Fetch remote URL and set GitHubUrl if it's a GitHub repository
         await UpdateGitHubUrlAsync(path);
@@ -1278,5 +1318,24 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             _factory.AutoSplitLayoutChanged -= OnAutoSplitLayoutChanged;
         }
+    }
+}
+
+/// <summary>
+/// Represents a recent repository item for display in the File menu.
+/// </summary>
+public class RecentRepositoryItem
+{
+    public string Path { get; }
+    public string DisplayName { get; }
+    public IAsyncRelayCommand<string> OpenCommand { get; }
+
+    public RecentRepositoryItem(string path, IAsyncRelayCommand<string> openCommand)
+    {
+        Path = path;
+        DisplayName = System.IO.Path.GetFileName(path.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar));
+        OpenCommand = openCommand;
     }
 }
