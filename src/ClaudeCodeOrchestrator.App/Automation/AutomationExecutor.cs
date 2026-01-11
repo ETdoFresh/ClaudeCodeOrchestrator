@@ -39,47 +39,67 @@ public class AutomationExecutor
 
     private async Task<AutomationResponse> ExecuteClickAsync(ClickCommand cmd)
     {
-        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        // Use a TaskCompletionSource to properly bridge async UI thread work
+        var tcs = new TaskCompletionSource<AutomationResponse>();
+
+        await Dispatcher.UIThread.InvokeAsync(async () =>
         {
-            Control? target = null;
-            Window? targetWindow = null;
-
-            if (!string.IsNullOrEmpty(cmd.AutomationId))
+            try
             {
-                // Search across all windows (main window + dialogs)
-                (target, targetWindow) = FindElementAcrossWindows(cmd.AutomationId);
-                if (target is null)
-                    return AutomationResponse.Fail($"Element not found: {cmd.AutomationId}");
+                Control? target = null;
+                Window? targetWindow = null;
+
+                if (!string.IsNullOrEmpty(cmd.AutomationId))
+                {
+                    // Search across all windows (main window + dialogs)
+                    (target, targetWindow) = FindElementAcrossWindows(cmd.AutomationId);
+                    if (target is null)
+                    {
+                        tcs.TrySetResult(AutomationResponse.Fail($"Element not found: {cmd.AutomationId}"));
+                        return;
+                    }
+                }
+                else
+                {
+                    targetWindow = GetMainWindow();
+                }
+
+                if (targetWindow is null)
+                {
+                    tcs.TrySetResult(AutomationResponse.Fail("No window found"));
+                    return;
+                }
+
+                if (target != null)
+                {
+                    // Get center of element for visual feedback
+                    var bounds = target.Bounds;
+                    var screenPos = target.TranslatePoint(new Point(bounds.Width / 2, bounds.Height / 2), targetWindow);
+
+                    // Even if TranslatePoint fails (element not in visual tree), still simulate the click
+                    // This handles menu items that exist logically but aren't rendered yet
+                    await SimulateClickAsync(targetWindow, target, screenPos ?? new Point(0, 0), cmd.DoubleClick);
+                    tcs.TrySetResult(AutomationResponse.Ok());
+                    return;
+                }
+                else if (cmd.X.HasValue && cmd.Y.HasValue)
+                {
+                    var point = new Point(cmd.X.Value, cmd.Y.Value);
+                    var hit = targetWindow.InputHitTest(point) as Control;
+                    await SimulateClickAsync(targetWindow, hit, point, cmd.DoubleClick);
+                    tcs.TrySetResult(AutomationResponse.Ok());
+                    return;
+                }
+
+                tcs.TrySetResult(AutomationResponse.Fail("No target specified for click"));
             }
-            else
+            catch (Exception ex)
             {
-                targetWindow = GetMainWindow();
+                tcs.TrySetResult(AutomationResponse.Fail($"Click error: {ex.Message}"));
             }
-
-            if (targetWindow is null)
-                return AutomationResponse.Fail("No window found");
-
-            if (target != null)
-            {
-                // Get center of element for visual feedback
-                var bounds = target.Bounds;
-                var screenPos = target.TranslatePoint(new Point(bounds.Width / 2, bounds.Height / 2), targetWindow);
-
-                // Even if TranslatePoint fails (element not in visual tree), still simulate the click
-                // This handles menu items that exist logically but aren't rendered yet
-                await SimulateClickAsync(targetWindow, target, screenPos ?? new Point(0, 0), cmd.DoubleClick);
-                return AutomationResponse.Ok();
-            }
-            else if (cmd.X.HasValue && cmd.Y.HasValue)
-            {
-                var point = new Point(cmd.X.Value, cmd.Y.Value);
-                var hit = targetWindow.InputHitTest(point) as Control;
-                await SimulateClickAsync(targetWindow, hit, point, cmd.DoubleClick);
-                return AutomationResponse.Ok();
-            }
-
-            return AutomationResponse.Fail("No target specified for click");
         });
+
+        return await tcs.Task;
     }
 
     private async Task SimulateClickAsync(Window window, Control? target, Point position, bool doubleClick)

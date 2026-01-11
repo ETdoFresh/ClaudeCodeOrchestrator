@@ -26,13 +26,29 @@ public static class AutomationClient
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
 
-            await client.ConnectAsync(TimeoutMs);
+            // Connect with a shorter timeout, then use the full timeout for the operation
+            await client.ConnectAsync(5000);
 
-            using var reader = new StreamReader(client, Encoding.UTF8);
-            await using var writer = new StreamWriter(client, Encoding.UTF8) { AutoFlush = true };
+            using var reader = new StreamReader(client, Encoding.UTF8, leaveOpen: true);
+            await using var writer = new StreamWriter(client, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
 
+            // Write command
             await writer.WriteLineAsync(command.ToJson());
-            var response = await reader.ReadLineAsync();
+            await writer.FlushAsync();
+
+            // Read response with timeout
+            using var cts = new CancellationTokenSource(TimeoutMs);
+            var readTask = reader.ReadLineAsync(cts.Token);
+
+            string? response;
+            try
+            {
+                response = await readTask;
+            }
+            catch (OperationCanceledException)
+            {
+                return AutomationResponse.Fail("Read timeout - server did not respond in time");
+            }
 
             if (string.IsNullOrEmpty(response))
                 return AutomationResponse.Fail("Empty response from server");

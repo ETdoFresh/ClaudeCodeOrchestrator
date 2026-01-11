@@ -165,11 +165,12 @@ public sealed class SessionHistoryService
             .Replace(".", "-")
             .Replace(":", "-");
 
-        // Remove leading dash if present
+        // Remove leading dash if present (e.g., from paths starting with / on Unix)
         if (encodedPath.StartsWith("-"))
             encodedPath = encodedPath.Substring(1);
 
-        return Path.Combine(ClaudeProjectsPath, "-" + encodedPath);
+        // Directory name is just the encoded path, no leading dash
+        return Path.Combine(ClaudeProjectsPath, encodedPath);
     }
 
     /// <summary>

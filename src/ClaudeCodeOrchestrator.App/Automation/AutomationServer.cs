@@ -79,6 +79,7 @@ public class AutomationServer : IDisposable
                 if (string.IsNullOrEmpty(line))
                 {
                     await writer.WriteLineAsync(AutomationResponse.Fail("Empty command").ToJson());
+                    await writer.FlushAsync();
                     return;
                 }
 
@@ -86,11 +87,35 @@ public class AutomationServer : IDisposable
                 if (command is null)
                 {
                     await writer.WriteLineAsync(AutomationResponse.Fail("Invalid command JSON").ToJson());
+                    await writer.FlushAsync();
                     return;
                 }
 
-                var response = await _executor.ExecuteAsync(command);
+                AutomationResponse response;
+                try
+                {
+                    // Add timeout for command execution to prevent hanging
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+                    var executeTask = _executor.ExecuteAsync(command);
+                    var completedTask = await Task.WhenAny(executeTask, Task.Delay(Timeout.Infinite, cts.Token));
+
+                    if (completedTask == executeTask)
+                    {
+                        response = await executeTask;
+                    }
+                    else
+                    {
+                        response = AutomationResponse.Fail("Command execution timed out");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    response = AutomationResponse.Fail($"Command execution error: {ex.Message}");
+                }
+
                 await writer.WriteLineAsync(response.ToJson());
+                await writer.FlushAsync();
+                await server.FlushAsync();
             }
         }
         catch (Exception ex)
