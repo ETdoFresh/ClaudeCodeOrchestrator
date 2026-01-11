@@ -44,6 +44,7 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     private string _taskDescription = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayTitle))]
     private string? _title;
 
     [ObservableProperty]
