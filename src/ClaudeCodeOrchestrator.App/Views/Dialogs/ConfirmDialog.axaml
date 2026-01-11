@@ -22,9 +22,11 @@
                     HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
             <Button Content="Cancel" Click="Cancel_Click" Width="80"
                     Background="#3C3C3C" Foreground="#CCCCCC"
+                    IsCancel="True"
                     AutomationProperties.AutomationId="ConfirmDialogCancel" />
             <Button Content="Yes" Click="Yes_Click" Width="80"
                     Background="#0E639C" Foreground="White"
+                    IsDefault="True"
                     AutomationProperties.AutomationId="ConfirmDialogYes" />
         </StackPanel>
     </Grid>

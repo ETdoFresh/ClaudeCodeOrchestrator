@@ -25,6 +25,8 @@
                 AutomationProperties.AutomationId="MessageDialogOkButton"
                 Width="80" HorizontalAlignment="Right"
                 Margin="0,16,0,0"
-                Background="#0E639C" Foreground="White" />
+                Background="#0E639C" Foreground="White"
+                IsDefault="True"
+                IsCancel="True" />
     </Grid>
 </Window>
