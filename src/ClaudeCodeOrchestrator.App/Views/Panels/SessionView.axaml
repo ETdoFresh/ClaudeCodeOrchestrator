@@ -63,6 +63,20 @@
                             <TextBlock Text="Copy Chat" />
                         </StackPanel>
                     </Button>
+                    <!-- VS Code button - shown when VS Code is available -->
+                    <Button Command="{Binding OpenInVSCodeCommand}"
+                            Padding="10,4"
+                            FontSize="12"
+                            Background="#007ACC"
+                            Foreground="White"
+                            ToolTip.Tip="Open in VS Code"
+                            IsVisible="{Binding CanOpenInVSCode}"
+                            AutomationProperties.AutomationId="OpenInVSCodeButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{}{}" FontWeight="Bold" />
+                            <TextBlock Text="VS Code" />
+                        </StackPanel>
+                    </Button>
                     <!-- Run button - shown when executable is configured -->
                     <Button Command="{Binding RunCommand}"
                             Padding="10,4"

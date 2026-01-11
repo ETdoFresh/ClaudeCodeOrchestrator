@@ -149,6 +149,25 @@
                         </Style>
                     </Button.Styles>
                 </Button>
+                <!-- Open Main Repo in VS Code Button (only visible when VS Code is available) -->
+                <Button Content="{}{}"
+                        Command="{Binding OpenMainRepoInVSCodeCommand}"
+                        IsVisible="{Binding CanOpenMainRepoInVSCode}"
+                        Background="Transparent"
+                        Foreground="#007ACC"
+                        FontSize="10"
+                        FontWeight="Bold"
+                        Padding="8,4"
+                        Margin="6,0,0,0"
+                        Cursor="Hand"
+                        ToolTip.Tip="Open main repository in VS Code"
+                        AutomationProperties.AutomationId="OpenMainRepoInVSCodeButton">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Foreground" Value="#3399DD" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
                 <!-- Run Main Repo Button (play icon, only visible when executable is configured) -->
                 <Button Content="▶"
                         Command="{Binding RunMainRepoCommand}"

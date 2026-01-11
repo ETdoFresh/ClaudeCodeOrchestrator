@@ -146,6 +146,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// </summary>
     public bool CanRunMainRepo => IsRepositoryOpen && _repositorySettingsService.HasExecutable;
 
+    /// <summary>
+    /// Gets whether the VS Code button for the main repository should be visible.
+    /// True when a repository is open and VS Code is available.
+    /// </summary>
+    public bool CanOpenMainRepoInVSCode => IsRepositoryOpen && _repositorySettingsService.IsVSCodeAvailable;
+
     public ObservableCollection<SessionViewModel> Sessions { get; } = new();
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
@@ -559,8 +565,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Clear worktrees opening session lock
         _worktreesOpeningSession.Clear();
 
-        // Notify CanRunMainRepo since IsRepositoryOpen changed
+        // Notify CanRunMainRepo and CanOpenMainRepoInVSCode since IsRepositoryOpen changed
         OnPropertyChanged(nameof(CanRunMainRepo));
+        OnPropertyChanged(nameof(CanOpenMainRepoInVSCode));
     }
 
     [RelayCommand]
@@ -691,6 +698,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task OpenMainRepoInVSCodeAsync()
+    {
+        if (!_repositorySettingsService.IsVSCodeAvailable || string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            var success = await _repositorySettingsService.OpenInVSCodeAsync(CurrentRepositoryPath);
+            if (!success)
+            {
+                await _dialogService.ShowErrorAsync("Open in VS Code Failed",
+                    "Failed to open VS Code. Make sure the 'code' command is available in your PATH.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Open in VS Code Failed",
+                $"Failed to open VS Code: {ex.Message}");
+        }
+    }
+
     public void SetRepository(string path)
     {
         CurrentRepositoryPath = path;
@@ -699,8 +727,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var repoName = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         WindowTitle = $"Claude Code Orchestrator - {repoName}";
 
-        // Notify CanRunMainRepo since IsRepositoryOpen changed
+        // Notify CanRunMainRepo and CanOpenMainRepoInVSCode since IsRepositoryOpen changed
         OnPropertyChanged(nameof(CanRunMainRepo));
+        OnPropertyChanged(nameof(CanOpenMainRepoInVSCode));
     }
 
     public async Task RefreshWorktreesAsync()
@@ -1119,6 +1148,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Opens VS Code for a worktree by its ID. Called from SessionDocumentViewModel.
+    /// </summary>
+    public async Task OpenInVSCodeByWorktreeIdAsync(string worktreeId)
+    {
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            await OnOpenInVSCodeRequestedAsync(worktree);
+        }
+    }
+
     private void OnRepositorySettingsChanged(object? sender, EventArgs e)
     {
         _dispatcher.Post(() =>
@@ -1135,8 +1176,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update CanRun on all open session documents
             UpdateSessionDocumentsCanRun(canRun);
 
-            // Update CanRunMainRepo for the top bar button
+            // Update CanRunMainRepo and CanOpenMainRepoInVSCode for the top bar buttons
             OnPropertyChanged(nameof(CanRunMainRepo));
+            OnPropertyChanged(nameof(CanOpenMainRepoInVSCode));
         });
     }
 

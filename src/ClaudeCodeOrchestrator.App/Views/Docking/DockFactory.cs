@@ -187,6 +187,7 @@ public class DockFactory : Factory
             document.OnSessionCompleted = () => mainVm.RefreshWorktreesAsync();
             document.OnMergeRequested = mainVm.MergeWorktreeByIdAsync;
             document.OnRunRequested = mainVm.RunExecutableByWorktreeIdAsync;
+            document.OnOpenInVSCodeRequested = mainVm.OpenInVSCodeByWorktreeIdAsync;
             document.OnProcessingStateChanged = (worktreeId, isProcessing) =>
             {
                 var wt = mainVm.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
@@ -202,6 +203,7 @@ public class DockFactory : Factory
             {
                 document.IsReadyToMerge = worktree.IsReadyToMerge;
                 document.CanRun = worktree.CanRun;
+                document.CanOpenInVSCode = worktree.CanOpenInVSCode;
                 // Set initial processing state from document to worktree
                 worktree.IsProcessing = document.IsProcessing;
             }
@@ -367,6 +369,7 @@ public class DockFactory : Factory
                     // Sync from worktree to document
                     doc.IsReadyToMerge = worktree.IsReadyToMerge;
                     doc.CanRun = worktree.CanRun;
+                    doc.CanOpenInVSCode = worktree.CanOpenInVSCode;
 
                     // Sync from document to worktree (processing state)
                     worktree.IsProcessing = doc.IsProcessing;

@@ -54,6 +54,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public Func<string, Task>? OnRunRequested { get; set; }
 
+    /// <summary>
+    /// Callback to open VS Code in this session's worktree.
+    /// </summary>
+    public Func<string, Task>? OnOpenInVSCodeRequested { get; set; }
+
     public string SessionId
     {
         get => _sessionId;
@@ -176,6 +181,17 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     {
         get => _canRun;
         set => SetProperty(ref _canRun, value);
+    }
+
+    private bool _canOpenInVSCode;
+
+    /// <summary>
+    /// Whether the VS Code button should be visible (VS Code is available).
+    /// </summary>
+    public bool CanOpenInVSCode
+    {
+        get => _canOpenInVSCode;
+        set => SetProperty(ref _canOpenInVSCode, value);
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -472,6 +488,15 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         if (OnRunRequested != null && !string.IsNullOrEmpty(WorktreeId))
         {
             await OnRunRequested(WorktreeId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenInVSCodeAsync()
+    {
+        if (OnOpenInVSCodeRequested != null && !string.IsNullOrEmpty(WorktreeId))
+        {
+            await OnOpenInVSCodeRequested(WorktreeId);
         }
     }
 

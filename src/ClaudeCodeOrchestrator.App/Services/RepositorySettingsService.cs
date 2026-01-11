@@ -269,10 +269,12 @@ public class RepositorySettingsService : IRepositorySettingsService
     {
         try
         {
+            // On Windows, 'code' is a .cmd file, so we need to use cmd.exe to run it
+            // when UseShellExecute is false
             var psi = new ProcessStartInfo
             {
-                FileName = "code",
-                Arguments = "--version",
+                FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "code",
+                Arguments = OperatingSystem.IsWindows() ? "/c code --version" : "--version",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -293,6 +295,12 @@ public class RepositorySettingsService : IRepositorySettingsService
         catch
         {
             _isVSCodeAvailable = false;
+        }
+
+        // Notify listeners that VS Code availability has been determined
+        if (_isVSCodeAvailable == true)
+        {
+            SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }
