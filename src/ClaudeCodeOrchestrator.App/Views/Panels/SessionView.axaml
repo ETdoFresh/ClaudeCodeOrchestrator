@@ -125,6 +125,19 @@
                                FontSize="12"
                                Foreground="#666666"
                                HorizontalAlignment="Center" />
+                    <Button Command="{Binding ResyncHistoryCommand}"
+                            Content="Resync History"
+                            Padding="12,6"
+                            FontSize="12"
+                            Background="#3C3C3C"
+                            Foreground="#AAAAAA"
+                            BorderThickness="1"
+                            BorderBrush="#555555"
+                            CornerRadius="4"
+                            HorizontalAlignment="Center"
+                            Margin="0,8,0,0"
+                            ToolTip.Tip="Try to recover session history from disk"
+                            AutomationProperties.AutomationId="ResyncHistoryButton" />
                 </StackPanel>
             </Border>
 

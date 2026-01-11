@@ -92,6 +92,11 @@ public sealed class SessionHistoryService
         var projectDir = GetProjectDirectory(worktreePath);
         var sessionFile = Path.Combine(projectDir, $"{sessionId}.jsonl");
 
+        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: worktreePath={worktreePath}");
+        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: projectDir={projectDir}");
+        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: sessionFile={sessionFile}");
+        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: File.Exists={File.Exists(sessionFile)}");
+
         if (!File.Exists(sessionFile))
             return Array.Empty<SessionHistoryMessage>();
 
@@ -106,13 +111,26 @@ public sealed class SessionHistoryService
                 var entry = JsonSerializer.Deserialize<SessionHistoryEntry>(line);
                 if (entry is null) continue;
 
+                System.Diagnostics.Debug.WriteLine($"Entry type={entry.Type}, isSidechain={entry.IsSidechain}");
+
                 // Skip non-message entries
                 if (entry.Type != "user" && entry.Type != "assistant") continue;
 
                 // Skip sidechain entries (agent tasks)
                 if (entry.IsSidechain == true) continue;
 
+                if (entry.Message != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Message.Content.ValueKind={entry.Message.Content.ValueKind}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Message is null!");
+                }
+
                 var (content, toolUses) = ExtractContentAndToolUses(entry);
+
+                System.Diagnostics.Debug.WriteLine($"  Extracted content length={(content?.Length ?? 0)}, toolUses count={toolUses.Count}");
 
                 // Skip if no content and no tool uses
                 if (string.IsNullOrEmpty(content) && toolUses.Count == 0) continue;
@@ -126,22 +144,26 @@ public sealed class SessionHistoryService
                     ToolUses = toolUses
                 });
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                // Skip malformed lines
+                // Log parsing errors for debugging
+                System.Diagnostics.Debug.WriteLine($"JSON parse error: {ex.Message}");
             }
         }
+
+        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: Loaded {messages.Count} messages from {sessionFile}");
 
         return messages;
     }
 
     private static string GetProjectDirectory(string worktreePath)
     {
-        // Claude encodes paths by replacing / and . with -
+        // Claude encodes paths by replacing /, \, ., and : with -
         var encodedPath = worktreePath
             .Replace("/", "-")
             .Replace("\\", "-")
-            .Replace(".", "-");
+            .Replace(".", "-")
+            .Replace(":", "-");
 
         // Remove leading dash if present
         if (encodedPath.StartsWith("-"))
@@ -149,6 +171,11 @@ public sealed class SessionHistoryService
 
         return Path.Combine(ClaudeProjectsPath, "-" + encodedPath);
     }
+
+    /// <summary>
+    /// Debug method to expose the project directory for troubleshooting.
+    /// </summary>
+    public string GetDebugProjectDirectory(string worktreePath) => GetProjectDirectory(worktreePath);
 
     private static DateTime GetSessionLastModified(string projectDir, string sessionId)
     {
@@ -162,58 +189,61 @@ public sealed class SessionHistoryService
 
         if (entry.Message is null) return (null, toolUses);
 
+        var contentElement = entry.Message.Content;
+
+        // Skip if content was not set (default JsonElement)
+        if (contentElement.ValueKind == JsonValueKind.Undefined)
+            return (null, toolUses);
+
         // For user messages, content might be a string
-        if (entry.Message.Content is JsonElement contentElement)
+        if (contentElement.ValueKind == JsonValueKind.String)
         {
-            if (contentElement.ValueKind == JsonValueKind.String)
-            {
-                return (contentElement.GetString(), toolUses);
-            }
+            return (contentElement.GetString(), toolUses);
+        }
 
-            // For assistant messages, content is an array of content blocks
-            if (contentElement.ValueKind == JsonValueKind.Array)
+        // For assistant messages, content is an array of content blocks
+        if (contentElement.ValueKind == JsonValueKind.Array)
+        {
+            var textParts = new List<string>();
+            foreach (var block in contentElement.EnumerateArray())
             {
-                var textParts = new List<string>();
-                foreach (var block in contentElement.EnumerateArray())
+                if (block.TryGetProperty("type", out var typeEl))
                 {
-                    if (block.TryGetProperty("type", out var typeEl))
+                    var blockType = typeEl.GetString();
+
+                    // Skip tool_result blocks - these are user message responses
+                    if (blockType == "tool_result")
+                        continue;
+
+                    // Extract tool_use blocks for assistant messages
+                    if (blockType == "tool_use")
                     {
-                        var blockType = typeEl.GetString();
+                        var id = block.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                        var name = block.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+                        var input = block.TryGetProperty("input", out var inputEl) ? inputEl.ToString() : "{}";
 
-                        // Skip tool_result blocks - these are user message responses
-                        if (blockType == "tool_result")
-                            continue;
-
-                        // Extract tool_use blocks for assistant messages
-                        if (blockType == "tool_use")
+                        if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(name))
                         {
-                            var id = block.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
-                            var name = block.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
-                            var input = block.TryGetProperty("input", out var inputEl) ? inputEl.ToString() : "{}";
-
-                            if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(name))
+                            toolUses.Add(new SessionHistoryToolUse
                             {
-                                toolUses.Add(new SessionHistoryToolUse
-                                {
-                                    Id = id,
-                                    Name = name,
-                                    InputJson = input ?? "{}"
-                                });
-                            }
-                            continue;
+                                Id = id,
+                                Name = name,
+                                InputJson = input ?? "{}"
+                            });
                         }
+                        continue;
+                    }
 
-                        if (blockType == "text" && block.TryGetProperty("text", out var textEl))
-                        {
-                            var text = textEl.GetString();
-                            if (!string.IsNullOrEmpty(text))
-                                textParts.Add(text);
-                        }
+                    if (blockType == "text" && block.TryGetProperty("text", out var textEl))
+                    {
+                        var text = textEl.GetString();
+                        if (!string.IsNullOrEmpty(text))
+                            textParts.Add(text);
                     }
                 }
-                var content = textParts.Count > 0 ? string.Join("\n", textParts) : null;
-                return (content, toolUses);
             }
+            var content = textParts.Count > 0 ? string.Join("\n", textParts) : null;
+            return (content, toolUses);
         }
 
         return (null, toolUses);

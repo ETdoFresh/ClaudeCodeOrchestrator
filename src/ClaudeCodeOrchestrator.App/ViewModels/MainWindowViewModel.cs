@@ -1160,6 +1160,138 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Resyncs session history from disk for a worktree. Called from SessionDocumentViewModel.
+    /// </summary>
+    public async Task ResyncSessionHistoryByWorktreeIdAsync(string worktreeId)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree == null) return;
+
+        try
+        {
+            // Get the WorktreeInfo
+            var worktreeInfo = await _worktreeService.GetWorktreeAsync(
+                CurrentRepositoryPath, worktreeId);
+
+            if (worktreeInfo == null) return;
+
+            // Find the Claude session ID from metadata or disk
+            var historyService = new SessionHistoryService();
+            var claudeSessionId = worktreeInfo.ClaudeSessionId;
+            if (string.IsNullOrEmpty(claudeSessionId))
+            {
+                claudeSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
+            }
+
+            if (string.IsNullOrEmpty(claudeSessionId))
+            {
+                await _dialogService.ShowErrorAsync("No Session History",
+                    "Could not find any session history for this worktree.");
+                return;
+            }
+
+            // Load the history
+            var history = await historyService.ReadSessionHistoryAsync(
+                worktreeInfo.Path, claudeSessionId);
+
+            if (history.Count == 0)
+            {
+                // Debug: show the actual path being used
+                var debugPath = historyService.GetDebugProjectDirectory(worktreeInfo.Path);
+                var sessionFilePath = System.IO.Path.Combine(debugPath, $"{claudeSessionId}.jsonl");
+                var fileExists = System.IO.File.Exists(sessionFilePath);
+                var fileSize = fileExists ? new System.IO.FileInfo(sessionFilePath).Length : 0;
+
+                await _dialogService.ShowErrorAsync("Empty Session History",
+                    $"Session file found ({claudeSessionId}) but contains no messages.\n\n" +
+                    $"Worktree: {worktreeInfo.Path}\n\n" +
+                    $"Looking in: {debugPath}\n\n" +
+                    $"Session file: {sessionFilePath}\n" +
+                    $"File exists: {fileExists}, Size: {fileSize} bytes");
+                return;
+            }
+
+            // Convert history to SDK messages
+            var historyMessages = new List<SDK.Messages.ISDKMessage>();
+            foreach (var msg in history)
+            {
+                if (msg.Role == "user")
+                {
+                    historyMessages.Add(SDK.Messages.SDKUserMessage.CreateText(msg.Content, claudeSessionId));
+                }
+                else if (msg.Role == "assistant")
+                {
+                    var contentBlocks = new List<SDK.Messages.ContentBlock>();
+
+                    if (!string.IsNullOrEmpty(msg.Content))
+                    {
+                        contentBlocks.Add(new SDK.Messages.TextContentBlock { Text = msg.Content });
+                    }
+
+                    foreach (var toolUse in msg.ToolUses)
+                    {
+                        var inputElement = System.Text.Json.JsonDocument.Parse(toolUse.InputJson).RootElement;
+                        contentBlocks.Add(new SDK.Messages.ToolUseContentBlock
+                        {
+                            Id = toolUse.Id,
+                            Name = toolUse.Name,
+                            Input = inputElement
+                        });
+                    }
+
+                    historyMessages.Add(new SDK.Messages.SDKAssistantMessage
+                    {
+                        Uuid = msg.Uuid ?? Guid.NewGuid().ToString(),
+                        SessionId = claudeSessionId,
+                        Message = new SDK.Messages.AssistantMessageContent
+                        {
+                            Id = msg.Uuid ?? Guid.NewGuid().ToString(),
+                            Model = "claude-opus-4-5-20251101",
+                            Content = contentBlocks
+                        }
+                    });
+                }
+            }
+
+            // Find the existing session document and update it
+            if (string.IsNullOrEmpty(worktree.ActiveSessionId)) return;
+
+            var document = Factory?.GetSessionDocument(worktree.ActiveSessionId);
+            if (document != null)
+            {
+                // Clear existing messages and load new ones
+                document.Messages.Clear();
+
+                // Get the session from service to update it
+                var session = _sessionService.GetSession(worktree.ActiveSessionId);
+                if (session != null)
+                {
+                    session.Messages.Clear();
+                    foreach (var msg in historyMessages)
+                    {
+                        session.Messages.Add(msg);
+                    }
+                    session.ClaudeSessionId = claudeSessionId;
+
+                    // Also update the worktree metadata with the Claude session ID
+                    await _worktreeService.UpdateClaudeSessionIdAsync(
+                        worktreeInfo.Path, claudeSessionId);
+
+                    // Reload messages into the document
+                    document.LoadMessagesFromSession(session);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Error Resyncing History",
+                $"Failed to resync session history: {ex.Message}");
+        }
+    }
+
     private void OnRepositorySettingsChanged(object? sender, EventArgs e)
     {
         _dispatcher.Post(() =>

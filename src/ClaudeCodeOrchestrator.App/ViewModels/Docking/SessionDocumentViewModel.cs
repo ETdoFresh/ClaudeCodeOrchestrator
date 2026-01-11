@@ -59,6 +59,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public Func<string, Task>? OnOpenInVSCodeRequested { get; set; }
 
+    /// <summary>
+    /// Callback to resync session history from disk.
+    /// </summary>
+    public Func<string, Task>? OnResyncHistoryRequested { get; set; }
+
     public string SessionId
     {
         get => _sessionId;
@@ -501,6 +506,15 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     [RelayCommand]
+    private async Task ResyncHistoryAsync()
+    {
+        if (OnResyncHistoryRequested != null && !string.IsNullOrEmpty(WorktreeId))
+        {
+            await OnResyncHistoryRequested(WorktreeId);
+        }
+    }
+
+    [RelayCommand]
     private async Task CopyChatAsync()
     {
         var clipboard = GetClipboard();
@@ -574,12 +588,13 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public void LoadMessagesFromSession(Session session)
     {
-        if (session.Messages.Count == 0) return;
-
+        // Always update state and processing flag, even for empty sessions
         State = session.State;
         TotalCost = session.TotalCostUsd;
         // Update IsProcessing based on session state
         IsProcessing = session.State is SessionState.Active or SessionState.Processing or SessionState.Starting;
+
+        if (session.Messages.Count == 0) return;
 
         foreach (var message in session.Messages)
         {

@@ -193,6 +193,7 @@ public class DockFactory : Factory
             document.OnMergeRequested = mainVm.MergeWorktreeByIdAsync;
             document.OnRunRequested = mainVm.RunExecutableByWorktreeIdAsync;
             document.OnOpenInVSCodeRequested = mainVm.OpenInVSCodeByWorktreeIdAsync;
+            document.OnResyncHistoryRequested = mainVm.ResyncSessionHistoryByWorktreeIdAsync;
             document.OnProcessingStateChanged = (worktreeId, isProcessing) =>
             {
                 var wt = mainVm.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
