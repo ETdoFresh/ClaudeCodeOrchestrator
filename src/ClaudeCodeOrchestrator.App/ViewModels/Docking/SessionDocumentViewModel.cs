@@ -64,6 +64,11 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public Func<string, Task>? OnResyncHistoryRequested { get; set; }
 
+    /// <summary>
+    /// Callback to delete this worktree.
+    /// </summary>
+    public Func<string, Task>? OnDeleteRequested { get; set; }
+
     public string SessionId
     {
         get => _sessionId;
@@ -511,6 +516,15 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         if (OnResyncHistoryRequested != null && !string.IsNullOrEmpty(WorktreeId))
         {
             await OnResyncHistoryRequested(WorktreeId);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteWorktreeAsync()
+    {
+        if (OnDeleteRequested != null && !string.IsNullOrEmpty(WorktreeId))
+        {
+            await OnDeleteRequested(WorktreeId);
         }
     }
 

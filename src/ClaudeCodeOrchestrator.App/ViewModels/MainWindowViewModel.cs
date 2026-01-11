@@ -915,6 +915,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes a worktree by its ID. Called from SessionDocumentViewModel.
+    /// </summary>
+    public async Task DeleteWorktreeByIdAsync(string worktreeId)
+    {
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            await OnDeleteRequestedAsync(worktree);
+        }
+    }
+
     private async Task CompleteMergeAsync(WorktreeViewModel worktree)
     {
         if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;

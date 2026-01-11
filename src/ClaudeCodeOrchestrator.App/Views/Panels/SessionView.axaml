@@ -91,6 +91,19 @@
                             <TextBlock Text="Run" />
                         </StackPanel>
                     </Button>
+                    <!-- Delete button -->
+                    <Button Command="{Binding DeleteWorktreeCommand}"
+                            Padding="10,4"
+                            FontSize="12"
+                            Background="#D32F2F"
+                            Foreground="White"
+                            ToolTip.Tip="Delete this worktree"
+                            AutomationProperties.AutomationId="DeleteWorktreeButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="✕" />
+                            <TextBlock Text="Delete" />
+                        </StackPanel>
+                    </Button>
                     <!-- Merge button - shown when ready to merge -->
                     <Button Command="{Binding MergeCommand}"
                             Padding="10,4"

@@ -194,6 +194,7 @@ public class DockFactory : Factory
             document.OnRunRequested = mainVm.RunExecutableByWorktreeIdAsync;
             document.OnOpenInVSCodeRequested = mainVm.OpenInVSCodeByWorktreeIdAsync;
             document.OnResyncHistoryRequested = mainVm.ResyncSessionHistoryByWorktreeIdAsync;
+            document.OnDeleteRequested = mainVm.DeleteWorktreeByIdAsync;
             document.OnProcessingStateChanged = (worktreeId, isProcessing) =>
             {
                 var wt = mainVm.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
