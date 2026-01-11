@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using ClaudeCodeOrchestrator.App.Models;
+using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 using ClaudeCodeOrchestrator.Git.Services;
 
 namespace ClaudeCodeOrchestrator.App.Services;
@@ -302,5 +303,27 @@ public class RepositorySettingsService : IRepositorySettingsService
         {
             SettingsChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    public IReadOnlyList<SavedPrompt> GetSavedPrompts()
+    {
+        if (_settings?.SavedPrompts is null)
+            return Array.Empty<SavedPrompt>();
+
+        return _settings.SavedPrompts
+            .Select(p => new SavedPrompt { Title = p.Title, PromptText = p.PromptText })
+            .ToList();
+    }
+
+    public void SetSavedPrompts(IEnumerable<SavedPrompt> prompts)
+    {
+        if (_settings is null)
+            _settings = new RepositorySettings();
+
+        _settings.SavedPrompts = prompts
+            .Select(p => new SavedPromptSettings { Title = p.Title, PromptText = p.PromptText })
+            .ToList();
+
+        Save();
     }
 }

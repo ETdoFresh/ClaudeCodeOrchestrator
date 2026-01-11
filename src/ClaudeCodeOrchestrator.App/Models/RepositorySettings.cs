@@ -12,4 +12,25 @@ public class RepositorySettings
     /// - A file path to open with the OS default handler (e.g., "index.html")
     /// </summary>
     public string? Executable { get; set; }
+
+    /// <summary>
+    /// Saved custom prompts for the Jobs panel.
+    /// </summary>
+    public List<SavedPromptSettings>? SavedPrompts { get; set; }
+}
+
+/// <summary>
+/// A saved custom prompt for the Jobs panel.
+/// </summary>
+public class SavedPromptSettings
+{
+    /// <summary>
+    /// The title/name of the saved prompt.
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The prompt text.
+    /// </summary>
+    public string PromptText { get; set; } = string.Empty;
 }

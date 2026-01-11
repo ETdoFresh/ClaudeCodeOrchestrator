@@ -338,6 +338,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Update file browser
         Factory?.UpdateFileBrowser(path);
+
+        // Load saved prompts and wire up save callback
+        var savedPrompts = _repositorySettingsService.GetSavedPrompts();
+        Factory?.LoadSavedPrompts(savedPrompts);
+        Factory?.SetSavePromptsCallback(SaveJobPrompts);
+    }
+
+    private void SaveJobPrompts()
+    {
+        if (Factory is null) return;
+        var prompts = Factory.GetSavedPrompts();
+        _repositorySettingsService.SetSavedPrompts(prompts);
     }
 
     private async Task UpdateGitHubUrlAsync(string path)
@@ -1923,7 +1935,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // TODO: Implement the actual job execution with:
             // - config.MaxIterations
             // - config.SessionOption (ResumeSession vs NewSession)
-            // - config.AskToCommitWhenDone
+            // - config.CommitOnEndOfTurn
             // For now, just open a regular session with the generated prompt
             await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
         }

@@ -513,6 +513,42 @@ public class DockFactory : Factory
     }
 
     /// <summary>
+    /// Loads saved prompts into the Jobs panel.
+    /// </summary>
+    /// <param name="prompts">The saved prompts to load.</param>
+    public void LoadSavedPrompts(IEnumerable<SavedPrompt> prompts)
+    {
+        if (_jobsViewModel is null) return;
+
+        _jobsViewModel.SavedPrompts.Clear();
+        foreach (var prompt in prompts)
+        {
+            _jobsViewModel.SavedPrompts.Add(prompt);
+        }
+    }
+
+    /// <summary>
+    /// Gets the current saved prompts from the Jobs panel.
+    /// </summary>
+    public IEnumerable<SavedPrompt> GetSavedPrompts()
+    {
+        if (_jobsViewModel is null) return Enumerable.Empty<SavedPrompt>();
+        return _jobsViewModel.SavedPrompts.ToList();
+    }
+
+    /// <summary>
+    /// Sets the callback for when saved prompts should be persisted.
+    /// </summary>
+    /// <param name="callback">The callback to invoke when prompts are saved.</param>
+    public void SetSavePromptsCallback(Action callback)
+    {
+        if (_jobsViewModel is not null)
+        {
+            _jobsViewModel.OnSavePromptsRequested = callback;
+        }
+    }
+
+    /// <summary>
     /// Refreshes the file browser sources dropdown with the current worktrees.
     /// Call this after worktrees are updated.
     /// </summary>

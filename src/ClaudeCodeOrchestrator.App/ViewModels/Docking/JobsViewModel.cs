@@ -20,7 +20,8 @@ public enum PromptOption
 {
     ContinueUntilComplete,
     ContinueWithSummary,
-    ReviewAndDecide
+    ReviewAndDecide,
+    Other
 }
 
 /// <summary>
@@ -57,11 +58,25 @@ public partial class JobsViewModel : ToolViewModelBase
     private PromptOptionItem? _selectedPromptOption;
 
     [ObservableProperty]
-    private bool _askToCommitWhenDone = true;
+    private bool _commitOnEndOfTurn = true;
+
+    [ObservableProperty]
+    private string _customPromptTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _customPromptText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCustomPromptSelected;
 
     public ObservableCollection<WorktreeViewModel> Worktrees { get; } = new();
 
     public ObservableCollection<PromptOptionItem> PromptOptions { get; } = new();
+
+    public ObservableCollection<SavedPrompt> SavedPrompts { get; } = new();
+
+    [ObservableProperty]
+    private SavedPrompt? _selectedSavedPrompt;
 
     /// <summary>
     /// Callback to invoke when the user requests to start a job.
@@ -100,8 +115,29 @@ public partial class JobsViewModel : ToolViewModelBase
             Description = "Please review the initial task and decide what to work on next, then implement until complete",
             RequiresResumeSession = false
         });
+        PromptOptions.Add(new PromptOptionItem
+        {
+            Value = PromptOption.Other,
+            DisplayName = "Other...",
+            Description = "Specify a custom title and prompt",
+            RequiresResumeSession = false
+        });
 
         SelectedPromptOption = PromptOptions[2]; // Default to ReviewAndDecide
+    }
+
+    partial void OnSelectedPromptOptionChanged(PromptOptionItem? value)
+    {
+        IsCustomPromptSelected = value?.Value == PromptOption.Other;
+    }
+
+    partial void OnSelectedSavedPromptChanged(SavedPrompt? value)
+    {
+        if (value != null)
+        {
+            CustomPromptTitle = value.Title;
+            CustomPromptText = value.PromptText;
+        }
     }
 
     partial void OnSessionOptionIndexChanged(int value)
@@ -132,6 +168,46 @@ public partial class JobsViewModel : ToolViewModelBase
     }
 
     [RelayCommand]
+    private void SaveCustomPrompt()
+    {
+        if (string.IsNullOrWhiteSpace(CustomPromptTitle) || string.IsNullOrWhiteSpace(CustomPromptText))
+            return;
+
+        // Check if a prompt with this title already exists
+        var existing = SavedPrompts.FirstOrDefault(p => p.Title == CustomPromptTitle);
+        if (existing != null)
+        {
+            existing.PromptText = CustomPromptText;
+        }
+        else
+        {
+            var newPrompt = new SavedPrompt { Title = CustomPromptTitle, PromptText = CustomPromptText };
+            SavedPrompts.Add(newPrompt);
+            SelectedSavedPrompt = newPrompt;
+        }
+
+        OnSavePromptsRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void DeleteSavedPrompt()
+    {
+        if (SelectedSavedPrompt == null) return;
+
+        SavedPrompts.Remove(SelectedSavedPrompt);
+        SelectedSavedPrompt = null;
+        CustomPromptTitle = string.Empty;
+        CustomPromptText = string.Empty;
+
+        OnSavePromptsRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Callback to save prompts to persistent storage.
+    /// </summary>
+    public Action? OnSavePromptsRequested { get; set; }
+
+    [RelayCommand]
     private async Task StartJobAsync(WorktreeViewModel worktree)
     {
         if (OnStartJobRequested == null || SelectedPromptOption == null) return;
@@ -141,7 +217,9 @@ public partial class JobsViewModel : ToolViewModelBase
             MaxIterations = MaxIterations,
             SessionOption = SessionOption,
             PromptOption = SelectedPromptOption.Value,
-            AskToCommitWhenDone = AskToCommitWhenDone
+            CommitOnEndOfTurn = CommitOnEndOfTurn,
+            CustomPromptTitle = SelectedPromptOption.Value == PromptOption.Other ? CustomPromptTitle : null,
+            CustomPromptText = SelectedPromptOption.Value == PromptOption.Other ? CustomPromptText : null
         };
 
         await OnStartJobRequested(worktree, config);
@@ -156,7 +234,9 @@ public class JobConfiguration
     public int MaxIterations { get; init; } = 20;
     public SessionOption SessionOption { get; init; } = SessionOption.ResumeSession;
     public PromptOption PromptOption { get; init; } = PromptOption.ReviewAndDecide;
-    public bool AskToCommitWhenDone { get; init; } = true;
+    public bool CommitOnEndOfTurn { get; init; } = true;
+    public string? CustomPromptTitle { get; init; }
+    public string? CustomPromptText { get; init; }
 
     /// <summary>
     /// Generates the prompt text based on configuration and worktree context.
@@ -172,7 +252,17 @@ public class JobConfiguration
             PromptOption.ReviewAndDecide => string.IsNullOrEmpty(initialPrompt)
                 ? "Please review the current state and decide what task to work on next, then implement until complete."
                 : $"Please review the following task and decide what to work on next, then implement until complete:\n\n{initialPrompt}",
+            PromptOption.Other => CustomPromptText ?? "Please continue.",
             _ => "Please continue."
         };
     }
+}
+
+/// <summary>
+/// Represents a saved custom prompt.
+/// </summary>
+public class SavedPrompt
+{
+    public required string Title { get; set; }
+    public required string PromptText { get; set; }
 }

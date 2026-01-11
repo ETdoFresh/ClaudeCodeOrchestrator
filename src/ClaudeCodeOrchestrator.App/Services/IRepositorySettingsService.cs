@@ -1,4 +1,5 @@
 using ClaudeCodeOrchestrator.App.Models;
+using ClaudeCodeOrchestrator.App.ViewModels.Docking;
 
 namespace ClaudeCodeOrchestrator.App.Services;
 
@@ -67,4 +68,15 @@ public interface IRepositorySettingsService
     /// <param name="workingDirectory">The directory to open in VS Code.</param>
     /// <returns>True if VS Code was launched successfully.</returns>
     Task<bool> OpenInVSCodeAsync(string workingDirectory);
+
+    /// <summary>
+    /// Gets the saved prompts for the Jobs panel.
+    /// </summary>
+    IReadOnlyList<SavedPrompt> GetSavedPrompts();
+
+    /// <summary>
+    /// Saves the prompts for the Jobs panel.
+    /// </summary>
+    /// <param name="prompts">The prompts to save.</param>
+    void SetSavedPrompts(IEnumerable<SavedPrompt> prompts);
 }
