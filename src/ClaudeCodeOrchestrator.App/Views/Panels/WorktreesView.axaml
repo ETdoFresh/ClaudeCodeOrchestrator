@@ -111,6 +111,15 @@
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                    <Button Command="{Binding OpenInVSCodeCommand}"
+                                            Content="{}{}"
+                                            Padding="4,2"
+                                            FontSize="9"
+                                            FontWeight="Bold"
+                                            ToolTip.Tip="Open in VS Code"
+                                            Foreground="#007ACC"
+                                            IsVisible="{Binding CanOpenInVSCode}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='OpenInVSCode_{0}'}" />
                                     <Button Command="{Binding RunCommand}"
                                             Content="▶"
                                             Padding="4,2"

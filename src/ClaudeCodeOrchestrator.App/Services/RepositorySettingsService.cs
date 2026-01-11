@@ -16,15 +16,20 @@ public class RepositorySettingsService : IRepositorySettingsService
     private RepositorySettings? _settings;
     private string? _repositoryPath;
     private string? _settingsFilePath;
+    private bool? _isVSCodeAvailable;
 
     public RepositorySettingsService(IGitService gitService)
     {
         _gitService = gitService;
+        // Detect VS Code availability on startup
+        _ = DetectVSCodeAsync();
     }
 
     public RepositorySettings? Settings => _settings;
 
     public bool HasExecutable => !string.IsNullOrWhiteSpace(_settings?.Executable);
+
+    public bool IsVSCodeAvailable => _isVSCodeAvailable ?? false;
 
     public string? RepositoryPath => _repositoryPath;
 
@@ -234,5 +239,60 @@ public class RepositorySettingsService : IRepositorySettingsService
         _repositoryPath = null;
         _settingsFilePath = null;
         SettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public Task<bool> OpenInVSCodeAsync(string workingDirectory)
+    {
+        if (!IsVSCodeAvailable)
+            return Task.FromResult(false);
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "code",
+                Arguments = $"\"{workingDirectory}\"",
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            Process.Start(psi);
+            return Task.FromResult(true);
+        }
+        catch
+        {
+            return Task.FromResult(false);
+        }
+    }
+
+    private async Task DetectVSCodeAsync()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "code",
+                Arguments = "--version",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            if (process != null)
+            {
+                await process.WaitForExitAsync();
+                _isVSCodeAvailable = process.ExitCode == 0;
+            }
+            else
+            {
+                _isVSCodeAvailable = false;
+            }
+        }
+        catch
+        {
+            _isVSCodeAvailable = false;
+        }
     }
 }

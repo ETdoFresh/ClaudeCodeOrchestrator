@@ -55,4 +55,16 @@ public interface IRepositorySettingsService
     /// Clears the current settings (called when closing a repository).
     /// </summary>
     void Clear();
+
+    /// <summary>
+    /// Gets whether VS Code is available on the system.
+    /// </summary>
+    bool IsVSCodeAvailable { get; }
+
+    /// <summary>
+    /// Opens VS Code in the specified working directory.
+    /// </summary>
+    /// <param name="workingDirectory">The directory to open in VS Code.</param>
+    /// <returns>True if VS Code was launched successfully.</returns>
+    Task<bool> OpenInVSCodeAsync(string workingDirectory);
 }

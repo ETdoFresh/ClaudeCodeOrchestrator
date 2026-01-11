@@ -777,7 +777,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         vm.OnMergeRequested = OnMergeRequestedAsync;
         vm.OnDeleteRequested = OnDeleteRequestedAsync;
         vm.OnRunRequested = OnRunRequestedAsync;
+        vm.OnOpenInVSCodeRequested = OnOpenInVSCodeRequestedAsync;
         vm.CanRun = _repositorySettingsService.HasExecutable;
+        vm.CanOpenInVSCode = _repositorySettingsService.IsVSCodeAvailable;
     }
 
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
@@ -1085,6 +1087,26 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task OnOpenInVSCodeRequestedAsync(WorktreeViewModel worktree)
+    {
+        if (!_repositorySettingsService.IsVSCodeAvailable) return;
+
+        try
+        {
+            var success = await _repositorySettingsService.OpenInVSCodeAsync(worktree.Path);
+            if (!success)
+            {
+                await _dialogService.ShowErrorAsync("Open in VS Code Failed",
+                    "Failed to open VS Code. Make sure the 'code' command is available in your PATH.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Open in VS Code Failed",
+                $"Failed to open VS Code: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Runs the configured executable for a worktree by its ID. Called from SessionDocumentViewModel.
     /// </summary>
@@ -1101,11 +1123,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         _dispatcher.Post(() =>
         {
-            // Update CanRun on all worktrees
+            // Update CanRun and CanOpenInVSCode on all worktrees
             var canRun = _repositorySettingsService.HasExecutable;
+            var canOpenInVSCode = _repositorySettingsService.IsVSCodeAvailable;
             foreach (var worktree in Worktrees)
             {
                 worktree.CanRun = canRun;
+                worktree.CanOpenInVSCode = canOpenInVSCode;
             }
 
             // Update CanRun on all open session documents

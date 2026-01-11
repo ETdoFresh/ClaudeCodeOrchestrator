@@ -147,10 +147,21 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     public Func<WorktreeViewModel, Task>? OnRunRequested { get; set; }
 
     /// <summary>
+    /// Callback for opening VS Code in this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnOpenInVSCodeRequested { get; set; }
+
+    /// <summary>
     /// Whether the run button should be visible (executable is configured).
     /// </summary>
     [ObservableProperty]
     private bool _canRun;
+
+    /// <summary>
+    /// Whether the VS Code button should be visible (VS Code is available).
+    /// </summary>
+    [ObservableProperty]
+    private bool _canOpenInVSCode;
 
     public string StatusText => DisplayStatus.Text;
 
@@ -219,6 +230,13 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         if (OnRunRequested != null)
             await OnRunRequested(this);
+    }
+
+    [RelayCommand]
+    private async Task OpenInVSCodeAsync()
+    {
+        if (OnOpenInVSCodeRequested != null)
+            await OnOpenInVSCodeRequested(this);
     }
 
     /// <summary>
