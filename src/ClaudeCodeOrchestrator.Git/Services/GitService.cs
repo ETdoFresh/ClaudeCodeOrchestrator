@@ -44,12 +44,12 @@ public sealed class GitService : IGitService
     {
         var repoInfo = await Task.Run(() =>
         {
-            // Initialize a new repository with 'main' as the default branch
+            // Initialize a new repository
             Repository.Init(path);
 
             using var repo = new Repository(path);
 
-            // Create an initial commit to establish the main branch
+            // Create an initial commit to establish the branch
             var signature = repo.Config.BuildSignature(DateTimeOffset.Now);
 
             // If no user is configured, use default values
@@ -57,8 +57,15 @@ public sealed class GitService : IGitService
 
             repo.Commit("Initial commit", signature, signature, new CommitOptions { AllowEmptyCommit = true });
 
-            var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+            // Rename the default branch to 'main' if it's not already
             var currentBranch = repo.Head.FriendlyName;
+            if (currentBranch != "main")
+            {
+                var mainBranch = repo.Branches.Rename(repo.Head, "main");
+                currentBranch = mainBranch.FriendlyName;
+            }
+
+            var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
 
             return new RepositoryInfo
             {
