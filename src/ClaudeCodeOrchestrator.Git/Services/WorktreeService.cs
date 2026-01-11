@@ -138,17 +138,167 @@ public sealed class WorktreeService : IWorktreeService
         var worktree = await GetWorktreeAsync(repoPath, worktreeId, cancellationToken)
             ?? throw new InvalidOperationException($"Worktree {worktreeId} not found");
 
+        var worktreePath = worktree.Path;
+
+        // First, try to kill any processes that might be locking files in the worktree
+        await KillProcessesInDirectoryAsync(worktreePath);
+
+        // Small delay to let processes terminate
+        await Task.Delay(200, cancellationToken);
+
         // Remove worktree using git command
-        await RemoveWorktreeViaGitAsync(repoPath, worktree.Path, force, cancellationToken);
+        await RemoveWorktreeViaGitAsync(repoPath, worktreePath, force, cancellationToken);
 
         // Delete the directory if it still exists, with retry logic for Windows file locking
-        if (Directory.Exists(worktree.Path))
+        if (Directory.Exists(worktreePath))
         {
-            await DeleteDirectoryWithRetryAsync(worktree.Path, cancellationToken);
+            await DeleteDirectoryWithRetryAsync(worktreePath, cancellationToken);
+        }
+
+        // If directory still exists after all attempts, try one more time after killing processes again
+        if (Directory.Exists(worktreePath))
+        {
+            await KillProcessesInDirectoryAsync(worktreePath);
+            await Task.Delay(500, cancellationToken);
+            await ForceDeleteDirectoryAsync(worktreePath);
         }
 
         // Optionally delete the branch
         // For now, we'll keep the branch in case user wants to reference it
+    }
+
+    /// <summary>
+    /// Kills any processes that have files open in the specified directory.
+    /// </summary>
+    private static async Task KillProcessesInDirectoryAsync(string directoryPath)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        try
+        {
+            // Use handle.exe or PowerShell to find processes with handles in this directory
+            // Fallback: just try to find common culprits like git, node, etc.
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = $"-NoProfile -Command \"Get-Process | Where-Object {{ $_.Path -like '{directoryPath.Replace("\\", "\\\\")}*' }} | Stop-Process -Force -ErrorAction SilentlyContinue\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process != null)
+            {
+                await process.WaitForExitAsync();
+            }
+        }
+        catch
+        {
+            // Ignore errors - this is best effort
+        }
+
+        // Also try to find processes with working directory in the path
+        try
+        {
+            var normalizedPath = Path.GetFullPath(directoryPath).TrimEnd(Path.DirectorySeparatorChar).ToLowerInvariant();
+            foreach (var proc in System.Diagnostics.Process.GetProcesses())
+            {
+                try
+                {
+                    // Check if process has main module in the directory
+                    if (proc.MainModule?.FileName?.ToLowerInvariant().StartsWith(normalizedPath) == true)
+                    {
+                        proc.Kill();
+                    }
+                }
+                catch
+                {
+                    // Ignore - we can't access some processes
+                }
+                finally
+                {
+                    proc.Dispose();
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors
+        }
+    }
+
+    /// <summary>
+    /// Force deletes a directory using cmd /c rd command which can sometimes succeed where Directory.Delete fails.
+    /// </summary>
+    private static async Task ForceDeleteDirectoryAsync(string path)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        try
+        {
+            // Clear read-only attributes first
+            ClearReadOnlyAttributes(path);
+
+            // Try using cmd /c rd /s /q which is more aggressive on Windows
+            if (OperatingSystem.IsWindows())
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c rd /s /q \"{path}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync();
+                }
+            }
+            else
+            {
+                // On Unix, use rm -rf
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "rm",
+                    Arguments = $"-rf \"{path}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync();
+                }
+            }
+        }
+        catch
+        {
+            // Ignore - this was a last resort
+        }
+
+        // Final attempt with .NET
+        if (Directory.Exists(path))
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+                // Give up silently
+            }
+        }
     }
 
     /// <summary>

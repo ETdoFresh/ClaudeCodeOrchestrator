@@ -931,6 +931,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
 
+        // End the Claude session FIRST to release file handles on the worktree directory
+        if (!string.IsNullOrEmpty(worktree.ActiveSessionId))
+        {
+            try
+            {
+                await _sessionService.EndSessionAsync(worktree.ActiveSessionId);
+                await Task.Delay(500); // Let process fully terminate
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to end session {worktree.ActiveSessionId}: {ex.Message}");
+            }
+        }
+
         // Close any open session documents for this worktree
         Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
 
@@ -1086,21 +1100,48 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 if (!confirmed) return;
             }
 
+            // End the Claude session FIRST to release file handles on the worktree directory
+            // This kills the claude.exe process that has its working directory set to the worktree
+            if (!string.IsNullOrEmpty(worktree.ActiveSessionId))
+            {
+                try
+                {
+                    await _sessionService.EndSessionAsync(worktree.ActiveSessionId);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to end session {worktree.ActiveSessionId}: {ex.Message}");
+                }
+            }
+
             // Close any open session documents for this worktree
             Factory?.RemoveSessionDocumentsByWorktree(worktree.Id);
 
             // Close any open file documents from this worktree's path
             Factory?.RemoveFileDocumentsByWorktreePath(worktree.Path);
 
-            await _worktreeService.DeleteWorktreeAsync(
-                CurrentRepositoryPath,
-                worktree.Id,
-                force: true);
+            // Remove from UI IMMEDIATELY - don't wait for deletion to complete
+            var worktreePath = worktree.Path;
+            var worktreeId = worktree.Id;
+            var repoPath = CurrentRepositoryPath;
 
             Worktrees.Remove(worktree);
-
-            // Sync to dock panel
             Factory?.RemoveWorktree(worktree);
+
+            // Run deletion in background - fire and forget with best effort
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Small delay to let the process fully terminate
+                    await Task.Delay(500);
+                    await _worktreeService.DeleteWorktreeAsync(repoPath, worktreeId, force: true);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Background worktree deletion failed: {ex.Message}");
+                }
+            });
         }
         catch (Exception ex)
         {
