@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ClaudeCodeOrchestrator.App.ViewModels.Docking"
+             xmlns:panels="using:ClaudeCodeOrchestrator.App.Views.Panels"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="600"
+             x:Class="ClaudeCodeOrchestrator.App.Views.Panels.LeftPanelView"
+             x:DataType="vm:LeftPanelViewModel"
+             AutomationProperties.AutomationId="LeftPanel"
+             VerticalAlignment="Stretch"
+             HorizontalAlignment="Stretch"
+             Background="#1E1E1E">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Dropdown selector at top -->
+        <ComboBox Grid.Row="0"
+                  ItemsSource="{Binding PanelOptions}"
+                  SelectedItem="{Binding SelectedPanel}"
+                  Margin="8,8,8,4"
+                  HorizontalAlignment="Stretch"
+                  AutomationProperties.AutomationId="PanelSelector">
+            <ComboBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:PanelOption}">
+                    <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <!-- Content area - shows selected panel -->
+        <ContentControl Grid.Row="1"
+                        Content="{Binding SelectedPanel.ViewModel}"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch">
+            <ContentControl.DataTemplates>
+                <DataTemplate DataType="{x:Type vm:WorktreesViewModel}">
+                    <panels:WorktreesView />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:FileBrowserViewModel}">
+                    <panels:FileBrowserView />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:DiffBrowserViewModel}">
+                    <panels:DiffBrowserView />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                    <panels:SettingsView />
+                </DataTemplate>
+            </ContentControl.DataTemplates>
+        </ContentControl>
+    </Grid>
+</UserControl>

@@ -51,6 +51,11 @@
         <DataTemplate DataType="{x:Type dockVm:SettingsViewModel}">
             <panels:SettingsView />
         </DataTemplate>
+
+        <!-- Left Panel (dropdown navigation) -->
+        <DataTemplate DataType="{x:Type dockVm:LeftPanelViewModel}">
+            <panels:LeftPanelView />
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Grid RowDefinitions="Auto,*">

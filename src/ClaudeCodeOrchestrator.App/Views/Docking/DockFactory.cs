@@ -49,6 +49,7 @@ public class DockFactory : Factory
     private readonly ISettingsService _settingsService;
     private IDocumentDock? _documentDock;
     private IToolDock? _leftDock;
+    private LeftPanelViewModel? _leftPanelViewModel;
     private FileBrowserViewModel? _fileBrowser;
     private DiffBrowserViewModel? _diffBrowser;
     private WorktreesViewModel? _worktreesViewModel;
@@ -116,13 +117,17 @@ public class DockFactory : Factory
                 mainVm.LoadDiffEntriesAsync(localPath, worktreePath);
         }
 
-        // Left side panel (worktrees as first tab, file browser as second, diff as third, settings as fourth)
+        // Create left panel with dropdown navigation
+        _leftPanelViewModel = new LeftPanelViewModel();
+        _leftPanelViewModel.Initialize(_worktreesViewModel, _fileBrowser, _diffBrowser, _settingsViewModel);
+
+        // Left side panel using ToolDock to hold our custom LeftPanelViewModel
         _leftDock = new ToolDock
         {
             Id = "LeftDock",
-            Title = "Explorer",
-            ActiveDockable = _worktreesViewModel,
-            VisibleDockables = CreateList<IDockable>(_worktreesViewModel, _fileBrowser, _diffBrowser, _settingsViewModel),
+            Title = "Left Panel",
+            ActiveDockable = _leftPanelViewModel,
+            VisibleDockables = CreateList<IDockable>(_leftPanelViewModel),
             Alignment = Alignment.Left,
             GripMode = GripMode.Hidden
         };
@@ -754,30 +759,30 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Highlights a file in the file browser by selecting it and switches to the Explorer tab.
+    /// Highlights a file in the file browser by selecting it and switches to the Explorer panel.
     /// </summary>
     private void HighlightFileInExplorer(string filePath)
     {
-        // Switch to Explorer tab in the left panel
-        if (_leftDock != null && _fileBrowser != null)
+        // Switch to Explorer panel in the left panel dropdown
+        if (_leftPanelViewModel != null && _fileBrowser != null)
         {
-            _leftDock.ActiveDockable = _fileBrowser;
+            _leftPanelViewModel.SelectPanel(_fileBrowser);
         }
 
         _fileBrowser?.SelectFileByPath(filePath, suppressCallback: true);
     }
 
     /// <summary>
-    /// Highlights a worktree in the worktrees list by selecting it and switches to the Worktrees tab.
+    /// Highlights a worktree in the worktrees list by selecting it and switches to the Worktrees panel.
     /// </summary>
     private void HighlightWorktreeInList(string worktreeId)
     {
         if (_worktreesViewModel is null || string.IsNullOrEmpty(worktreeId)) return;
 
-        // Switch to Worktrees tab in the left panel
-        if (_leftDock != null)
+        // Switch to Worktrees panel in the left panel dropdown
+        if (_leftPanelViewModel != null)
         {
-            _leftDock.ActiveDockable = _worktreesViewModel;
+            _leftPanelViewModel.SelectPanel(_worktreesViewModel);
         }
 
         var worktree = _worktreesViewModel.Worktrees.FirstOrDefault(w => w.Id == worktreeId);
@@ -827,6 +832,7 @@ public class DockFactory : Factory
         {
             ["Root"] = () => _context,
             ["LeftDock"] = () => _context,
+            ["LeftPanel"] = () => _context,
             ["DocumentDock"] = () => _context,
             ["RootProportional"] = () => _context,
             ["FileBrowser"] = () => _context,
