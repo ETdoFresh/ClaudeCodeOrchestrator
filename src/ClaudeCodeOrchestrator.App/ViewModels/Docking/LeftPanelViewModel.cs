@@ -23,6 +23,7 @@ public partial class LeftPanelViewModel : ToolViewModelBase
     public ObservableCollection<PanelOption> PanelOptions { get; } = new();
 
     public WorktreesViewModel? WorktreesViewModel { get; private set; }
+    public JobsViewModel? JobsViewModel { get; private set; }
     public FileBrowserViewModel? FileBrowserViewModel { get; private set; }
     public DiffBrowserViewModel? DiffBrowserViewModel { get; private set; }
     public SettingsViewModel? SettingsViewModel { get; private set; }
@@ -38,17 +39,20 @@ public partial class LeftPanelViewModel : ToolViewModelBase
     /// </summary>
     public void Initialize(
         WorktreesViewModel worktreesViewModel,
+        JobsViewModel jobsViewModel,
         FileBrowserViewModel fileBrowserViewModel,
         DiffBrowserViewModel diffBrowserViewModel,
         SettingsViewModel settingsViewModel)
     {
         WorktreesViewModel = worktreesViewModel;
+        JobsViewModel = jobsViewModel;
         FileBrowserViewModel = fileBrowserViewModel;
         DiffBrowserViewModel = diffBrowserViewModel;
         SettingsViewModel = settingsViewModel;
 
         PanelOptions.Clear();
         PanelOptions.Add(new PanelOption { Name = "Worktrees", ViewModel = worktreesViewModel });
+        PanelOptions.Add(new PanelOption { Name = "Jobs", ViewModel = jobsViewModel });
         PanelOptions.Add(new PanelOption { Name = "Explorer", ViewModel = fileBrowserViewModel });
         PanelOptions.Add(new PanelOption { Name = "Diff", ViewModel = diffBrowserViewModel });
         PanelOptions.Add(new PanelOption { Name = "Settings", ViewModel = settingsViewModel });

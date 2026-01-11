@@ -53,6 +53,7 @@ public class DockFactory : Factory
     private FileBrowserViewModel? _fileBrowser;
     private DiffBrowserViewModel? _diffBrowser;
     private WorktreesViewModel? _worktreesViewModel;
+    private JobsViewModel? _jobsViewModel;
     private SettingsViewModel? _settingsViewModel;
     private bool _isAddingDocument;
     private IRootDock? _rootDock;
@@ -98,6 +99,7 @@ public class DockFactory : Factory
         // Create tool view models
         _worktreesViewModel = new WorktreesViewModel();
         _worktreesViewModel.SetMainRepoUnpushedCommits(_settingsService.CachedPushBadgeCount);
+        _jobsViewModel = new JobsViewModel();
         _fileBrowser = new FileBrowserViewModel();
         _diffBrowser = new DiffBrowserViewModel();
         _settingsViewModel = new SettingsViewModel(_settingsService);
@@ -110,6 +112,8 @@ public class DockFactory : Factory
             _worktreesViewModel.OnPushRequested = () => mainVm.PushAllBranchesCommand.ExecuteAsync(null);
             _worktreesViewModel.OnPullRequested = () => mainVm.PullCommand.ExecuteAsync(null);
             _worktreesViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
+            _jobsViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
+            _jobsViewModel.OnStartJobRequested = (worktree, config) => mainVm.StartJobAsync(worktree, config);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
             _diffBrowser.OnDiffFileSelected = (localPath, worktreePath, relativePath, isPreview) =>
                 mainVm.OpenDiffDocumentAsync(localPath, worktreePath, relativePath, isPreview);
@@ -119,7 +123,7 @@ public class DockFactory : Factory
 
         // Create left panel with dropdown navigation
         _leftPanelViewModel = new LeftPanelViewModel();
-        _leftPanelViewModel.Initialize(_worktreesViewModel, _fileBrowser, _diffBrowser, _settingsViewModel);
+        _leftPanelViewModel.Initialize(_worktreesViewModel, _jobsViewModel, _fileBrowser, _diffBrowser, _settingsViewModel);
 
         // Left side panel using ToolDock to hold our custom LeftPanelViewModel
         _leftDock = new ToolDock
@@ -546,10 +550,22 @@ public class DockFactory : Factory
     {
         if (_worktreesViewModel is null) return;
 
+        var worktreeList = worktrees.ToList();
+
         _worktreesViewModel.Worktrees.Clear();
-        foreach (var wt in worktrees)
+        foreach (var wt in worktreeList)
         {
             _worktreesViewModel.Worktrees.Add(wt);
+        }
+
+        // Also update Jobs panel with the same worktrees
+        if (_jobsViewModel != null)
+        {
+            _jobsViewModel.Worktrees.Clear();
+            foreach (var wt in worktreeList)
+            {
+                _jobsViewModel.Worktrees.Add(wt);
+            }
         }
 
         // Update the badge with main repo count
@@ -574,6 +590,7 @@ public class DockFactory : Factory
     public void AddWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Insert(0, worktree);
+        _jobsViewModel?.Worktrees.Insert(0, worktree);
         RefreshFileBrowserSources();
     }
 
@@ -583,6 +600,7 @@ public class DockFactory : Factory
     public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
     {
         _worktreesViewModel?.Worktrees.Remove(worktree);
+        _jobsViewModel?.Worktrees.Remove(worktree);
         RefreshFileBrowserSources();
     }
 
@@ -1588,5 +1606,8 @@ public class DockFactory : Factory
 
         _worktreesViewModel.Worktrees.Clear();
         _worktreesViewModel.SetMainRepoUnpushedCommits(0);
+
+        // Also clear Jobs panel
+        _jobsViewModel?.Worktrees.Clear();
     }
 }

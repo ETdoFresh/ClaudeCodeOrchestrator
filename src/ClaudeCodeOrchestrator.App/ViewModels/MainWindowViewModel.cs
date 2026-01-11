@@ -1896,6 +1896,43 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             _factory.SessionDocumentClosed -= OnSessionDocumentClosed;
         }
     }
+
+    /// <summary>
+    /// Starts a long-running job for a worktree with the specified configuration.
+    /// </summary>
+    /// <param name="worktree">The worktree to run the job on.</param>
+    /// <param name="config">The job configuration.</param>
+    public async Task StartJobAsync(WorktreeViewModel worktree, Docking.JobConfiguration config)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            // Get the WorktreeInfo
+            var worktreeInfo = await _worktreeService.GetWorktreeAsync(
+                CurrentRepositoryPath, worktree.Id);
+
+            if (worktreeInfo is null) return;
+
+            // Generate the prompt based on configuration
+            var prompt = config.GeneratePrompt(
+                worktreeInfo.TaskDescription,
+                null // TODO: Get previous conversation summary if available
+            );
+
+            // TODO: Implement the actual job execution with:
+            // - config.MaxIterations
+            // - config.SessionOption (ResumeSession vs NewSession)
+            // - config.AskToCommitWhenDone
+            // For now, just open a regular session with the generated prompt
+            await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Job Start Failed",
+                $"Failed to start job: {ex.Message}");
+        }
+    }
 }
 
 /// <summary>

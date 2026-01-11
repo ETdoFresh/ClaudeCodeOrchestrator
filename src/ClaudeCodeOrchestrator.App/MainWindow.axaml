@@ -56,6 +56,11 @@
         <DataTemplate DataType="{x:Type dockVm:LeftPanelViewModel}">
             <panels:LeftPanelView />
         </DataTemplate>
+
+        <!-- Jobs -->
+        <DataTemplate DataType="{x:Type dockVm:JobsViewModel}">
+            <panels:JobsView />
+        </DataTemplate>
     </Window.DataTemplates>
 
     <Grid RowDefinitions="Auto,*">
