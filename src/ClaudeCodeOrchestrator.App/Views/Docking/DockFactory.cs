@@ -226,10 +226,11 @@ public class DockFactory : Factory
 
             _documentDock.VisibleDockables ??= CreateList<IDockable>();
 
-            // Check if this session is already open (non-preview)
+            // Check if this worktree already has a document open (by WorktreeId, not just SessionId)
+            // This prevents duplicate tabs for the same worktree
             var existingDoc = _documentDock.VisibleDockables
                 .OfType<SessionDocumentViewModel>()
-                .FirstOrDefault(d => d.SessionId == document.SessionId && !d.IsPreview);
+                .FirstOrDefault(d => d.WorktreeId == document.WorktreeId && !d.IsPreview);
 
             if (existingDoc != null)
             {
@@ -239,6 +240,23 @@ public class DockFactory : Factory
                 // Just activate the existing document
                 _documentDock.ActiveDockable = existingDoc;
                 return;
+            }
+
+            // Also check if there's a preview for the same worktree and we're opening non-preview
+            // In this case, promote the preview instead of creating a duplicate
+            if (!isPreview)
+            {
+                var existingPreview = _documentDock.VisibleDockables
+                    .OfType<SessionDocumentViewModel>()
+                    .FirstOrDefault(d => d.WorktreeId == document.WorktreeId && d.IsPreview);
+
+                if (existingPreview != null)
+                {
+                    // Promote the preview to persistent
+                    existingPreview.IsPreview = false;
+                    _documentDock.ActiveDockable = existingPreview;
+                    return;
+                }
             }
 
             if (isPreview)

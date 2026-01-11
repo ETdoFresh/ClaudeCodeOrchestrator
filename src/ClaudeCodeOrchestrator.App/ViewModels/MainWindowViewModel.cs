@@ -186,8 +186,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             await OpenRepositoryAtPathAsync(lastPath);
 
-            // Reconnect to worktrees that had active sessions when app closed
-            await ReconnectActiveSessionsAsync();
+            // Note: Previously reconnected active sessions here, but this was removed
+            // to prevent unexpected tabs opening on startup. Users can manually click
+            // on worktrees to open their sessions.
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("No Git repository found"))
         {
