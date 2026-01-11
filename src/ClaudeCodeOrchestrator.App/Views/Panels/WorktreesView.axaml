@@ -140,10 +140,10 @@
                                             Padding="4,2" FontSize="10" ToolTip.Tip="Delete worktree"
                                             Foreground="#F44336"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='DeleteWorktree_{0}'}" />
-                                    <!-- Active session spinner (small) -->
+                                    <!-- Active session spinner (small) - only show when actively processing -->
                                     <Panel Classes="arc-spinner-small"
-                                           IsVisible="{Binding HasActiveSession}"
-                                           ToolTip.Tip="Session is active">
+                                           IsVisible="{Binding IsProcessing}"
+                                           ToolTip.Tip="Session is processing">
                                         <Ellipse Stroke="#007ACC"
                                                  StrokeThickness="1.5" />
                                     </Panel>
