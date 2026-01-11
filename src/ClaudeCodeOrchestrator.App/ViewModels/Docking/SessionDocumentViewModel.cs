@@ -40,6 +40,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     public Func<Task>? OnSessionCompleted { get; set; }
 
     /// <summary>
+    /// Callback for job iteration handling when session completes.
+    /// Passes (worktreeId, finalState).
+    /// </summary>
+    public Func<string, Core.Models.SessionState, Task>? OnJobIterationCompleted { get; set; }
+
+    /// <summary>
     /// Callback when processing state changes, passing (worktreeId, isProcessing).
     /// </summary>
     public Action<string, bool>? OnProcessingStateChanged { get; set; }
@@ -358,6 +364,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             await OnSessionCompleted();
         }
+
+        // Handle job iteration if this is part of a job
+        if (OnJobIterationCompleted != null)
+        {
+            await OnJobIterationCompleted(WorktreeId, State);
+        }
     }
 
     private void OnSessionStateChanged(object? sender, SessionStateChangedEventArgs e)
@@ -376,6 +388,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
                 if (OnSessionCompleted != null)
                 {
                     await OnSessionCompleted();
+                }
+
+                // Handle job iteration if this is part of a job
+                if (OnJobIterationCompleted != null)
+                {
+                    await OnJobIterationCompleted(WorktreeId, e.Session.State);
                 }
             }
         });

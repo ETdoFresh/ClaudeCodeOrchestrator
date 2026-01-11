@@ -154,10 +154,26 @@
                           Content="Commit on End of Turn"
                           Foreground="#CCCCCC"
                           AutomationProperties.AutomationId="CommitOnEndOfTurnCheckbox" />
+
+                <!-- New Job Button -->
+                <Button Command="{Binding CreateNewJobCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="8,6"
+                        Margin="0,4,0,0"
+                        Background="#4EC9B0"
+                        Foreground="White"
+                        FontWeight="SemiBold"
+                        AutomationProperties.AutomationId="NewJobButton">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="+" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="New Job" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 
-        <!-- Worktree List -->
+        <!-- Job Worktrees List -->
         <ListBox Grid.Row="1"
                  x:Name="WorktreesList"
                  ItemsSource="{Binding Worktrees}"

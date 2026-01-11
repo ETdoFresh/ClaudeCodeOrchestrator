@@ -114,6 +114,7 @@ public class DockFactory : Factory
             _worktreesViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
             _jobsViewModel.OnWorktreeSelected = (worktree, isPreview) => mainVm.OpenWorktreeSessionAsync(worktree, isPreview);
             _jobsViewModel.OnStartJobRequested = (worktree, config) => mainVm.StartJobAsync(worktree, config);
+            _jobsViewModel.OnCreateNewJobRequested = config => mainVm.CreateNewJobAsync(config);
             _fileBrowser.OnFileSelected = (path, isPreview) => mainVm.OpenFileDocumentAsync(path, isPreview);
             _diffBrowser.OnDiffFileSelected = (localPath, worktreePath, relativePath, isPreview) =>
                 mainVm.OpenDiffDocumentAsync(localPath, worktreePath, relativePath, isPreview);
@@ -194,6 +195,7 @@ public class DockFactory : Factory
         if (_context is ViewModels.MainWindowViewModel mainVm)
         {
             document.OnSessionCompleted = () => mainVm.RefreshWorktreesAsync();
+            document.OnJobIterationCompleted = (worktreeId, state) => mainVm.HandleJobIterationAsync(worktreeId, state);
             document.OnMergeRequested = mainVm.MergeWorktreeByIdAsync;
             document.OnRunRequested = mainVm.RunExecutableByWorktreeIdAsync;
             document.OnOpenInVSCodeRequested = mainVm.OpenInVSCodeByWorktreeIdAsync;
@@ -588,17 +590,21 @@ public class DockFactory : Factory
 
         var worktreeList = worktrees.ToList();
 
+        // Filter worktrees: jobs/ prefix goes to Jobs panel only, others go to Worktrees panel
+        var regularWorktrees = worktreeList.Where(w => !w.BranchName.StartsWith("jobs/")).ToList();
+        var jobWorktrees = worktreeList.Where(w => w.BranchName.StartsWith("jobs/")).ToList();
+
         _worktreesViewModel.Worktrees.Clear();
-        foreach (var wt in worktreeList)
+        foreach (var wt in regularWorktrees)
         {
             _worktreesViewModel.Worktrees.Add(wt);
         }
 
-        // Also update Jobs panel with the same worktrees
+        // Update Jobs panel with only job worktrees
         if (_jobsViewModel != null)
         {
             _jobsViewModel.Worktrees.Clear();
-            foreach (var wt in worktreeList)
+            foreach (var wt in jobWorktrees)
             {
                 _jobsViewModel.Worktrees.Add(wt);
             }
@@ -621,22 +627,36 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Adds a worktree to the panel.
+    /// Adds a worktree to the appropriate panel based on branch name.
     /// </summary>
     public void AddWorktree(ViewModels.WorktreeViewModel worktree)
     {
-        _worktreesViewModel?.Worktrees.Insert(0, worktree);
-        _jobsViewModel?.Worktrees.Insert(0, worktree);
+        // Add to the appropriate panel based on branch name
+        if (worktree.BranchName.StartsWith("jobs/"))
+        {
+            _jobsViewModel?.Worktrees.Insert(0, worktree);
+        }
+        else
+        {
+            _worktreesViewModel?.Worktrees.Insert(0, worktree);
+        }
         RefreshFileBrowserSources();
     }
 
     /// <summary>
-    /// Removes a worktree from the panel.
+    /// Removes a worktree from the appropriate panel.
     /// </summary>
     public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
     {
-        _worktreesViewModel?.Worktrees.Remove(worktree);
-        _jobsViewModel?.Worktrees.Remove(worktree);
+        // Remove from the appropriate panel based on branch name
+        if (worktree.BranchName.StartsWith("jobs/"))
+        {
+            _jobsViewModel?.Worktrees.Remove(worktree);
+        }
+        else
+        {
+            _worktreesViewModel?.Worktrees.Remove(worktree);
+        }
         RefreshFileBrowserSources();
     }
 

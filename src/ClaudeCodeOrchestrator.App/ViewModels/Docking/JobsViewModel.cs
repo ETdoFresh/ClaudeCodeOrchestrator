@@ -79,9 +79,14 @@ public partial class JobsViewModel : ToolViewModelBase
     private SavedPrompt? _selectedSavedPrompt;
 
     /// <summary>
-    /// Callback to invoke when the user requests to start a job.
+    /// Callback to invoke when the user requests to start a job on an existing worktree.
     /// </summary>
     public Func<WorktreeViewModel, JobConfiguration, Task>? OnStartJobRequested { get; set; }
+
+    /// <summary>
+    /// Callback to invoke when the user requests to create a new job (creates worktree and starts).
+    /// </summary>
+    public Func<JobConfiguration, Task>? OnCreateNewJobRequested { get; set; }
 
     /// <summary>
     /// Callback to invoke when a worktree is selected.
@@ -165,6 +170,24 @@ public partial class JobsViewModel : ToolViewModelBase
         SelectedWorktree = worktree;
         if (OnWorktreeSelected != null)
             await OnWorktreeSelected(worktree, true);
+    }
+
+    [RelayCommand]
+    private async Task CreateNewJobAsync()
+    {
+        if (OnCreateNewJobRequested == null || SelectedPromptOption == null) return;
+
+        var config = new JobConfiguration
+        {
+            MaxIterations = MaxIterations,
+            SessionOption = SessionOption,
+            PromptOption = SelectedPromptOption.Value,
+            CommitOnEndOfTurn = CommitOnEndOfTurn,
+            CustomPromptTitle = SelectedPromptOption.Value == PromptOption.Other ? CustomPromptTitle : null,
+            CustomPromptText = SelectedPromptOption.Value == PromptOption.Other ? CustomPromptText : null
+        };
+
+        await OnCreateNewJobRequested(config);
     }
 
     [RelayCommand]

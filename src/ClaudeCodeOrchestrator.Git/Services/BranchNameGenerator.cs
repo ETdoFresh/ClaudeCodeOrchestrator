@@ -36,6 +36,12 @@ public sealed partial class BranchNameGenerator
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
 
+        // If it starts with jobs/, use as-is (already has timestamp from job creation)
+        if (branchName.StartsWith("jobs/"))
+        {
+            return branchName;
+        }
+
         // If it already has a prefix, just add timestamp
         if (branchName.StartsWith(BranchPrefix))
         {

@@ -748,4 +748,77 @@ public sealed class GitService : IGitService
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
         return int.TryParse(output.Trim(), out var count) ? count : 0;
     }
+
+    public async Task<bool> HasUncommittedChangesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "status --porcelain",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process == null)
+            return false;
+
+        await process.WaitForExitAsync(cancellationToken);
+
+        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        return !string.IsNullOrWhiteSpace(output);
+    }
+
+    public async Task StageAllAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = "add -A",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process == null)
+            return;
+
+        await process.WaitForExitAsync(cancellationToken);
+    }
+
+    public async Task CommitAsync(
+        string repoPath,
+        string message,
+        CancellationToken cancellationToken = default)
+    {
+        // Escape the message for shell
+        var escapedMessage = message.Replace("\"", "\\\"");
+
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"commit -m \"{escapedMessage}\"",
+            WorkingDirectory = repoPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(psi);
+        if (process == null)
+            return;
+
+        await process.WaitForExitAsync(cancellationToken);
+    }
 }

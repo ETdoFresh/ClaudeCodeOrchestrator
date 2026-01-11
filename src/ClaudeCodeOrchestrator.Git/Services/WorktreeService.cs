@@ -44,9 +44,12 @@ public sealed class WorktreeService : IWorktreeService
         Directory.CreateDirectory(worktreesDir);
         await _gitService.EnsureGitIgnoreEntriesAsync(repoPath, [WorktreesDirectoryName, MetadataFileName], cancellationToken);
 
-        // Create worktree path
+        // Create worktree path (strip branch prefixes for directory name)
         var worktreeId = Guid.NewGuid().ToString("N")[..8];
-        var worktreePath = Path.Combine(worktreesDir, $"{finalBranchName.Replace("task/", "")}-{worktreeId}");
+        var pathSafeBranchName = finalBranchName
+            .Replace("task/", "")
+            .Replace("jobs/", "");
+        var worktreePath = Path.Combine(worktreesDir, $"{pathSafeBranchName}-{worktreeId}");
 
         // Create worktree using git command (LibGit2Sharp worktree support is limited)
         await CreateWorktreeViaGitAsync(repoPath, finalBranchName, worktreePath, baseBranch, cancellationToken);

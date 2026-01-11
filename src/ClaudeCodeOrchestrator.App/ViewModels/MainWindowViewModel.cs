@@ -42,6 +42,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // Track worktrees currently having sessions opened (prevents duplicate tabs from race conditions)
     private readonly ConcurrentDictionary<string, byte> _worktreesOpeningSession = new();
 
+    // Track active jobs with their configurations (worktreeId -> ActiveJob)
+    private readonly ConcurrentDictionary<string, ActiveJob> _activeJobs = new();
+
     /// <summary>
     /// Reference to DockFactory for dynamic document creation.
     /// </summary>
@@ -1926,25 +1929,205 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (worktreeInfo is null) return;
 
-            // Generate the prompt based on configuration
+            // Check if there's already an active job for this worktree
+            if (_activeJobs.ContainsKey(worktree.Id))
+            {
+                await _dialogService.ShowErrorAsync("Job Already Running",
+                    "A job is already running for this worktree. Please wait for it to complete or stop it first.");
+                return;
+            }
+
+            // Generate the initial prompt based on configuration
             var prompt = config.GeneratePrompt(
                 worktreeInfo.TaskDescription,
                 null // TODO: Get previous conversation summary if available
             );
 
-            // TODO: Implement the actual job execution with:
-            // - config.MaxIterations
-            // - config.SessionOption (ResumeSession vs NewSession)
-            // - config.CommitOnEndOfTurn
-            // For now, just open a regular session with the generated prompt
-            await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+            // Create and track the active job
+            var activeJob = new ActiveJob
+            {
+                WorktreeId = worktree.Id,
+                WorktreePath = worktreeInfo.Path,
+                Configuration = config,
+                CurrentIteration = 1,
+                InitialPrompt = worktreeInfo.TaskDescription
+            };
+            _activeJobs[worktree.Id] = activeJob;
+
+            // Check if we should resume an existing session or start new
+            var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
+
+            if (config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null)
+            {
+                // Resume existing session with the prompt
+                await _sessionService.SendMessageAsync(existingSession.Id, prompt);
+            }
+            else
+            {
+                // Start a new session
+                await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+            }
         }
         catch (Exception ex)
         {
+            // Clean up job tracking on failure
+            _activeJobs.TryRemove(worktree.Id, out _);
             await _dialogService.ShowErrorAsync("Job Start Failed",
                 $"Failed to start job: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Creates a new job worktree and starts a long-running job on it.
+    /// </summary>
+    /// <param name="config">The job configuration.</param>
+    public async Task CreateNewJobAsync(Docking.JobConfiguration config)
+    {
+        if (string.IsNullOrEmpty(CurrentRepositoryPath)) return;
+
+        try
+        {
+            // Generate a unique branch name for the job
+            var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var branchName = $"jobs/job-{timestamp}";
+
+            // Determine the task description/prompt to use
+            var taskDescription = config.PromptOption == Docking.PromptOption.Other
+                ? config.CustomPromptText ?? "Long-running job"
+                : config.GeneratePrompt(null, null);
+
+            // Create the worktree
+            var worktreeInfo = await _worktreeService.CreateWorktreeAsync(
+                CurrentRepositoryPath,
+                taskDescription,
+                title: null,
+                branchName: branchName);
+
+            // Refresh worktrees to show the new job worktree
+            await RefreshWorktreesAsync();
+
+            // Find the new worktree view model
+            var worktreeVm = Worktrees.FirstOrDefault(w => w.Id == worktreeInfo.Id);
+            if (worktreeVm == null) return;
+
+            // Start the job on the new worktree
+            await StartJobAsync(worktreeVm, config);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Create Job Failed",
+                $"Failed to create job: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handles job iteration when a session completes.
+    /// Called from DockFactory when session completes.
+    /// </summary>
+    public async Task HandleJobIterationAsync(string worktreeId, Core.Models.SessionState finalState)
+    {
+        if (!_activeJobs.TryGetValue(worktreeId, out var job))
+            return; // Not a job, just a regular session
+
+        var config = job.Configuration;
+
+        // Check if session failed or errored
+        if (finalState == Core.Models.SessionState.Error || finalState == Core.Models.SessionState.Cancelled)
+        {
+            _activeJobs.TryRemove(worktreeId, out _);
+            return;
+        }
+
+        // Handle "Commit on End of Turn" if enabled
+        if (config.CommitOnEndOfTurn)
+        {
+            await TryAutoCommitAsync(job.WorktreePath);
+        }
+
+        // Check if we've reached max iterations
+        if (job.CurrentIteration >= config.MaxIterations)
+        {
+            _activeJobs.TryRemove(worktreeId, out _);
+            // Job completed - no dialog needed, just stop iterating
+            return;
+        }
+
+        // Continue with next iteration
+        job.CurrentIteration++;
+
+        var session = _sessionService.GetSessionByWorktreeId(worktreeId);
+        if (session == null)
+        {
+            _activeJobs.TryRemove(worktreeId, out _);
+            return;
+        }
+
+        // Generate the continuation prompt
+        var prompt = config.GeneratePrompt(job.InitialPrompt, null);
+
+        // Small delay to let UI update
+        await Task.Delay(500);
+
+        // Send the continuation message
+        await _sessionService.SendMessageAsync(session.Id, prompt);
+    }
+
+    /// <summary>
+    /// Stops an active job for a worktree.
+    /// </summary>
+    public void StopJob(string worktreeId)
+    {
+        _activeJobs.TryRemove(worktreeId, out _);
+    }
+
+    /// <summary>
+    /// Checks if a job is active for a worktree.
+    /// </summary>
+    public bool IsJobActive(string worktreeId)
+    {
+        return _activeJobs.ContainsKey(worktreeId);
+    }
+
+    /// <summary>
+    /// Gets the current iteration for an active job.
+    /// </summary>
+    public int? GetJobIteration(string worktreeId)
+    {
+        return _activeJobs.TryGetValue(worktreeId, out var job) ? job.CurrentIteration : null;
+    }
+
+    private async Task TryAutoCommitAsync(string worktreePath)
+    {
+        try
+        {
+            // Check if there are any changes to commit
+            var hasChanges = await _gitService.HasUncommittedChangesAsync(worktreePath);
+            if (!hasChanges) return;
+
+            // Stage all changes
+            await _gitService.StageAllAsync(worktreePath);
+
+            // Commit with auto-generated message
+            var commitMessage = $"Auto-commit at end of job iteration - {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            await _gitService.CommitAsync(worktreePath, commitMessage);
+        }
+        catch
+        {
+            // Silently ignore commit errors - job should continue
+        }
+    }
+}
+
+/// <summary>
+/// Tracks an active job and its state.
+/// </summary>
+public class ActiveJob
+{
+    public required string WorktreeId { get; init; }
+    public required string WorktreePath { get; init; }
+    public required Docking.JobConfiguration Configuration { get; init; }
+    public int CurrentIteration { get; set; }
+    public string? InitialPrompt { get; init; }
 }
 
 /// <summary>

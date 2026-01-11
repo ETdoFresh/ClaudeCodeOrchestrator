@@ -145,4 +145,34 @@ public interface IGitService
         string branch,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Checks if the repository has uncommitted changes.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository or worktree.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if there are uncommitted changes.</returns>
+    Task<bool> HasUncommittedChangesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages all changes in the repository.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository or worktree.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task StageAllAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a commit with the specified message.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository or worktree.</param>
+    /// <param name="message">The commit message.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task CommitAsync(
+        string repoPath,
+        string message,
+        CancellationToken cancellationToken = default);
+
 }
