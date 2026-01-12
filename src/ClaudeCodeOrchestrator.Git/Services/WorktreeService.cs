@@ -531,7 +531,10 @@ public sealed class WorktreeService : IWorktreeService
                 UnpushedCommits = unpushedCommits,
                 ClaudeSessionId = metadata.ClaudeSessionId,
                 SessionWasActive = metadata.SessionWasActive,
-                AccumulatedDurationMs = metadata.AccumulatedDurationMs
+                AccumulatedDurationMs = metadata.AccumulatedDurationMs,
+                WasJob = metadata.WasJob,
+                LastIteration = metadata.LastIteration,
+                JobMaxIterations = metadata.MaxIterations
             };
         }
         catch
@@ -820,6 +823,11 @@ public sealed class WorktreeService : IWorktreeService
         public string? ClaudeSessionId { get; init; }
         public bool SessionWasActive { get; init; }
         public long AccumulatedDurationMs { get; init; }
+
+        // Job metadata for persistence across app restarts
+        public bool WasJob { get; init; }
+        public int? LastIteration { get; init; }
+        public int? MaxIterations { get; init; }
     }
 
     /// <summary>
@@ -906,6 +914,35 @@ public sealed class WorktreeService : IWorktreeService
             return;
 
         var updatedMetadata = metadata with { Title = title };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the job metadata for a worktree (for persistence across app restarts).
+    /// </summary>
+    public async Task UpdateJobMetadataAsync(
+        string worktreePath,
+        bool wasJob,
+        int? lastIteration,
+        int? maxIterations,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with
+        {
+            WasJob = wasJob,
+            LastIteration = lastIteration,
+            MaxIterations = maxIterations
+        };
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }

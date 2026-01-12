@@ -96,4 +96,14 @@ public interface IWorktreeService
         string worktreePath,
         string title,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the job metadata for a worktree (for persistence across app restarts).
+    /// </summary>
+    Task UpdateJobMetadataAsync(
+        string worktreePath,
+        bool wasJob,
+        int? lastIteration,
+        int? maxIterations,
+        CancellationToken cancellationToken = default);
 }

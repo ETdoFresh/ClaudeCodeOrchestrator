@@ -77,6 +77,21 @@ public sealed record WorktreeInfo
     /// This tracks only the time Claude was actively processing, not idle time.
     /// </summary>
     public long AccumulatedDurationMs { get; set; }
+
+    /// <summary>
+    /// Whether this worktree was used as a job (for persistence across app restarts).
+    /// </summary>
+    public bool WasJob { get; set; }
+
+    /// <summary>
+    /// The last iteration number when the job was running (for display in history).
+    /// </summary>
+    public int? LastIteration { get; set; }
+
+    /// <summary>
+    /// The max iterations configured when the job was running (for display in history).
+    /// </summary>
+    public int? JobMaxIterations { get; set; }
 }
 
 /// <summary>

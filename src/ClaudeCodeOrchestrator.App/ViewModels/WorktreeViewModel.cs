@@ -116,11 +116,24 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// Gets the formatted iteration text (e.g., "Iteration 1/20").
+    /// Shows current iteration for active jobs, or last iteration for historical jobs.
     /// Returns null if not part of a job.
     /// </summary>
-    public string? IterationText => CurrentIteration.HasValue && MaxIterations.HasValue
-        ? $"Iteration {CurrentIteration}/{MaxIterations}"
-        : null;
+    public string? IterationText
+    {
+        get
+        {
+            // Active job: show current iteration
+            if (CurrentIteration.HasValue && MaxIterations.HasValue)
+                return $"Iteration {CurrentIteration}/{MaxIterations}";
+
+            // Historical job: show last iteration
+            if (LastIteration.HasValue && JobMaxIterations.HasValue)
+                return $"Ran {LastIteration}/{JobMaxIterations}";
+
+            return null;
+        }
+    }
 
     [ObservableProperty]
     private string? _activeSessionId;
@@ -331,6 +344,26 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
         SessionDuration = duration;
     }
 
+    /// <summary>
+    /// Whether this worktree was used as a job (for persistence across app restarts).
+    /// </summary>
+    [ObservableProperty]
+    private bool _wasJob;
+
+    /// <summary>
+    /// The last iteration number when the job was running (for display in history).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    private int? _lastIteration;
+
+    /// <summary>
+    /// The max iterations configured when the job was running (for display in history).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    private int? _jobMaxIterations;
+
     public static WorktreeViewModel FromModel(WorktreeInfo info)
     {
         var vm = new WorktreeViewModel
@@ -342,7 +375,11 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             TaskDescription = info.TaskDescription,
             Title = info.Title,
             CommitsAhead = info.CommitsAhead,
-            UnpushedCommits = info.UnpushedCommits
+            UnpushedCommits = info.UnpushedCommits,
+            // Job metadata for persistence
+            WasJob = info.WasJob,
+            LastIteration = info.LastIteration,
+            JobMaxIterations = info.JobMaxIterations
         };
         // Set these last to trigger NotifyCanExecuteChangedFor
         vm.Status = info.Status;

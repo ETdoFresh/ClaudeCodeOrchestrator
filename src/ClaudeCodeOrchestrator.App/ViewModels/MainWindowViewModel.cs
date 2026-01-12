@@ -1958,6 +1958,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             worktree.CurrentIteration = 1;
             worktree.MaxIterations = config.MaxIterations;
 
+            // Persist job metadata for app restart recovery
+            await _worktreeService.UpdateJobMetadataAsync(
+                worktreeInfo.Path,
+                wasJob: true,
+                lastIteration: 1,
+                maxIterations: config.MaxIterations);
+
             // Check if we should resume an existing session or start new
             var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
 
@@ -2068,6 +2075,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             worktree.CurrentIteration = job.CurrentIteration;
         }
+
+        // Persist job iteration progress
+        await _worktreeService.UpdateJobMetadataAsync(
+            job.WorktreePath,
+            wasJob: true,
+            lastIteration: job.CurrentIteration,
+            maxIterations: config.MaxIterations);
 
         var session = _sessionService.GetSessionByWorktreeId(worktreeId);
         if (session == null)

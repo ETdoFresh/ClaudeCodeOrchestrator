@@ -596,9 +596,9 @@ public class DockFactory : Factory
 
         var worktreeList = worktrees.ToList();
 
-        // Filter worktrees: jobs/ prefix goes to Jobs panel only, others go to Worktrees panel
-        var regularWorktrees = worktreeList.Where(w => !w.BranchName.StartsWith("jobs/")).ToList();
-        var jobWorktrees = worktreeList.Where(w => w.BranchName.StartsWith("jobs/")).ToList();
+        // Filter worktrees: jobs/ prefix OR WasJob=true goes to Jobs panel only, others go to Worktrees panel
+        var regularWorktrees = worktreeList.Where(w => !w.BranchName.StartsWith("jobs/") && !w.WasJob).ToList();
+        var jobWorktrees = worktreeList.Where(w => w.BranchName.StartsWith("jobs/") || w.WasJob).ToList();
 
         _worktreesViewModel.Worktrees.Clear();
         foreach (var wt in regularWorktrees)

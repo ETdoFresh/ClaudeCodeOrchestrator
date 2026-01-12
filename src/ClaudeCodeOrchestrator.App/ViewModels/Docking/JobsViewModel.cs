@@ -169,7 +169,15 @@ public partial class JobsViewModel : ToolViewModelBase
     {
         SelectedWorktree = worktree;
         if (OnWorktreeSelected != null)
-            await OnWorktreeSelected(worktree, true);
+            await OnWorktreeSelected(worktree, true); // true = preview
+    }
+
+    [RelayCommand]
+    private async Task OpenWorktreeAsync(WorktreeViewModel worktree)
+    {
+        SelectedWorktree = worktree;
+        if (OnWorktreeSelected != null)
+            await OnWorktreeSelected(worktree, false); // false = not preview (persistent)
     }
 
     [RelayCommand]
