@@ -208,6 +208,9 @@ public class DockFactory : Factory
                 {
                     wt.IsProcessing = isProcessing;
                 }
+                // Sync iteration info from MainWindowViewModel to the document
+                document.CurrentIteration = mainVm.GetJobIteration(worktreeId);
+                document.MaxIterations = mainVm.GetJobMaxIterations(worktreeId);
             };
 
             // Set initial IsReadyToMerge state based on worktree status
@@ -219,6 +222,9 @@ public class DockFactory : Factory
                 document.CanOpenInVSCode = worktree.CanOpenInVSCode;
                 // Set initial processing state from document to worktree
                 worktree.IsProcessing = document.IsProcessing;
+                // Set initial iteration info if this is part of a job
+                document.CurrentIteration = mainVm.GetJobIteration(document.WorktreeId);
+                document.MaxIterations = mainVm.GetJobMaxIterations(document.WorktreeId);
             }
         }
 

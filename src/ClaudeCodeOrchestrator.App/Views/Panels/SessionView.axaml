@@ -44,6 +44,16 @@
                         <Run Text="Cost: $" />
                         <Run Text="{Binding TotalCost, StringFormat=N4}" />
                     </TextBlock>
+                    <!-- Iteration counter (for jobs) -->
+                    <TextBlock Text="•"
+                               Foreground="#666666"
+                               IsVisible="{Binding IterationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Text="{Binding IterationText}"
+                               FontSize="13"
+                               Foreground="#4EC9B0"
+                               FontWeight="SemiBold"
+                               IsVisible="{Binding IterationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               ToolTip.Tip="Current job iteration" />
                 </StackPanel>
                 <!-- Action buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">

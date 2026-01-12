@@ -193,6 +193,14 @@
                                            TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <!-- Iteration counter -->
+                                    <TextBlock Text="{Binding IterationText}"
+                                               FontSize="10"
+                                               Foreground="#4EC9B0"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding IterationText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                               ToolTip.Tip="Current job iteration" />
                                     <!-- Session duration -->
                                     <TextBlock Text="{Binding SessionDurationText}"
                                                FontSize="10"

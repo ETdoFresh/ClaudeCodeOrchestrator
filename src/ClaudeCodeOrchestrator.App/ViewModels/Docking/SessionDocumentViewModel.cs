@@ -210,6 +210,48 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         set => SetProperty(ref _canOpenInVSCode, value);
     }
 
+    private int? _currentIteration;
+
+    /// <summary>
+    /// Current iteration number for an active job (null if not part of a job).
+    /// </summary>
+    public int? CurrentIteration
+    {
+        get => _currentIteration;
+        set
+        {
+            if (SetProperty(ref _currentIteration, value))
+            {
+                OnPropertyChanged(nameof(IterationText));
+            }
+        }
+    }
+
+    private int? _maxIterations;
+
+    /// <summary>
+    /// Maximum iterations for an active job (null if not part of a job).
+    /// </summary>
+    public int? MaxIterations
+    {
+        get => _maxIterations;
+        set
+        {
+            if (SetProperty(ref _maxIterations, value))
+            {
+                OnPropertyChanged(nameof(IterationText));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the formatted iteration text (e.g., "Iteration 1/20").
+    /// Returns null if not part of a job.
+    /// </summary>
+    public string? IterationText => CurrentIteration.HasValue && MaxIterations.HasValue
+        ? $"Iteration {CurrentIteration}/{MaxIterations}"
+        : null;
+
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     /// <summary>
