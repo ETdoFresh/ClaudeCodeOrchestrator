@@ -216,6 +216,25 @@
                                                VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                    <!-- VS Code button -->
+                                    <Button Command="{Binding OpenInVSCodeCommand}"
+                                            Content="{}{}"
+                                            Padding="4,2"
+                                            FontSize="9"
+                                            FontWeight="Bold"
+                                            ToolTip.Tip="Open in VS Code"
+                                            Foreground="#007ACC"
+                                            IsVisible="{Binding CanOpenInVSCode}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='OpenInVSCode_{0}'}" />
+                                    <!-- Run button -->
+                                    <Button Command="{Binding RunCommand}"
+                                            Content="▶"
+                                            Padding="4,2"
+                                            FontSize="8"
+                                            ToolTip.Tip="Run application"
+                                            Foreground="#4EC9B0"
+                                            IsVisible="{Binding CanRun}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='RunWorktree_{0}'}" />
                                     <!-- Start Job button -->
                                     <Button Command="{Binding $parent[ListBox].((vm:JobsViewModel)DataContext).StartJobCommand}"
                                             CommandParameter="{Binding}"
