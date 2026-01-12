@@ -20,6 +20,9 @@ public partial class SessionView : UserControl
     private DispatcherTimer? _statusTimer;
     private SessionDocumentViewModel? _currentViewModel;
 
+    // Threshold in pixels from top to trigger loading more messages
+    private const double LoadMoreThreshold = 200;
+
     private static readonly FilePickerFileType ImageFileTypes = new("Images")
     {
         Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp" },
@@ -41,6 +44,9 @@ public partial class SessionView : UserControl
 
         // Subscribe to DataContext changes to track when session changes
         DataContextChanged += OnDataContextChanged;
+
+        // Subscribe to scroll events for lazy loading
+        MessagesScrollViewer.ScrollChanged += OnScrollChanged;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -81,6 +87,36 @@ public partial class SessionView : UserControl
         {
             MessagesScrollViewer.ScrollToEnd();
         }, DispatcherPriority.Loaded);
+    }
+
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        // Load more messages when user scrolls near the top
+        if (_currentViewModel == null || !_currentViewModel.HasMoreMessages || _currentViewModel.IsLoadingMore)
+            return;
+
+        var scrollOffset = MessagesScrollViewer.Offset.Y;
+
+        if (scrollOffset < LoadMoreThreshold)
+        {
+            // Remember current scroll position and content height before loading
+            var previousHeight = MessagesScrollViewer.Extent.Height;
+
+            // Load more messages
+            var loadedCount = _currentViewModel.LoadMoreMessages();
+
+            if (loadedCount > 0)
+            {
+                // After loading, adjust scroll position to maintain view position
+                // New messages were inserted at the top, so we need to scroll down by the height difference
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var newHeight = MessagesScrollViewer.Extent.Height;
+                    var heightDiff = newHeight - previousHeight;
+                    MessagesScrollViewer.Offset = new Avalonia.Vector(0, scrollOffset + heightDiff);
+                }, DispatcherPriority.Loaded);
+            }
+        }
     }
 
     private async void MessageInput_PastingFromClipboard(object? sender, RoutedEventArgs e)

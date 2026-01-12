@@ -34,6 +34,14 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool _isReadyToMerge;
     private List<ImageAttachment> _pendingAttachments = new();
 
+    // Pagination support for large message histories
+    private const int InitialMessageCount = 100;
+    private const int LoadMoreCount = 50;
+    private List<ISDKMessage> _allMessages = new();
+    private int _loadedMessageCount;
+    private bool _isLoadingMore;
+    private bool _hasMoreMessages;
+
     /// <summary>
     /// Callback to refresh worktrees when session completes.
     /// </summary>
@@ -259,6 +267,24 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// Used to show a welcome/empty state message.
     /// </summary>
     public bool ShowEmptyState => Messages.Count == 0 && !IsProcessing;
+
+    /// <summary>
+    /// True when there are more messages that can be loaded by scrolling up.
+    /// </summary>
+    public bool HasMoreMessages
+    {
+        get => _hasMoreMessages;
+        private set => SetProperty(ref _hasMoreMessages, value);
+    }
+
+    /// <summary>
+    /// True while loading more messages (prevents concurrent loads).
+    /// </summary>
+    public bool IsLoadingMore
+    {
+        get => _isLoadingMore;
+        private set => SetProperty(ref _isLoadingMore, value);
+    }
 
     /// <summary>
     /// Sets the pending image attachments for the next message.
@@ -659,6 +685,8 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
     /// <summary>
     /// Loads existing messages from a session (for resumed sessions with history).
+    /// Only loads the last InitialMessageCount messages initially for performance.
+    /// More messages can be loaded by calling LoadMoreMessages().
     /// </summary>
     public void LoadMessagesFromSession(Session session)
     {
@@ -670,81 +698,152 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
         if (session.Messages.Count == 0) return;
 
-        foreach (var message in session.Messages)
+        // Store all messages for lazy loading
+        _allMessages = session.Messages.ToList();
+
+        // Determine how many messages to load initially
+        var totalCount = _allMessages.Count;
+        var startIndex = Math.Max(0, totalCount - InitialMessageCount);
+        _loadedMessageCount = totalCount - startIndex;
+        HasMoreMessages = startIndex > 0;
+
+        // Load only the last InitialMessageCount messages
+        for (var i = startIndex; i < totalCount; i++)
         {
-            switch (message)
+            var viewModel = ConvertToViewModel(_allMessages[i]);
+            if (viewModel != null)
             {
-                case SDKUserMessage userMsg:
-                    var userVm = new UserMessageViewModel
-                    {
-                        Uuid = userMsg.Uuid,
-                        Content = userMsg.Message?.Content?.GetText() ?? string.Empty
-                    };
+                Messages.Add(viewModel);
+            }
+        }
+    }
 
-                    // Extract images from content blocks
-                    if (userMsg.Message?.Content?.Blocks != null)
+    /// <summary>
+    /// Loads more messages when scrolling up. Call this when user scrolls near the top.
+    /// </summary>
+    /// <returns>The number of messages loaded.</returns>
+    public int LoadMoreMessages()
+    {
+        if (!HasMoreMessages || IsLoadingMore) return 0;
+
+        IsLoadingMore = true;
+        try
+        {
+            var totalCount = _allMessages.Count;
+            var currentStartIndex = totalCount - _loadedMessageCount;
+
+            // Calculate the new range to load
+            var newStartIndex = Math.Max(0, currentStartIndex - LoadMoreCount);
+            var countToLoad = currentStartIndex - newStartIndex;
+
+            if (countToLoad <= 0)
+            {
+                HasMoreMessages = false;
+                return 0;
+            }
+
+            // Load messages in reverse order and insert at the beginning
+            var insertedCount = 0;
+            for (var i = currentStartIndex - 1; i >= newStartIndex; i--)
+            {
+                var viewModel = ConvertToViewModel(_allMessages[i]);
+                if (viewModel != null)
+                {
+                    Messages.Insert(0, viewModel);
+                    insertedCount++;
+                }
+            }
+
+            _loadedMessageCount += countToLoad;
+            HasMoreMessages = newStartIndex > 0;
+
+            return insertedCount;
+        }
+        finally
+        {
+            IsLoadingMore = false;
+        }
+    }
+
+    /// <summary>
+    /// Converts an SDK message to a view model.
+    /// </summary>
+    private MessageViewModel? ConvertToViewModel(ISDKMessage message)
+    {
+        switch (message)
+        {
+            case SDKUserMessage userMsg:
+                var userVm = new UserMessageViewModel
+                {
+                    Uuid = userMsg.Uuid,
+                    Content = userMsg.Message?.Content?.GetText() ?? string.Empty
+                };
+
+                // Extract images from content blocks
+                if (userMsg.Message?.Content?.Blocks != null)
+                {
+                    foreach (var block in userMsg.Message.Content.Blocks)
                     {
-                        foreach (var block in userMsg.Message.Content.Blocks)
+                        if (block.Type == "image" && block.Content != null)
                         {
-                            if (block.Type == "image" && block.Content != null)
+                            try
                             {
-                                try
+                                // Content is an anonymous object, serialize and deserialize to extract properties
+                                var contentJson = JsonSerializer.Serialize(block.Content);
+                                using var doc = JsonDocument.Parse(contentJson);
+                                var root = doc.RootElement;
+
+                                if (root.TryGetProperty("data", out var dataElement) &&
+                                    root.TryGetProperty("media_type", out var mediaTypeElement))
                                 {
-                                    // Content is an anonymous object, serialize and deserialize to extract properties
-                                    var contentJson = JsonSerializer.Serialize(block.Content);
-                                    using var doc = JsonDocument.Parse(contentJson);
-                                    var root = doc.RootElement;
+                                    var base64Data = dataElement.GetString();
+                                    var mediaType = mediaTypeElement.GetString();
 
-                                    if (root.TryGetProperty("data", out var dataElement) &&
-                                        root.TryGetProperty("media_type", out var mediaTypeElement))
+                                    if (!string.IsNullOrEmpty(base64Data) && !string.IsNullOrEmpty(mediaType))
                                     {
-                                        var base64Data = dataElement.GetString();
-                                        var mediaType = mediaTypeElement.GetString();
-
-                                        if (!string.IsNullOrEmpty(base64Data) && !string.IsNullOrEmpty(mediaType))
-                                        {
-                                            var imageAttachment = ImageAttachment.FromBase64(base64Data, mediaType);
-                                            userVm.Images.Add(imageAttachment);
-                                        }
+                                        var imageAttachment = ImageAttachment.FromBase64(base64Data, mediaType);
+                                        userVm.Images.Add(imageAttachment);
                                     }
                                 }
-                                catch
-                                {
-                                    // Skip invalid image blocks
-                                }
+                            }
+                            catch
+                            {
+                                // Skip invalid image blocks
                             }
                         }
                     }
+                }
 
-                    Messages.Add(userVm);
-                    break;
+                return userVm;
 
-                case SDKAssistantMessage assistantMsg:
-                    var vm = new AssistantMessageViewModel { Uuid = assistantMsg.Uuid };
-                    foreach (var block in assistantMsg.Message.Content)
+            case SDKAssistantMessage assistantMsg:
+                var vm = new AssistantMessageViewModel { Uuid = assistantMsg.Uuid };
+                foreach (var block in assistantMsg.Message.Content)
+                {
+                    if (block is TextContentBlock textBlock)
                     {
-                        if (block is TextContentBlock textBlock)
-                        {
-                            vm.TextContent += textBlock.Text;
-                        }
-                        else if (block is ToolUseContentBlock toolBlock)
-                        {
-                            vm.ToolUses.Add(new ToolUseViewModel
-                            {
-                                Id = toolBlock.Id,
-                                ToolName = toolBlock.Name,
-                                InputJson = toolBlock.Input?.ToString() ?? "{}",
-                                Status = ToolUseStatus.Completed // From history, assume completed
-                            });
-                        }
+                        vm.TextContent += textBlock.Text;
                     }
-                    // Add if there's text content OR tool uses
-                    if (!string.IsNullOrEmpty(vm.TextContent) || vm.ToolUses.Count > 0)
+                    else if (block is ToolUseContentBlock toolBlock)
                     {
-                        Messages.Add(vm);
+                        vm.ToolUses.Add(new ToolUseViewModel
+                        {
+                            Id = toolBlock.Id,
+                            ToolName = toolBlock.Name,
+                            InputJson = toolBlock.Input?.ToString() ?? "{}",
+                            Status = ToolUseStatus.Completed // From history, assume completed
+                        });
                     }
-                    break;
-            }
+                }
+                // Return if there's text content OR tool uses
+                if (!string.IsNullOrEmpty(vm.TextContent) || vm.ToolUses.Count > 0)
+                {
+                    return vm;
+                }
+                return null;
+
+            default:
+                return null;
         }
     }
 
