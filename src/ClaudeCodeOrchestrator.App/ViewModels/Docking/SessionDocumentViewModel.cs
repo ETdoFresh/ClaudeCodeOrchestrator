@@ -127,6 +127,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             {
                 SendMessageCommand.NotifyCanExecuteChanged();
                 InterruptCommand.NotifyCanExecuteChanged();
+                MergeCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(ShowSendButton));
                 OnPropertyChanged(nameof(ShowStopButton));
                 OnPropertyChanged(nameof(ShowQueueButton));

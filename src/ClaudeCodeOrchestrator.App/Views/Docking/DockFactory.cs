@@ -633,12 +633,12 @@ public class DockFactory : Factory
     }
 
     /// <summary>
-    /// Adds a worktree to the appropriate panel based on branch name.
+    /// Adds a worktree to the appropriate panel based on branch name or WasJob flag.
     /// </summary>
     public void AddWorktree(ViewModels.WorktreeViewModel worktree)
     {
-        // Add to the appropriate panel based on branch name
-        if (worktree.BranchName.StartsWith("jobs/"))
+        // Add to the appropriate panel based on branch name or WasJob flag
+        if (worktree.BranchName.StartsWith("jobs/") || worktree.WasJob)
         {
             _jobsViewModel?.Worktrees.Insert(0, worktree);
         }
@@ -654,8 +654,8 @@ public class DockFactory : Factory
     /// </summary>
     public void RemoveWorktree(ViewModels.WorktreeViewModel worktree)
     {
-        // Remove from the appropriate panel based on branch name
-        if (worktree.BranchName.StartsWith("jobs/"))
+        // Remove from the appropriate panel based on branch name or WasJob flag
+        if (worktree.BranchName.StartsWith("jobs/") || worktree.WasJob)
         {
             _jobsViewModel?.Worktrees.Remove(worktree);
         }
