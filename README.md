@@ -15,6 +15,13 @@ Claude Code Orchestrator provides a way to manage and orchestrate Claude Code wo
 - **Parallel Tasks** - Send multiple tasks to Claude Code simultaneously
 - **Long-Running Jobs** - Set up and monitor extended Claude Code sessions
 
+## Getting Started
+
+```bash
+cd src/ClaudeCodeOrchestrator.App
+dotnet run
+```
+
 ## Tech Stack
 
 - .NET 8
