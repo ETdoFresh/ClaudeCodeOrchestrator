@@ -1954,6 +1954,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             };
             _activeJobs[worktree.Id] = activeJob;
 
+            // Update worktree with iteration info
+            worktree.CurrentIteration = 1;
+            worktree.MaxIterations = config.MaxIterations;
+
             // Check if we should resume an existing session or start new
             var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
 
@@ -1972,6 +1976,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             // Clean up job tracking on failure
             _activeJobs.TryRemove(worktree.Id, out _);
+            ClearWorktreeIterationInfo(worktree);
             await _dialogService.ShowErrorAsync("Job Start Failed",
                 $"Failed to start job: {ex.Message}");
         }
@@ -2030,11 +2035,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             return; // Not a job, just a regular session
 
         var config = job.Configuration;
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
 
         // Check if session failed or errored
         if (finalState == Core.Models.SessionState.Error || finalState == Core.Models.SessionState.Cancelled)
         {
             _activeJobs.TryRemove(worktreeId, out _);
+            ClearWorktreeIterationInfo(worktree);
             return;
         }
 
@@ -2048,6 +2055,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (job.CurrentIteration >= config.MaxIterations)
         {
             _activeJobs.TryRemove(worktreeId, out _);
+            ClearWorktreeIterationInfo(worktree);
             // Job completed - no dialog needed, just stop iterating
             return;
         }
@@ -2055,10 +2063,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // Continue with next iteration
         job.CurrentIteration++;
 
+        // Update worktree iteration info
+        if (worktree != null)
+        {
+            worktree.CurrentIteration = job.CurrentIteration;
+        }
+
         var session = _sessionService.GetSessionByWorktreeId(worktreeId);
         if (session == null)
         {
             _activeJobs.TryRemove(worktreeId, out _);
+            ClearWorktreeIterationInfo(worktree);
             return;
         }
 
@@ -2072,12 +2087,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await _sessionService.SendMessageAsync(session.Id, prompt);
     }
 
+    private static void ClearWorktreeIterationInfo(WorktreeViewModel? worktree)
+    {
+        if (worktree == null) return;
+        worktree.CurrentIteration = null;
+        worktree.MaxIterations = null;
+    }
+
     /// <summary>
     /// Stops an active job for a worktree.
     /// </summary>
     public void StopJob(string worktreeId)
     {
         _activeJobs.TryRemove(worktreeId, out _);
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        ClearWorktreeIterationInfo(worktree);
     }
 
     /// <summary>
@@ -2094,6 +2118,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public int? GetJobIteration(string worktreeId)
     {
         return _activeJobs.TryGetValue(worktreeId, out var job) ? job.CurrentIteration : null;
+    }
+
+    /// <summary>
+    /// Gets the max iterations for an active job.
+    /// </summary>
+    public int? GetJobMaxIterations(string worktreeId)
+    {
+        return _activeJobs.TryGetValue(worktreeId, out var job) ? job.Configuration.MaxIterations : null;
     }
 
     private async Task TryAutoCommitAsync(string worktreePath)

@@ -100,6 +100,28 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(DisplayStatus))]
     private bool _wasInterrupted;
 
+    /// <summary>
+    /// Current iteration number for an active job (null if not part of a job).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    private int? _currentIteration;
+
+    /// <summary>
+    /// Maximum iterations for an active job (null if not part of a job).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    private int? _maxIterations;
+
+    /// <summary>
+    /// Gets the formatted iteration text (e.g., "Iteration 1/20").
+    /// Returns null if not part of a job.
+    /// </summary>
+    public string? IterationText => CurrentIteration.HasValue && MaxIterations.HasValue
+        ? $"Iteration {CurrentIteration}/{MaxIterations}"
+        : null;
+
     [ObservableProperty]
     private string? _activeSessionId;
 
