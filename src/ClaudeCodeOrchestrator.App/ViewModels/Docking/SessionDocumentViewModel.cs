@@ -41,6 +41,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private int _loadedMessageCount;
     private bool _isLoadingMore;
     private bool _hasMoreMessages;
+    private bool _isLoadingHistory;
 
     /// <summary>
     /// Callback to refresh worktrees when session completes.
@@ -263,10 +264,10 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     /// <summary>
-    /// True when the session has no messages and is not processing.
+    /// True when the session has no messages, not processing, and not loading history.
     /// Used to show a welcome/empty state message.
     /// </summary>
-    public bool ShowEmptyState => Messages.Count == 0 && !IsProcessing;
+    public bool ShowEmptyState => Messages.Count == 0 && !IsProcessing && !IsLoadingHistory;
 
     /// <summary>
     /// True when there are more messages that can be loaded by scrolling up.
@@ -285,6 +286,28 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         get => _isLoadingMore;
         private set => SetProperty(ref _isLoadingMore, value);
     }
+
+    /// <summary>
+    /// True while loading session history from disk.
+    /// Used to show a loading spinner in the tab.
+    /// </summary>
+    public bool IsLoadingHistory
+    {
+        get => _isLoadingHistory;
+        set
+        {
+            if (SetProperty(ref _isLoadingHistory, value))
+            {
+                OnPropertyChanged(nameof(ShowEmptyState));
+                OnPropertyChanged(nameof(ShowLoadingState));
+            }
+        }
+    }
+
+    /// <summary>
+    /// True when loading history (show loading spinner).
+    /// </summary>
+    public bool ShowLoadingState => IsLoadingHistory;
 
     /// <summary>
     /// Sets the pending image attachments for the next message.
@@ -603,6 +626,12 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             await OnResyncHistoryRequested(WorktreeId);
         }
+    }
+
+    [RelayCommand]
+    private void LoadMoreMessagesAction()
+    {
+        LoadMoreMessages();
     }
 
     [RelayCommand]

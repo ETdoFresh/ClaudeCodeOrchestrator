@@ -84,23 +84,34 @@ public sealed class SessionHistoryService
     /// <summary>
     /// Reads session history messages from a session file.
     /// </summary>
+    /// <param name="worktreePath">Path to the worktree.</param>
+    /// <param name="sessionId">The session ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="maxMessages">Maximum number of messages to load (0 = all). Loads the most recent messages.</param>
     public async Task<IReadOnlyList<SessionHistoryMessage>> ReadSessionHistoryAsync(
         string worktreePath,
         string sessionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int maxMessages = 0)
     {
         var projectDir = GetProjectDirectory(worktreePath);
         var sessionFile = Path.Combine(projectDir, $"{sessionId}.jsonl");
-
-        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: worktreePath={worktreePath}");
-        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: projectDir={projectDir}");
-        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: sessionFile={sessionFile}");
-        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: File.Exists={File.Exists(sessionFile)}");
 
         if (!File.Exists(sessionFile))
             return Array.Empty<SessionHistoryMessage>();
 
         var messages = new List<SessionHistoryMessage>();
+
+        // If maxMessages is specified and file is large, read from the end
+        if (maxMessages > 0)
+        {
+            var fileInfo = new FileInfo(sessionFile);
+            // If file is larger than 100KB, use tail-reading approach
+            if (fileInfo.Length > 100 * 1024)
+            {
+                return await ReadLastMessagesAsync(sessionFile, maxMessages, cancellationToken);
+            }
+        }
 
         await foreach (var line in File.ReadLinesAsync(sessionFile, cancellationToken))
         {
@@ -111,26 +122,13 @@ public sealed class SessionHistoryService
                 var entry = JsonSerializer.Deserialize<SessionHistoryEntry>(line);
                 if (entry is null) continue;
 
-                System.Diagnostics.Debug.WriteLine($"Entry type={entry.Type}, isSidechain={entry.IsSidechain}");
-
                 // Skip non-message entries
                 if (entry.Type != "user" && entry.Type != "assistant") continue;
 
                 // Skip sidechain entries (agent tasks)
                 if (entry.IsSidechain == true) continue;
 
-                if (entry.Message != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"  Message.Content.ValueKind={entry.Message.Content.ValueKind}");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"  Message is null!");
-                }
-
                 var (content, toolUses) = ExtractContentAndToolUses(entry);
-
-                System.Diagnostics.Debug.WriteLine($"  Extracted content length={(content?.Length ?? 0)}, toolUses count={toolUses.Count}");
 
                 // Skip if no content and no tool uses
                 if (string.IsNullOrEmpty(content) && toolUses.Count == 0) continue;
@@ -144,14 +142,87 @@ public sealed class SessionHistoryService
                     ToolUses = toolUses
                 });
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
-                // Log parsing errors for debugging
-                System.Diagnostics.Debug.WriteLine($"JSON parse error: {ex.Message}");
+                // Skip malformed entries
             }
         }
 
-        System.Diagnostics.Debug.WriteLine($"SessionHistoryService: Loaded {messages.Count} messages from {sessionFile}");
+        // If maxMessages specified, return only the last N
+        if (maxMessages > 0 && messages.Count > maxMessages)
+        {
+            return messages.Skip(messages.Count - maxMessages).ToList();
+        }
+
+        return messages;
+    }
+
+    /// <summary>
+    /// Reads the last N messages from a large file by reading from the end.
+    /// </summary>
+    private async Task<IReadOnlyList<SessionHistoryMessage>> ReadLastMessagesAsync(
+        string sessionFile,
+        int maxMessages,
+        CancellationToken cancellationToken)
+    {
+        // Read lines from the end of the file
+        var lines = new List<string>();
+        var messages = new List<SessionHistoryMessage>();
+
+        // Read the file in reverse, collecting enough lines
+        // We need to over-read since not all lines are user/assistant messages
+        var targetLines = maxMessages * 3; // Read 3x to account for system messages
+
+        await using var stream = new FileStream(sessionFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(stream);
+
+        // For simplicity with large files, read all lines but process only last N
+        // This is still faster than parsing all JSON
+        var allLines = new List<string>();
+        string? line;
+        while ((line = await reader.ReadLineAsync(cancellationToken)) != null)
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                allLines.Add(line);
+            }
+        }
+
+        // Process lines from the end until we have enough messages
+        for (var i = allLines.Count - 1; i >= 0 && messages.Count < maxMessages; i--)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                var entry = JsonSerializer.Deserialize<SessionHistoryEntry>(allLines[i]);
+                if (entry is null) continue;
+
+                // Skip non-message entries
+                if (entry.Type != "user" && entry.Type != "assistant") continue;
+
+                // Skip sidechain entries (agent tasks)
+                if (entry.IsSidechain == true) continue;
+
+                var (content, toolUses) = ExtractContentAndToolUses(entry);
+
+                // Skip if no content and no tool uses
+                if (string.IsNullOrEmpty(content) && toolUses.Count == 0) continue;
+
+                messages.Insert(0, new SessionHistoryMessage
+                {
+                    Role = entry.Type == "user" ? "user" : "assistant",
+                    Content = content ?? "",
+                    Timestamp = entry.Timestamp,
+                    Uuid = entry.Uuid,
+                    ToolUses = toolUses
+                });
+            }
+            catch (JsonException)
+            {
+                // Skip malformed entries
+            }
+        }
 
         return messages;
     }

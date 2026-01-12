@@ -239,6 +239,36 @@
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
+    <!-- Large arc spinner (32x32) for loading states -->
+    <Style Selector="Panel.arc-spinner-large">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="RenderTransform">
+            <RotateTransform />
+        </Setter>
+        <Style.Animations>
+            <Animation Duration="0:0:0.8" IterationCount="INFINITE">
+                <KeyFrame Cue="0%">
+                    <Setter Property="RotateTransform.Angle" Value="0" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="RotateTransform.Angle" Value="360" />
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+
+    <!-- Ellipse within large spinner - symmetric bounds ensure proper center rotation -->
+    <Style Selector="Panel.arc-spinner-large > Ellipse">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <!-- StrokeDashArray: ~75% visible (270°), ~25% gap (90°) of circumference for 32x32 -->
+        <!-- Circumference = π * ~26 (inner diameter with 3px stroke) ≈ 81.7, so dash=61.3, gap=20.4 -->
+        <Setter Property="StrokeDashArray" Value="61.3,20.4" />
+        <Setter Property="StrokeDashOffset" Value="0" />
+    </Style>
+
     <!-- ToolTabStrip styling for left panel tabs (Worktrees/Explorer) -->
     <Style Selector="dock|ToolTabStrip">
         <Setter Property="Background" Value="#252526" />

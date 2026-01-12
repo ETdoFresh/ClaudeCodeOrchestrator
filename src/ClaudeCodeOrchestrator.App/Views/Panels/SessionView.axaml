@@ -135,25 +135,43 @@
         <!-- Messages area -->
         <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="1" Padding="12,8,12,0" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,0,60">
-            <!-- Load more indicator at top -->
+            <!-- Load previous messages button at top -->
             <Border IsVisible="{Binding HasMoreMessages}"
                     Margin="0,0,0,8"
                     HorizontalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Panel Classes="arc-spinner" IsVisible="{Binding IsLoadingMore}">
-                        <Ellipse Stroke="#007ACC" StrokeThickness="2" />
+                <Button Command="{Binding LoadMoreMessagesActionCommand}"
+                        IsEnabled="{Binding !IsLoadingMore}"
+                        Classes="vscode-secondary-button"
+                        Padding="12,6">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Panel Classes="arc-spinner" IsVisible="{Binding IsLoadingMore}">
+                            <Ellipse Stroke="#007ACC" StrokeThickness="2" />
+                        </Panel>
+                        <TextBlock VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <Binding Path="IsLoadingMore">
+                                    <Binding.Converter>
+                                        <conv:BoolToStringConverter TrueValue="Loading..." FalseValue="Load Previous Messages" />
+                                    </Binding.Converter>
+                                </Binding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+            </Border>
+
+            <!-- Loading history indicator -->
+            <Border IsVisible="{Binding ShowLoadingState}"
+                    Margin="0,60,0,0"
+                    HorizontalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" Spacing="12">
+                    <Panel Classes="arc-spinner-large" ToolTip.Tip="Loading session history...">
+                        <Ellipse Stroke="#007ACC" StrokeThickness="3" />
                     </Panel>
-                    <TextBlock FontSize="12"
-                               Foreground="#666666"
-                               VerticalAlignment="Center">
-                        <TextBlock.Text>
-                            <Binding Path="IsLoadingMore">
-                                <Binding.Converter>
-                                    <conv:BoolToStringConverter TrueValue="Loading more messages..." FalseValue="Scroll up for more" />
-                                </Binding.Converter>
-                            </Binding>
-                        </TextBlock.Text>
-                    </TextBlock>
+                    <TextBlock Text="Loading message history..."
+                               FontSize="14"
+                               Foreground="#858585"
+                               HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>
 

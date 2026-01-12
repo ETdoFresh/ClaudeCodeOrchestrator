@@ -1433,8 +1433,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 branch,
                 e.Session.WorktreeId);
 
+            // Check if this session is loading history asynchronously
+            var isLoadingHistory = _pendingHistoryLoads.ContainsKey(e.Session.WorktreeId);
+            document.IsLoadingHistory = isLoadingHistory;
+
             // Load any existing messages from the session (for resumed sessions)
-            document.LoadMessagesFromSession(e.Session);
+            // If loading history async, this will be empty and will be populated later
+            if (!isLoadingHistory)
+            {
+                document.LoadMessagesFromSession(e.Session);
+            }
 
             // Check if this session should be opened as preview
             var isPreview = _pendingSessionPreviewStates.TryRemove(e.Session.WorktreeId, out var preview) && preview;
@@ -1685,30 +1693,118 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    // Track sessions that are loading history asynchronously
+    private readonly ConcurrentDictionary<string, (string WorktreePath, string ClaudeSessionId)> _pendingHistoryLoads = new();
+
     /// <summary>
     /// Creates an idle session and loads history from an existing Claude session.
+    /// The session is created immediately with a loading state, and history is loaded asynchronously.
     /// </summary>
     private async Task CreateIdleSessionWithHistoryAsync(WorktreeInfo worktree, string claudeSessionId)
     {
-        // Load the history FIRST before creating the session
-        // Use a timeout to prevent hanging on large session files
-        var historyService = new SessionHistoryService();
-        IReadOnlyList<SessionHistoryMessage> history;
-        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+        // Create options to resume the existing session when user sends a message
+        var options = new SDK.Options.ClaudeAgentOptions
         {
-            try
-            {
-                history = await historyService.ReadSessionHistoryAsync(worktree.Path, claudeSessionId, cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // History loading timed out - create session without history
-                history = Array.Empty<SessionHistoryMessage>();
-            }
+            Resume = claudeSessionId
+        };
+
+        // Store the accumulated duration to be applied when the session document is created
+        if (worktree.AccumulatedDurationMs > 0)
+        {
+            _pendingAccumulatedDurations[worktree.Id] = TimeSpan.FromMilliseconds(worktree.AccumulatedDurationMs);
         }
 
-        // Convert history to SDK messages
+        // Mark this session as having pending history load
+        _pendingHistoryLoads[worktree.Id] = (worktree.Path, claudeSessionId);
+
+        // Create session IMMEDIATELY with empty messages - document will show loading state
+        var session = await _sessionService.CreateIdleSessionAsync(worktree, options, null);
+
+        // Store the Claude session ID for resumption
+        session.ClaudeSessionId = claudeSessionId;
+
+        // Load history asynchronously in background (don't await)
+        _ = LoadHistoryInBackgroundAsync(session.Id, worktree.Id, worktree.Path, claudeSessionId);
+    }
+
+    /// <summary>
+    /// Loads session history in the background and updates the document when complete.
+    /// </summary>
+    private async Task LoadHistoryInBackgroundAsync(string sessionId, string worktreeId, string worktreePath, string claudeSessionId)
+    {
+        try
+        {
+            var historyService = new SessionHistoryService();
+            IReadOnlyList<SessionHistoryMessage> history;
+
+            // Use a longer timeout for background loading
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            {
+                try
+                {
+                    // Load only the last 100 messages initially for faster loading
+                    history = await historyService.ReadSessionHistoryAsync(worktreePath, claudeSessionId, cts.Token, maxMessages: 100);
+                }
+                catch (OperationCanceledException)
+                {
+                    history = Array.Empty<SessionHistoryMessage>();
+                }
+            }
+
+            // Convert history to SDK messages
+            var historyMessages = ConvertHistoryToSDKMessages(history, claudeSessionId);
+
+            // Update the session and document on the UI thread
+            _dispatcher.Post(() =>
+            {
+                // Get the session
+                var session = _sessionService.GetSession(sessionId);
+                if (session == null) return;
+
+                // Add messages to session
+                foreach (var msg in historyMessages)
+                {
+                    session.Messages.Add(msg);
+                }
+
+                // Find the document and update it
+                var document = Factory?.GetSessionDocument(sessionId);
+                if (document != null)
+                {
+                    document.LoadMessagesFromSession(session);
+                    document.IsLoadingHistory = false;
+                }
+
+                // Clean up pending history load tracking
+                _pendingHistoryLoads.TryRemove(worktreeId, out _);
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading history in background: {ex.Message}");
+
+            // Clear loading state on error
+            _dispatcher.Post(() =>
+            {
+                var document = Factory?.GetSessionDocument(sessionId);
+                if (document != null)
+                {
+                    document.IsLoadingHistory = false;
+                }
+                _pendingHistoryLoads.TryRemove(worktreeId, out _);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Converts session history messages to SDK messages.
+    /// </summary>
+    private static List<SDK.Messages.ISDKMessage> ConvertHistoryToSDKMessages(
+        IReadOnlyList<SessionHistoryMessage> history,
+        string claudeSessionId)
+    {
         var historyMessages = new List<SDK.Messages.ISDKMessage>();
+
         foreach (var msg in history)
         {
             if (msg.Role == "user")
@@ -1753,23 +1849,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
         }
 
-        // Create options to resume the existing session when user sends a message
-        var options = new SDK.Options.ClaudeAgentOptions
-        {
-            Resume = claudeSessionId
-        };
-
-        // Store the accumulated duration to be applied when the session document is created
-        if (worktree.AccumulatedDurationMs > 0)
-        {
-            _pendingAccumulatedDurations[worktree.Id] = TimeSpan.FromMilliseconds(worktree.AccumulatedDurationMs);
-        }
-
-        // Create session with history messages already populated
-        var session = await _sessionService.CreateIdleSessionAsync(worktree, options, historyMessages);
-
-        // Store the Claude session ID for resumption
-        session.ClaudeSessionId = claudeSessionId;
+        return historyMessages;
     }
 
     /// <summary>
