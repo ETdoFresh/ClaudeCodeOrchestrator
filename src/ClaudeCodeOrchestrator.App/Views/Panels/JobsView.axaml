@@ -227,6 +227,15 @@
                                             Foreground="White"
                                             IsVisible="{Binding !IsProcessing}"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='StartJob_{0}'}" />
+                                    <!-- Merge button - shown when ready to merge -->
+                                    <Button Command="{Binding MergeCommand}"
+                                            Content="↗"
+                                            Padding="4,2"
+                                            FontSize="10"
+                                            ToolTip.Tip="Merge to base branch"
+                                            Foreground="#4CAF50"
+                                            IsVisible="{Binding IsReadyToMerge}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='MergeJob_{0}'}" />
                                     <!-- Active session spinner (small) - only show when actively processing -->
                                     <Panel Classes="arc-spinner-small"
                                            IsVisible="{Binding IsProcessing}"
