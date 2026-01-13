@@ -29,6 +29,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private string _inputText = string.Empty;
     private bool _isProcessing;
     private decimal _totalCost;
+    private decimal _accumulatedCost;
     private string _worktreeBranch = string.Empty;
     private bool _isPreview;
     private bool _isReadyToMerge;
@@ -42,6 +43,16 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     private bool _isLoadingMore;
     private bool _hasMoreMessages;
     private bool _isLoadingHistory;
+
+    // Message virtualization - unload old messages when conversation grows
+    private const int MaxMessagesInMemory = 150;
+    private const int UnloadThreshold = 200;
+    private const int MessagesToUnload = 100;
+    private string? _claudeSessionId;
+    private string? _worktreePath;
+    private int _diskMessageCount;
+    private int _oldestLoadedIndex;
+    private bool _hasUnloadedMessages;
 
     /// <summary>
     /// Callback to refresh worktrees when session completes.
@@ -171,6 +182,20 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         set => SetProperty(ref _totalCost, value);
     }
 
+    /// <summary>
+    /// Gets or sets the accumulated cost across all session resumes.
+    /// Setting this initializes the cost from persisted data.
+    /// </summary>
+    public decimal AccumulatedCostUsd
+    {
+        get => _accumulatedCost;
+        set
+        {
+            _accumulatedCost = value;
+            TotalCost = value;
+        }
+    }
+
     public string WorktreeBranch
     {
         get => _worktreeBranch;
@@ -275,9 +300,23 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// </summary>
     public bool HasMoreMessages
     {
-        get => _hasMoreMessages;
+        get => _hasMoreMessages || _hasUnloadedMessages;
         private set => SetProperty(ref _hasMoreMessages, value);
     }
+
+    /// <summary>
+    /// True when old messages have been unloaded from memory.
+    /// </summary>
+    public bool HasUnloadedMessages
+    {
+        get => _hasUnloadedMessages;
+        private set => SetProperty(ref _hasUnloadedMessages, value);
+    }
+
+    /// <summary>
+    /// Gets the count of messages that have been unloaded.
+    /// </summary>
+    public int UnloadedMessageCount => _oldestLoadedIndex;
 
     /// <summary>
     /// True while loading more messages (prevents concurrent loads).
@@ -442,11 +481,14 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         }
 
         Messages.Add(vm);
+        CheckAndUnloadOldMessages();
     }
 
     private async void ProcessResultMessage(SDKResultMessage msg)
     {
-        TotalCost = msg.TotalCostUsd;
+        // Accumulate cost instead of replacing
+        _accumulatedCost += msg.TotalCostUsd;
+        TotalCost = _accumulatedCost;
         IsProcessing = false;
 
         State = msg.IsError ? SessionState.Error : SessionState.Completed;
@@ -518,6 +560,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             }
 
             Messages.Add(userVm);
+            CheckAndUnloadOldMessages();
         }
         IsProcessing = true;
 
@@ -560,6 +603,7 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         }
 
         Messages.Add(userVm);
+        CheckAndUnloadOldMessages();
 
         try
         {
@@ -630,9 +674,9 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     [RelayCommand]
-    private void LoadMoreMessagesAction()
+    private async Task LoadMoreMessagesAction()
     {
-        LoadMoreMessages();
+        await LoadMoreMessagesAsync();
     }
 
     [RelayCommand]
@@ -749,6 +793,47 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     /// <summary>
+    /// Sets the context needed for loading messages from disk when they've been unloaded.
+    /// </summary>
+    public void SetDiskLoadingContext(string worktreePath, string claudeSessionId, int totalMessageCount)
+    {
+        _worktreePath = worktreePath;
+        _claudeSessionId = claudeSessionId;
+        _diskMessageCount = totalMessageCount;
+    }
+
+    /// <summary>
+    /// Checks if old messages should be unloaded and performs the unload if needed.
+    /// Called after adding new messages.
+    /// </summary>
+    private void CheckAndUnloadOldMessages()
+    {
+        if (Messages.Count <= UnloadThreshold) return;
+
+        var toRemove = Math.Min(MessagesToUnload, Messages.Count - MaxMessagesInMemory);
+        if (toRemove <= 0) return;
+
+        // Remove oldest messages from UI
+        for (var i = 0; i < toRemove; i++)
+        {
+            Messages.RemoveAt(0);
+        }
+
+        // Also remove from _allMessages to free memory
+        if (_allMessages.Count > 0)
+        {
+            var removeCount = Math.Min(toRemove, _allMessages.Count);
+            _allMessages.RemoveRange(0, removeCount);
+        }
+
+        // Update tracking
+        _oldestLoadedIndex += toRemove;
+        HasUnloadedMessages = true;
+        OnPropertyChanged(nameof(UnloadedMessageCount));
+        OnPropertyChanged(nameof(HasMoreMessages));
+    }
+
+    /// <summary>
     /// Loads more messages when scrolling up. Call this when user scrolls near the top.
     /// </summary>
     /// <returns>The number of messages loaded.</returns>
@@ -768,7 +853,8 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
             if (countToLoad <= 0)
             {
-                HasMoreMessages = false;
+                _hasMoreMessages = false;
+                OnPropertyChanged(nameof(HasMoreMessages));
                 return 0;
             }
 
@@ -785,7 +871,8 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
             }
 
             _loadedMessageCount += countToLoad;
-            HasMoreMessages = newStartIndex > 0;
+            _hasMoreMessages = newStartIndex > 0;
+            OnPropertyChanged(nameof(HasMoreMessages));
 
             return insertedCount;
         }
@@ -793,6 +880,126 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         {
             IsLoadingMore = false;
         }
+    }
+
+    /// <summary>
+    /// Loads more messages asynchronously, including from disk if messages were unloaded.
+    /// </summary>
+    /// <returns>The number of messages loaded.</returns>
+    public async Task<int> LoadMoreMessagesAsync()
+    {
+        if (!HasMoreMessages || IsLoadingMore) return 0;
+
+        IsLoadingMore = true;
+        try
+        {
+            // First try loading from _allMessages (in-memory)
+            if (_allMessages.Count > 0)
+            {
+                var totalCount = _allMessages.Count;
+                var currentStartIndex = totalCount - _loadedMessageCount;
+
+                if (currentStartIndex > 0)
+                {
+                    var newStartIndex = Math.Max(0, currentStartIndex - LoadMoreCount);
+                    var countToLoad = currentStartIndex - newStartIndex;
+
+                    if (countToLoad > 0)
+                    {
+                        var insertedCount = 0;
+                        for (var i = currentStartIndex - 1; i >= newStartIndex; i--)
+                        {
+                            var viewModel = ConvertToViewModel(_allMessages[i]);
+                            if (viewModel != null)
+                            {
+                                Messages.Insert(0, viewModel);
+                                insertedCount++;
+                            }
+                        }
+
+                        _loadedMessageCount += countToLoad;
+                        _hasMoreMessages = newStartIndex > 0;
+                        OnPropertyChanged(nameof(HasMoreMessages));
+                        return insertedCount;
+                    }
+                }
+            }
+
+            // If we have unloaded messages on disk, load from there
+            if (HasUnloadedMessages && !string.IsNullOrEmpty(_worktreePath) && !string.IsNullOrEmpty(_claudeSessionId))
+            {
+                return await LoadFromDiskAsync();
+            }
+
+            _hasMoreMessages = false;
+            OnPropertyChanged(nameof(HasMoreMessages));
+            return 0;
+        }
+        finally
+        {
+            IsLoadingMore = false;
+        }
+    }
+
+    /// <summary>
+    /// Loads messages from disk when they've been unloaded from memory.
+    /// </summary>
+    private async Task<int> LoadFromDiskAsync()
+    {
+        if (string.IsNullOrEmpty(_worktreePath) || string.IsNullOrEmpty(_claudeSessionId))
+            return 0;
+
+        var historyService = new SessionHistoryService();
+
+        // Calculate range to load
+        var startIndex = Math.Max(0, _oldestLoadedIndex - LoadMoreCount);
+        var count = _oldestLoadedIndex - startIndex;
+
+        if (count <= 0)
+        {
+            HasUnloadedMessages = false;
+            OnPropertyChanged(nameof(HasMoreMessages));
+            return 0;
+        }
+
+        // Read messages from disk
+        var messages = await historyService.ReadSessionHistoryRangeAsync(
+            _worktreePath, _claudeSessionId, startIndex, count);
+
+        // Convert and insert at beginning
+        var insertedCount = 0;
+        foreach (var msg in messages.Reverse())
+        {
+            var vm = ConvertHistoryMessageToViewModel(msg);
+            if (vm != null)
+            {
+                Messages.Insert(0, vm);
+                insertedCount++;
+            }
+        }
+
+        _oldestLoadedIndex = startIndex;
+        HasUnloadedMessages = startIndex > 0;
+        OnPropertyChanged(nameof(UnloadedMessageCount));
+        OnPropertyChanged(nameof(HasMoreMessages));
+
+        return insertedCount;
+    }
+
+    /// <summary>
+    /// Converts a SessionHistoryMessage to a MessageViewModel.
+    /// </summary>
+    private MessageViewModel? ConvertHistoryMessageToViewModel(SessionHistoryMessage msg)
+    {
+        if (msg.Role == "user")
+        {
+            return new UserMessageViewModel { Content = msg.Content };
+        }
+        else if (msg.Role == "assistant")
+        {
+            return new AssistantMessageViewModel { TextContent = msg.Content };
+        }
+        return null;
     }
 
     /// <summary>

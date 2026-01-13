@@ -532,6 +532,7 @@ public sealed class WorktreeService : IWorktreeService
                 ClaudeSessionId = metadata.ClaudeSessionId,
                 SessionWasActive = metadata.SessionWasActive,
                 AccumulatedDurationMs = metadata.AccumulatedDurationMs,
+                AccumulatedCostUsd = metadata.AccumulatedCostUsd,
                 WasJob = metadata.WasJob,
                 LastIteration = metadata.LastIteration,
                 JobMaxIterations = metadata.MaxIterations
@@ -823,6 +824,7 @@ public sealed class WorktreeService : IWorktreeService
         public string? ClaudeSessionId { get; init; }
         public bool SessionWasActive { get; init; }
         public long AccumulatedDurationMs { get; init; }
+        public decimal AccumulatedCostUsd { get; init; }
 
         // Job metadata for persistence across app restarts
         public bool WasJob { get; init; }
@@ -892,6 +894,28 @@ public sealed class WorktreeService : IWorktreeService
             return;
 
         var updatedMetadata = metadata with { AccumulatedDurationMs = durationMs };
+        var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the accumulated cost for a worktree session.
+    /// </summary>
+    public async Task UpdateAccumulatedCostAsync(
+        string worktreePath,
+        decimal costUsd,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = Path.Combine(worktreePath, MetadataFileName);
+        if (!File.Exists(metadataPath))
+            return;
+
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken);
+        var metadata = JsonSerializer.Deserialize<WorktreeMetadata>(json);
+        if (metadata == null)
+            return;
+
+        var updatedMetadata = metadata with { AccumulatedCostUsd = costUsd };
         var updatedJson = JsonSerializer.Serialize(updatedMetadata, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(metadataPath, updatedJson, cancellationToken);
     }

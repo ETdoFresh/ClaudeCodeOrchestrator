@@ -79,6 +79,11 @@ public sealed record WorktreeInfo
     public long AccumulatedDurationMs { get; set; }
 
     /// <summary>
+    /// Accumulated total cost in USD across all session resumes.
+    /// </summary>
+    public decimal AccumulatedCostUsd { get; set; }
+
+    /// <summary>
     /// Whether this worktree was used as a job (for persistence across app restarts).
     /// </summary>
     public bool WasJob { get; set; }

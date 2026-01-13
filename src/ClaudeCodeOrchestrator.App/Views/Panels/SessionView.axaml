@@ -147,15 +147,8 @@
                         <Panel Classes="arc-spinner" IsVisible="{Binding IsLoadingMore}">
                             <Ellipse Stroke="#007ACC" StrokeThickness="2" />
                         </Panel>
-                        <TextBlock VerticalAlignment="Center">
-                            <TextBlock.Text>
-                                <Binding Path="IsLoadingMore">
-                                    <Binding.Converter>
-                                        <conv:BoolToStringConverter TrueValue="Loading..." FalseValue="Load Previous Messages" />
-                                    </Binding.Converter>
-                                </Binding>
-                            </TextBlock.Text>
-                        </TextBlock>
+                        <TextBlock Text="Load Previous Messages" VerticalAlignment="Center" IsVisible="{Binding !IsLoadingMore}" />
+                        <TextBlock Text="Loading..." VerticalAlignment="Center" IsVisible="{Binding IsLoadingMore}" />
                     </StackPanel>
                 </Button>
             </Border>

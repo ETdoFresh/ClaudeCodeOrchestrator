@@ -227,6 +227,113 @@ public sealed class SessionHistoryService
         return messages;
     }
 
+    /// <summary>
+    /// Reads a specific range of messages from a session file.
+    /// </summary>
+    /// <param name="worktreePath">Path to the worktree.</param>
+    /// <param name="sessionId">The session ID.</param>
+    /// <param name="startIndex">The starting index (0-based).</param>
+    /// <param name="count">Number of messages to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public async Task<IReadOnlyList<SessionHistoryMessage>> ReadSessionHistoryRangeAsync(
+        string worktreePath,
+        string sessionId,
+        int startIndex,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        var projectDir = GetProjectDirectory(worktreePath);
+        var sessionFile = Path.Combine(projectDir, $"{sessionId}.jsonl");
+
+        if (!File.Exists(sessionFile))
+            return Array.Empty<SessionHistoryMessage>();
+
+        var messages = new List<SessionHistoryMessage>();
+        var currentIndex = 0;
+        var endIndex = startIndex + count;
+
+        await foreach (var line in File.ReadLinesAsync(sessionFile, cancellationToken))
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            try
+            {
+                var entry = JsonSerializer.Deserialize<SessionHistoryEntry>(line);
+                if (entry is null) continue;
+
+                // Skip non-message entries
+                if (entry.Type != "user" && entry.Type != "assistant") continue;
+
+                // Skip sidechain entries (agent tasks)
+                if (entry.IsSidechain == true) continue;
+
+                var (content, toolUses) = ExtractContentAndToolUses(entry);
+
+                // Skip if no content and no tool uses
+                if (string.IsNullOrEmpty(content) && toolUses.Count == 0) continue;
+
+                // Check if we're in the desired range
+                if (currentIndex >= startIndex && currentIndex < endIndex)
+                {
+                    messages.Add(new SessionHistoryMessage
+                    {
+                        Role = entry.Type == "user" ? "user" : "assistant",
+                        Content = content ?? "",
+                        Timestamp = entry.Timestamp,
+                        Uuid = entry.Uuid,
+                        ToolUses = toolUses
+                    });
+                }
+
+                currentIndex++;
+
+                // Stop if we've collected enough
+                if (currentIndex >= endIndex)
+                    break;
+            }
+            catch (JsonException)
+            {
+                // Skip malformed entries
+            }
+        }
+
+        return messages;
+    }
+
+    /// <summary>
+    /// Gets the total count of user/assistant messages in a session.
+    /// </summary>
+    public async Task<int> GetMessageCountAsync(
+        string worktreePath,
+        string sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var projectDir = GetProjectDirectory(worktreePath);
+        var sessionFile = Path.Combine(projectDir, $"{sessionId}.jsonl");
+
+        if (!File.Exists(sessionFile))
+            return 0;
+
+        var count = 0;
+
+        await foreach (var line in File.ReadLinesAsync(sessionFile, cancellationToken))
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            // Quick check without full parsing
+            if (line.Contains("\"type\":\"user\"") || line.Contains("\"type\":\"assistant\""))
+            {
+                // Need to verify it's not a sidechain message
+                if (!line.Contains("\"isSidechain\":true"))
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
     private static string GetProjectDirectory(string worktreePath)
     {
         // Claude encodes paths by replacing /, \, ., and : with -

@@ -90,6 +90,14 @@ public interface IWorktreeService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the accumulated cost for a worktree session.
+    /// </summary>
+    Task UpdateAccumulatedCostAsync(
+        string worktreePath,
+        decimal costUsd,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the title for a worktree.
     /// </summary>
     Task UpdateTitleAsync(

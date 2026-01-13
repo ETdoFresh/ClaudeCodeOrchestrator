@@ -39,6 +39,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // Track pending accumulated durations for sessions being restored with history
     private readonly ConcurrentDictionary<string, TimeSpan> _pendingAccumulatedDurations = new();
 
+    // Track pending accumulated costs for sessions being restored with history
+    private readonly ConcurrentDictionary<string, decimal> _pendingAccumulatedCosts = new();
+
     // Track worktrees currently having sessions opened (prevents duplicate tabs from race conditions)
     private readonly ConcurrentDictionary<string, byte> _worktreesOpeningSession = new();
 
@@ -577,6 +580,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Clear pending accumulated durations
         _pendingAccumulatedDurations.Clear();
+
+        // Clear pending accumulated costs
+        _pendingAccumulatedCosts.Clear();
 
         // Clear worktrees opening session lock
         _worktreesOpeningSession.Clear();
@@ -1450,6 +1456,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Add to document dock via factory
             Factory?.AddSessionDocument(document, isPreview);
 
+            // Restore accumulated cost from previous sessions if available
+            if (_pendingAccumulatedCosts.TryRemove(e.Session.WorktreeId, out var accumulatedCost))
+            {
+                document.AccumulatedCostUsd = accumulatedCost;
+            }
+
             // Find the worktree view model
             var worktree = Worktrees.FirstOrDefault(w => w.Id == e.Session.WorktreeId);
             if (worktree != null)
@@ -1517,6 +1529,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 {
                     var durationMs = (long)worktree.AccumulatedDuration.TotalMilliseconds;
                     await _worktreeService.UpdateAccumulatedDurationAsync(worktree.Path, durationMs);
+                }
+                catch
+                {
+                    // Ignore errors - this is not critical
+                }
+
+                // Save accumulated cost to metadata for persistence across app restarts
+                try
+                {
+                    var document = Factory?.GetSessionDocument(e.SessionId);
+                    if (document != null)
+                    {
+                        await _worktreeService.UpdateAccumulatedCostAsync(worktree.Path, document.AccumulatedCostUsd);
+                    }
                 }
                 catch
                 {
@@ -1714,6 +1740,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             _pendingAccumulatedDurations[worktree.Id] = TimeSpan.FromMilliseconds(worktree.AccumulatedDurationMs);
         }
 
+        // Store the accumulated cost to be applied when the session document is created
+        if (worktree.AccumulatedCostUsd > 0)
+        {
+            _pendingAccumulatedCosts[worktree.Id] = worktree.AccumulatedCostUsd;
+        }
+
         // Mark this session as having pending history load
         _pendingHistoryLoads[worktree.Id] = (worktree.Path, claudeSessionId);
 
@@ -1773,6 +1805,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 {
                     document.LoadMessagesFromSession(session);
                     document.IsLoadingHistory = false;
+                    // Set disk loading context for message virtualization
+                    document.SetDiskLoadingContext(worktreePath, claudeSessionId, history.Count);
                 }
 
                 // Clean up pending history load tracking
@@ -1893,6 +1927,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     if (durationMs > 0)
                     {
                         await _worktreeService.UpdateAccumulatedDurationAsync(worktree.Path, durationMs);
+                    }
+                }
+                catch
+                {
+                    // Ignore errors - not critical
+                }
+
+                // Save the accumulated cost before clearing state
+                try
+                {
+                    var document = Factory?.GetSessionDocument(e.SessionId);
+                    if (document != null && document.AccumulatedCostUsd > 0)
+                    {
+                        await _worktreeService.UpdateAccumulatedCostAsync(worktree.Path, document.AccumulatedCostUsd);
                     }
                 }
                 catch
