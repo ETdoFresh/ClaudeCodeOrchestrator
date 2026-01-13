@@ -47,6 +47,7 @@ public class DockFactory : Factory
 {
     private readonly object _context;
     private readonly ISettingsService _settingsService;
+    private readonly IRepositorySettingsService _repositorySettingsService;
     private IDocumentDock? _documentDock;
     private IToolDock? _leftDock;
     private LeftPanelViewModel? _leftPanelViewModel;
@@ -88,10 +89,11 @@ public class DockFactory : Factory
     /// </summary>
     public event EventHandler<SessionDocumentClosedEventArgs>? SessionDocumentClosed;
 
-    public DockFactory(object context, ISettingsService settingsService)
+    public DockFactory(object context, ISettingsService settingsService, IRepositorySettingsService repositorySettingsService)
     {
         _context = context;
         _settingsService = settingsService;
+        _repositorySettingsService = repositorySettingsService;
     }
 
     public override IRootDock CreateLayout()
@@ -596,9 +598,10 @@ public class DockFactory : Factory
 
         var worktreeList = worktrees.ToList();
 
-        // Filter worktrees: jobs/ prefix OR WasJob=true goes to Jobs panel only, others go to Worktrees panel
-        var regularWorktrees = worktreeList.Where(w => !w.BranchName.StartsWith("jobs/") && !w.WasJob).ToList();
-        var jobWorktrees = worktreeList.Where(w => w.BranchName.StartsWith("jobs/") || w.WasJob).ToList();
+        // Filter worktrees: job prefix OR WasJob=true goes to Jobs panel only, others go to Worktrees panel
+        var jobPrefix = _repositorySettingsService.JobBranchPrefix;
+        var regularWorktrees = worktreeList.Where(w => !w.BranchName.StartsWith(jobPrefix) && !w.WasJob).ToList();
+        var jobWorktrees = worktreeList.Where(w => w.BranchName.StartsWith(jobPrefix) || w.WasJob).ToList();
 
         _worktreesViewModel.Worktrees.Clear();
         foreach (var wt in regularWorktrees)

@@ -79,11 +79,8 @@ public partial class App : Application
 
         // Git services
         services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<BranchNameGenerator>();
         services.AddSingleton<IWorktreeService>(sp =>
-            new WorktreeService(
-                sp.GetRequiredService<IGitService>(),
-                sp.GetRequiredService<BranchNameGenerator>()));
+            new WorktreeService(sp.GetRequiredService<IGitService>()));
 
         // Core services
         services.AddSingleton<ISessionService, SessionService>();

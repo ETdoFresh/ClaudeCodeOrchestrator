@@ -8,7 +8,21 @@ namespace ClaudeCodeOrchestrator.Git.Services;
 public sealed partial class BranchNameGenerator
 {
     private const int MaxSlugLength = 50;
-    private const string BranchPrefix = "task/";
+    public const string DefaultTaskPrefix = "task/";
+    public const string DefaultJobPrefix = "jobs/";
+
+    private readonly string _taskPrefix;
+    private readonly string _jobPrefix;
+
+    public BranchNameGenerator() : this(DefaultTaskPrefix, DefaultJobPrefix)
+    {
+    }
+
+    public BranchNameGenerator(string taskPrefix, string jobPrefix)
+    {
+        _taskPrefix = taskPrefix;
+        _jobPrefix = jobPrefix;
+    }
 
     [GeneratedRegex(@"[^a-z0-9\-]")]
     private static partial Regex InvalidCharsRegex();
@@ -36,20 +50,20 @@ public sealed partial class BranchNameGenerator
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
 
-        // If it starts with jobs/, use as-is (already has timestamp from job creation)
-        if (branchName.StartsWith("jobs/"))
+        // If it starts with job prefix, use as-is (already has timestamp from job creation)
+        if (branchName.StartsWith(_jobPrefix))
         {
             return branchName;
         }
 
-        // If it already has a prefix, just add timestamp
-        if (branchName.StartsWith(BranchPrefix))
+        // If it already has the task prefix, just add timestamp
+        if (branchName.StartsWith(_taskPrefix))
         {
-            var slug = branchName[BranchPrefix.Length..];
-            return $"{BranchPrefix}{slug}-{timestamp}";
+            var slug = branchName[_taskPrefix.Length..];
+            return $"{_taskPrefix}{slug}-{timestamp}";
         }
 
-        return $"{BranchPrefix}{branchName}-{timestamp}";
+        return $"{_taskPrefix}{branchName}-{timestamp}";
     }
 
     /// <summary>
@@ -88,7 +102,7 @@ public sealed partial class BranchNameGenerator
             slug = "task";
         }
 
-        return $"{BranchPrefix}{slug}";
+        return $"{_taskPrefix}{slug}";
     }
 
     /// <summary>
@@ -96,12 +110,12 @@ public sealed partial class BranchNameGenerator
     /// </summary>
     public string? ExtractSlug(string branchName)
     {
-        if (!branchName.StartsWith(BranchPrefix))
+        if (!branchName.StartsWith(_taskPrefix))
         {
             return null;
         }
 
-        var withoutPrefix = branchName[BranchPrefix.Length..];
+        var withoutPrefix = branchName[_taskPrefix.Length..];
 
         // Remove timestamp suffix (format: -YYYYMMDD-HHMMSS)
         var lastHyphen = withoutPrefix.LastIndexOf('-');

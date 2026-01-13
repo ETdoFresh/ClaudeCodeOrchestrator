@@ -21,9 +21,10 @@ public partial class MainWindow : Window
 
         // Get services
         var settingsService = ServiceLocator.GetRequiredService<ISettingsService>();
+        var repositorySettingsService = ServiceLocator.GetRequiredService<IRepositorySettingsService>();
 
         // Create dock factory and layout
-        var factory = new DockFactory(_viewModel, settingsService);
+        var factory = new DockFactory(_viewModel, settingsService, repositorySettingsService);
         var layout = factory.CreateLayout();
         factory.InitLayout(layout);
 

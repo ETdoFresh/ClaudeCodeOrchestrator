@@ -15,6 +15,8 @@ public interface IWorktreeService
     /// <param name="title">Generated title for display (optional, falls back to task description).</param>
     /// <param name="branchName">Pre-generated branch name without timestamp (optional, auto-generated if null).</param>
     /// <param name="baseBranch">Base branch to create worktree from.</param>
+    /// <param name="taskBranchPrefix">Branch prefix for tasks (default: "task/").</param>
+    /// <param name="jobBranchPrefix">Branch prefix for jobs (default: "jobs/").</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<WorktreeInfo> CreateWorktreeAsync(
         string repoPath,
@@ -22,6 +24,8 @@ public interface IWorktreeService
         string? title = null,
         string? branchName = null,
         string? baseBranch = null,
+        string? taskBranchPrefix = null,
+        string? jobBranchPrefix = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -424,7 +424,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             CurrentRepositoryPath,
             taskInput.Text,
             title: placeholderTitle,
-            branchName: branchName);
+            branchName: branchName,
+            baseBranch: null,
+            taskBranchPrefix: _repositorySettingsService.TaskBranchPrefix,
+            jobBranchPrefix: _repositorySettingsService.JobBranchPrefix);
 
         // Add to list
         var vm = WorktreeViewModel.FromModel(worktree);
@@ -2127,9 +2130,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // Generate a unique branch name for the job
+            // Generate a unique branch name for the job using the configured prefix
+            var jobPrefix = _repositorySettingsService.JobBranchPrefix;
             var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            var branchName = $"jobs/job-{timestamp}";
+            var branchName = $"{jobPrefix}job-{timestamp}";
 
             // Determine the task description/prompt to use
             var taskDescription = config.PromptOption == Docking.PromptOption.Other
@@ -2141,7 +2145,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 CurrentRepositoryPath,
                 taskDescription,
                 title: null,
-                branchName: branchName);
+                branchName: branchName,
+                baseBranch: null,
+                taskBranchPrefix: _repositorySettingsService.TaskBranchPrefix,
+                jobBranchPrefix: jobPrefix);
 
             // Refresh worktrees to show the new job worktree
             await RefreshWorktreesAsync();

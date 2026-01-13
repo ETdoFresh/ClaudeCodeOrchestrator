@@ -79,4 +79,19 @@ public interface IRepositorySettingsService
     /// </summary>
     /// <param name="prompts">The prompts to save.</param>
     void SetSavedPrompts(IEnumerable<SavedPrompt> prompts);
+
+    /// <summary>
+    /// Gets the branch prefix for task worktrees.
+    /// </summary>
+    string TaskBranchPrefix { get; }
+
+    /// <summary>
+    /// Gets the branch prefix for job worktrees.
+    /// </summary>
+    string JobBranchPrefix { get; }
+
+    /// <summary>
+    /// Sets the branch prefixes and saves.
+    /// </summary>
+    void SetBranchPrefixes(string? taskPrefix, string? jobPrefix);
 }

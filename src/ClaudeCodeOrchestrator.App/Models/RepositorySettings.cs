@@ -17,6 +17,16 @@ public class RepositorySettings
     /// Saved custom prompts for the Jobs panel.
     /// </summary>
     public List<SavedPromptSettings>? SavedPrompts { get; set; }
+
+    /// <summary>
+    /// The branch prefix for task worktrees (default: "task/").
+    /// </summary>
+    public string? TaskBranchPrefix { get; set; }
+
+    /// <summary>
+    /// The branch prefix for job worktrees (default: "jobs/").
+    /// </summary>
+    public string? JobBranchPrefix { get; set; }
 }
 
 /// <summary>

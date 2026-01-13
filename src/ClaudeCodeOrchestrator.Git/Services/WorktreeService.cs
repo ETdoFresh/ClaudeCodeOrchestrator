@@ -15,12 +15,10 @@ public sealed class WorktreeService : IWorktreeService
     private const string MetadataFileName = ".worktree-metadata.json";
 
     private readonly IGitService _gitService;
-    private readonly BranchNameGenerator _branchNameGenerator;
 
-    public WorktreeService(IGitService gitService, BranchNameGenerator branchNameGenerator)
+    public WorktreeService(IGitService gitService)
     {
         _gitService = gitService;
-        _branchNameGenerator = branchNameGenerator;
     }
 
     public async Task<WorktreeInfo> CreateWorktreeAsync(
@@ -29,15 +27,22 @@ public sealed class WorktreeService : IWorktreeService
         string? title = null,
         string? branchName = null,
         string? baseBranch = null,
+        string? taskBranchPrefix = null,
+        string? jobBranchPrefix = null,
         CancellationToken cancellationToken = default)
     {
         var repoInfo = await _gitService.OpenRepositoryAsync(repoPath, cancellationToken);
         baseBranch ??= repoInfo.DefaultBranch;
 
+        // Create a BranchNameGenerator with the specified prefixes (or defaults)
+        var generator = new BranchNameGenerator(
+            taskBranchPrefix ?? BranchNameGenerator.DefaultTaskPrefix,
+            jobBranchPrefix ?? BranchNameGenerator.DefaultJobPrefix);
+
         // Use provided branch name with timestamp, or generate from task description
         var finalBranchName = branchName != null
-            ? _branchNameGenerator.AddTimestamp(branchName)
-            : _branchNameGenerator.Generate(taskDescription);
+            ? generator.AddTimestamp(branchName)
+            : generator.Generate(taskDescription);
 
         // Ensure worktrees directory exists and is gitignored
         var worktreesDir = Path.Combine(repoPath, WorktreesDirectoryName);
@@ -46,9 +51,13 @@ public sealed class WorktreeService : IWorktreeService
 
         // Create worktree path (strip branch prefixes for directory name)
         var worktreeId = Guid.NewGuid().ToString("N")[..8];
-        var pathSafeBranchName = finalBranchName
-            .Replace("task/", "")
-            .Replace("jobs/", "");
+        // Strip any prefix that ends with / to get a cleaner directory name
+        var pathSafeBranchName = finalBranchName;
+        var slashIndex = pathSafeBranchName.IndexOf('/');
+        if (slashIndex >= 0)
+        {
+            pathSafeBranchName = pathSafeBranchName[(slashIndex + 1)..];
+        }
         var worktreePath = Path.Combine(worktreesDir, $"{pathSafeBranchName}-{worktreeId}");
 
         // Create worktree using git command (LibGit2Sharp worktree support is limited)

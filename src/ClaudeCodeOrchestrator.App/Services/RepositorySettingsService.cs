@@ -32,6 +32,17 @@ public class RepositorySettingsService : IRepositorySettingsService
 
     public bool IsVSCodeAvailable => _isVSCodeAvailable ?? false;
 
+    private const string DefaultTaskBranchPrefix = "task/";
+    private const string DefaultJobBranchPrefix = "jobs/";
+
+    public string TaskBranchPrefix => !string.IsNullOrWhiteSpace(_settings?.TaskBranchPrefix)
+        ? _settings.TaskBranchPrefix
+        : DefaultTaskBranchPrefix;
+
+    public string JobBranchPrefix => !string.IsNullOrWhiteSpace(_settings?.JobBranchPrefix)
+        ? _settings.JobBranchPrefix
+        : DefaultJobBranchPrefix;
+
     public string? RepositoryPath => _repositoryPath;
 
     public event EventHandler? SettingsChanged;
@@ -325,5 +336,22 @@ public class RepositorySettingsService : IRepositorySettingsService
             .ToList();
 
         Save();
+    }
+
+    public void SetBranchPrefixes(string? taskPrefix, string? jobPrefix)
+    {
+        if (_settings is null)
+            _settings = new RepositorySettings();
+
+        // Ensure prefixes end with / for consistency
+        if (!string.IsNullOrWhiteSpace(taskPrefix) && !taskPrefix.EndsWith("/"))
+            taskPrefix += "/";
+        if (!string.IsNullOrWhiteSpace(jobPrefix) && !jobPrefix.EndsWith("/"))
+            jobPrefix += "/";
+
+        _settings.TaskBranchPrefix = string.IsNullOrWhiteSpace(taskPrefix) ? null : taskPrefix;
+        _settings.JobBranchPrefix = string.IsNullOrWhiteSpace(jobPrefix) ? null : jobPrefix;
+        Save();
+        SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 }
