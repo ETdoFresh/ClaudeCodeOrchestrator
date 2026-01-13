@@ -67,15 +67,25 @@ public sealed class DialogService : IDialogService
     }
 
     /// <inheritdoc />
-    public async Task<string?> ShowRepositorySettingsAsync(string? currentExecutable)
+    public async Task<RepositorySettingsResult?> ShowRepositorySettingsAsync(
+        string? currentExecutable,
+        string? currentTaskPrefix,
+        string? currentJobPrefix)
     {
         var window = GetMainWindow();
         if (window is null) return null;
 
         var dialog = new RepositorySettingsDialog();
         dialog.SetExecutable(currentExecutable);
+        dialog.SetBranchPrefixes(currentTaskPrefix, currentJobPrefix);
         await dialog.ShowDialog(window);
 
-        return dialog.WasSaved ? dialog.Executable : null;
+        if (!dialog.WasSaved)
+            return null;
+
+        return new RepositorySettingsResult(
+            dialog.Executable,
+            dialog.TaskBranchPrefix,
+            dialog.JobBranchPrefix);
     }
 }

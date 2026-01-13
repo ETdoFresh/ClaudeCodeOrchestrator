@@ -12,6 +12,16 @@ public partial class RepositorySettingsDialog : Window
     public string? Executable { get; private set; }
 
     /// <summary>
+    /// Gets the task branch prefix entered by the user.
+    /// </summary>
+    public string? TaskBranchPrefix { get; private set; }
+
+    /// <summary>
+    /// Gets the job branch prefix entered by the user.
+    /// </summary>
+    public string? JobBranchPrefix { get; private set; }
+
+    /// <summary>
     /// Gets whether the user saved the settings.
     /// </summary>
     public bool WasSaved { get; private set; }
@@ -46,6 +56,15 @@ public partial class RepositorySettingsDialog : Window
         ExecutableTextBox.Text = executable ?? string.Empty;
     }
 
+    /// <summary>
+    /// Sets the initial branch prefix values.
+    /// </summary>
+    public void SetBranchPrefixes(string? taskPrefix, string? jobPrefix)
+    {
+        TaskBranchPrefixTextBox.Text = taskPrefix ?? string.Empty;
+        JobBranchPrefixTextBox.Text = jobPrefix ?? string.Empty;
+    }
+
     private void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         Cancel();
@@ -65,6 +84,8 @@ public partial class RepositorySettingsDialog : Window
     private void Save()
     {
         Executable = ExecutableTextBox.Text;
+        TaskBranchPrefix = TaskBranchPrefixTextBox.Text;
+        JobBranchPrefix = JobBranchPrefixTextBox.Text;
         WasSaved = true;
         Close();
     }

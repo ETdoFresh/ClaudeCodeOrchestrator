@@ -1,6 +1,14 @@
 namespace ClaudeCodeOrchestrator.App.Services;
 
 /// <summary>
+/// Result from the repository settings dialog.
+/// </summary>
+public record RepositorySettingsResult(
+    string? Executable,
+    string? TaskBranchPrefix,
+    string? JobBranchPrefix);
+
+/// <summary>
 /// Service for showing dialogs and picking files/folders.
 /// </summary>
 public interface IDialogService
@@ -36,6 +44,11 @@ public interface IDialogService
     /// Shows the repository settings dialog.
     /// </summary>
     /// <param name="currentExecutable">The current executable setting.</param>
-    /// <returns>The new executable setting if saved, or null if cancelled.</returns>
-    Task<string?> ShowRepositorySettingsAsync(string? currentExecutable);
+    /// <param name="currentTaskPrefix">The current task branch prefix.</param>
+    /// <param name="currentJobPrefix">The current job branch prefix.</param>
+    /// <returns>The settings if saved, or null if cancelled.</returns>
+    Task<RepositorySettingsResult?> ShowRepositorySettingsAsync(
+        string? currentExecutable,
+        string? currentTaskPrefix,
+        string? currentJobPrefix);
 }

@@ -695,10 +695,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task OpenRepositorySettingsAsync()
     {
-        var result = await _dialogService.ShowRepositorySettingsAsync(_repositorySettingsService.Settings?.Executable);
+        var result = await _dialogService.ShowRepositorySettingsAsync(
+            _repositorySettingsService.Settings?.Executable,
+            _repositorySettingsService.TaskBranchPrefix,
+            _repositorySettingsService.JobBranchPrefix);
+
         if (result != null)
         {
-            _repositorySettingsService.SetExecutable(result);
+            _repositorySettingsService.SetExecutable(result.Executable);
+            _repositorySettingsService.SetBranchPrefixes(result.TaskBranchPrefix, result.JobBranchPrefix);
         }
     }
 

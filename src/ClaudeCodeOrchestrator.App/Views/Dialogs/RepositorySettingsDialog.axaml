@@ -3,36 +3,80 @@
         x:Class="ClaudeCodeOrchestrator.App.Views.Dialogs.RepositorySettingsDialog"
         AutomationProperties.AutomationId="RepositorySettingsDialog"
         Title="Repository Settings"
-        Width="450" Height="200"
+        Width="450" Height="380"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         ShowInTaskbar="False"
         Background="#2D2D30">
 
     <Grid RowDefinitions="*,Auto" Margin="20">
-        <StackPanel Grid.Row="0" Spacing="12">
-            <TextBlock Text="Run Configuration"
-                       AutomationProperties.AutomationId="RepoSettingsTitle"
-                       FontSize="16" FontWeight="SemiBold"
-                       Foreground="#CCCCCC" />
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="16">
+                <!-- Run Configuration Section -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Run Configuration"
+                               AutomationProperties.AutomationId="RepoSettingsTitle"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="#CCCCCC" />
 
-            <StackPanel Spacing="6">
-                <TextBlock Text="Executable"
-                           FontSize="13"
-                           Foreground="#D4D4D4"/>
-                <TextBox x:Name="ExecutableTextBox"
-                         AutomationProperties.AutomationId="ExecutableTextBox"
-                         Watermark="e.g., dotnet run, ./build.sh, index.html"
-                         Background="#3C3C3C"
-                         BorderBrush="#474747"
-                         Foreground="#CCCCCC"
-                         Padding="8,6" />
-                <TextBlock Text="Enter a command (e.g., 'dotnet run'), executable path with args, or a file to open with the OS default handler."
-                           FontSize="11"
-                           Foreground="#808080"
-                           TextWrapping="Wrap" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Executable"
+                                   FontSize="13"
+                                   Foreground="#D4D4D4"/>
+                        <TextBox x:Name="ExecutableTextBox"
+                                 AutomationProperties.AutomationId="ExecutableTextBox"
+                                 Watermark="e.g., dotnet run, ./build.sh, index.html"
+                                 Background="#3C3C3C"
+                                 BorderBrush="#474747"
+                                 Foreground="#CCCCCC"
+                                 Padding="8,6" />
+                        <TextBlock Text="Enter a command (e.g., 'dotnet run'), executable path with args, or a file to open with the OS default handler."
+                                   FontSize="11"
+                                   Foreground="#808080"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Branch Prefixes Section -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Branch Prefixes"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="#CCCCCC" />
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Task Branch Prefix"
+                                   FontSize="13"
+                                   Foreground="#D4D4D4"/>
+                        <TextBox x:Name="TaskBranchPrefixTextBox"
+                                 AutomationProperties.AutomationId="TaskBranchPrefixTextBox"
+                                 Watermark="task/"
+                                 Background="#3C3C3C"
+                                 BorderBrush="#474747"
+                                 Foreground="#CCCCCC"
+                                 Padding="8,6" />
+                        <TextBlock Text="Prefix for worktree branches (e.g., task/, feature/)"
+                                   FontSize="11"
+                                   Foreground="#808080" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                        <TextBlock Text="Job Branch Prefix"
+                                   FontSize="13"
+                                   Foreground="#D4D4D4"/>
+                        <TextBox x:Name="JobBranchPrefixTextBox"
+                                 AutomationProperties.AutomationId="JobBranchPrefixTextBox"
+                                 Watermark="jobs/"
+                                 Background="#3C3C3C"
+                                 BorderBrush="#474747"
+                                 Foreground="#CCCCCC"
+                                 Padding="8,6" />
+                        <TextBlock Text="Prefix for job branches (e.g., jobs/, automation/)"
+                                   FontSize="11"
+                                   Foreground="#808080" />
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
             <Button Content="Cancel" Click="Cancel_Click"
