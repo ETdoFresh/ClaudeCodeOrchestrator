@@ -1451,11 +1451,26 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var isLoadingHistory = _pendingHistoryLoads.ContainsKey(e.Session.WorktreeId);
             document.IsLoadingHistory = isLoadingHistory;
 
+            // Check if this is a job session and set iteration info
+            var isJob = _activeJobs.TryGetValue(e.Session.WorktreeId, out var job);
+            if (isJob && job != null)
+            {
+                document.CurrentIteration = job.CurrentIteration;
+                document.MaxIterations = job.Configuration.MaxIterations;
+            }
+
             // Load any existing messages from the session (for resumed sessions)
             // If loading history async, this will be empty and will be populated later
             if (!isLoadingHistory)
             {
                 document.LoadMessagesFromSession(e.Session);
+
+                // Add session started indicator for new sessions (not history loads)
+                // This will be inserted at the beginning of the messages
+                document.InsertSessionStartedIndicator(
+                    isJob,
+                    job?.CurrentIteration,
+                    job?.Configuration.MaxIterations);
             }
 
             // Check if this session should be opened as preview

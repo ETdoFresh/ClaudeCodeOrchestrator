@@ -424,3 +424,28 @@ public partial class TodoItemViewModel : ViewModelBase
         ? ActiveForm
         : Content;
 }
+
+/// <summary>
+/// View model for system messages (session started, iteration started, etc.).
+/// </summary>
+public partial class SystemMessageViewModel : MessageViewModel
+{
+    [ObservableProperty]
+    private string _content = string.Empty;
+
+    [ObservableProperty]
+    private string _icon = "🚀";
+
+    [ObservableProperty]
+    private SystemMessageType _messageType = SystemMessageType.SessionStarted;
+}
+
+/// <summary>
+/// Type of system message.
+/// </summary>
+public enum SystemMessageType
+{
+    SessionStarted,
+    IterationStarted,
+    SessionResumed
+}

@@ -202,6 +202,28 @@
                     <DataTemplate DataType="{x:Type vmBase:MessageViewModel}">
                         <ContentControl Content="{Binding}">
                             <ContentControl.DataTemplates>
+                                <!-- System message - centered indicator -->
+                                <DataTemplate DataType="{x:Type vmBase:SystemMessageViewModel}">
+                                    <Border Margin="0,12,0,8" HorizontalAlignment="Center">
+                                        <Border Background="#2D4A2D"
+                                                CornerRadius="12"
+                                                Padding="16,8"
+                                                BorderBrush="#4CAF50"
+                                                BorderThickness="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Icon}"
+                                                           FontSize="14"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Content}"
+                                                           FontSize="12"
+                                                           Foreground="#A5D6A7"
+                                                           FontWeight="SemiBold"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Border>
+                                </DataTemplate>
+
                                 <!-- User message - light grey box style -->
                                 <DataTemplate DataType="{x:Type vmBase:UserMessageViewModel}">
                                     <Border x:Name="UserMessageBorder" Margin="0,4,0,2" Padding="12,8" Background="#2D2D30" CornerRadius="6"

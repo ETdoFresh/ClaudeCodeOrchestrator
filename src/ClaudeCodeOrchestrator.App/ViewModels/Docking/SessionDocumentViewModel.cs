@@ -793,6 +793,49 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     /// <summary>
+    /// Inserts a session started indicator at the beginning of the messages.
+    /// </summary>
+    /// <param name="isJob">Whether this is a job session.</param>
+    /// <param name="iteration">The current iteration number (for jobs).</param>
+    /// <param name="maxIterations">The max iterations (for jobs).</param>
+    public void InsertSessionStartedIndicator(bool isJob = false, int? iteration = null, int? maxIterations = null)
+    {
+        string content;
+        string icon;
+        SystemMessageType messageType;
+
+        if (isJob && iteration.HasValue && maxIterations.HasValue)
+        {
+            content = $"New Session Started - Iteration {iteration}/{maxIterations}";
+            icon = "🔄";
+            messageType = SystemMessageType.IterationStarted;
+        }
+        else if (isJob)
+        {
+            content = "Job Session Started";
+            icon = "🚀";
+            messageType = SystemMessageType.SessionStarted;
+        }
+        else
+        {
+            content = "New Session Started";
+            icon = "🚀";
+            messageType = SystemMessageType.SessionStarted;
+        }
+
+        var systemMessage = new SystemMessageViewModel
+        {
+            Content = content,
+            Icon = icon,
+            MessageType = messageType,
+            Timestamp = DateTime.UtcNow
+        };
+
+        // Insert at the beginning (index 0)
+        Messages.Insert(0, systemMessage);
+    }
+
+    /// <summary>
     /// Sets the context needed for loading messages from disk when they've been unloaded.
     /// </summary>
     public void SetDiskLoadingContext(string worktreePath, string claudeSessionId, int totalMessageCount)
