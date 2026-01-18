@@ -252,7 +252,30 @@ public class DockFactory : Factory
                 // Close any existing preview since we're switching to a persistent tab
                 ClosePreviewDocument();
 
-                // Just activate the existing document
+                // Update the existing document's session ID if it differs from the new document
+                // This is crucial for multi-iteration jobs where a new session is created each iteration
+                if (existingDoc.SessionId != document.SessionId)
+                {
+                    existingDoc.SessionId = document.SessionId;
+
+                    // Copy over iteration info from new document
+                    if (document.CurrentIteration.HasValue)
+                    {
+                        existingDoc.CurrentIteration = document.CurrentIteration;
+                    }
+                    if (document.MaxIterations.HasValue)
+                    {
+                        existingDoc.MaxIterations = document.MaxIterations;
+                    }
+
+                    // Note: We do NOT add iteration indicators or messages here.
+                    // That is handled by OnSessionCreated in MainWindowViewModel which
+                    // properly detects job sessions and handles the reuse case.
+                    // This code path is a fallback for edge cases where OnSessionCreated
+                    // created a new document but an existing one was already present.
+                }
+
+                // Activate the existing document
                 _documentDock.ActiveDockable = existingDoc;
                 return;
             }
@@ -269,6 +292,25 @@ public class DockFactory : Factory
                 {
                     // Promote the preview to persistent
                     existingPreview.IsPreview = false;
+
+                    // Update session ID if different (for new iteration sessions)
+                    if (existingPreview.SessionId != document.SessionId)
+                    {
+                        existingPreview.SessionId = document.SessionId;
+
+                        if (document.CurrentIteration.HasValue)
+                        {
+                            existingPreview.CurrentIteration = document.CurrentIteration;
+                        }
+                        if (document.MaxIterations.HasValue)
+                        {
+                            existingPreview.MaxIterations = document.MaxIterations;
+                        }
+
+                        // Note: We do NOT add iteration indicators or messages here.
+                        // That is handled by OnSessionCreated in MainWindowViewModel.
+                    }
+
                     _documentDock.ActiveDockable = existingPreview;
                     return;
                 }

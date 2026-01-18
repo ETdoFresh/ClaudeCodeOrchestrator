@@ -796,10 +796,24 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
         _loadedMessageCount = totalCount - startIndex;
         HasMoreMessages = startIndex > 0;
 
-        // Load only the last InitialMessageCount messages
+        // Get existing message UUIDs to avoid duplicates
+        var existingUuids = Messages.OfType<MessageViewModel>()
+            .Where(m => !string.IsNullOrEmpty(m.Uuid))
+            .Select(m => m.Uuid)
+            .ToHashSet();
+
+        // Load only the last InitialMessageCount messages, skipping duplicates
         for (var i = startIndex; i < totalCount; i++)
         {
-            var viewModel = ConvertToViewModel(_allMessages[i]);
+            var sdkMessage = _allMessages[i];
+
+            // Skip if we already have this message (by UUID)
+            if (sdkMessage is SDK.Messages.SDKUserMessage userMsg && existingUuids.Contains(userMsg.Uuid))
+                continue;
+            if (sdkMessage is SDK.Messages.SDKAssistantMessage assistantMsg && existingUuids.Contains(assistantMsg.Uuid))
+                continue;
+
+            var viewModel = ConvertToViewModel(sdkMessage);
             if (viewModel != null)
             {
                 Messages.Add(viewModel);
@@ -858,9 +872,20 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     /// <param name="maxIterations">The max iterations.</param>
     public void AppendIterationIndicator(int iteration, int maxIterations)
     {
+        // Check if we already have an indicator for this iteration to prevent duplicates
+        var expectedContent = $"New Session Started - Iteration {iteration}/{maxIterations}";
+        var lastSystemMsg = Messages.OfType<SystemMessageViewModel>()
+            .LastOrDefault(m => m.MessageType == SystemMessageType.IterationStarted);
+
+        if (lastSystemMsg?.Content == expectedContent)
+        {
+            // Already have this indicator, skip
+            return;
+        }
+
         var systemMessage = new SystemMessageViewModel
         {
-            Content = $"New Session Started - Iteration {iteration}/{maxIterations}",
+            Content = expectedContent,
             Icon = "🔄",
             MessageType = SystemMessageType.IterationStarted,
             Timestamp = DateTime.UtcNow

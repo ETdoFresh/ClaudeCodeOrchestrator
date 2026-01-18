@@ -107,6 +107,9 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IterationText))]
+    [NotifyPropertyChangedFor(nameof(CanPauseJob))]
+    [NotifyPropertyChangedFor(nameof(CanResumeJob))]
+    [NotifyPropertyChangedFor(nameof(CanStopJob))]
     private int? _currentIteration;
 
     /// <summary>
@@ -166,6 +169,11 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     /// Whether the job can be resumed (is paused or has error).
     /// </summary>
     public bool CanResumeJob => CurrentIteration.HasValue && (IsJobPaused || HasError);
+
+    /// <summary>
+    /// Whether the job can be stopped (has an active job, regardless of state).
+    /// </summary>
+    public bool CanStopJob => CurrentIteration.HasValue;
 
     [ObservableProperty]
     private string? _activeSessionId;
@@ -227,6 +235,11 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     /// Callback for resuming a paused/errored job on this worktree.
     /// </summary>
     public Func<WorktreeViewModel, Task>? OnResumeJobRequested { get; set; }
+
+    /// <summary>
+    /// Callback for stopping/cancelling a job on this worktree.
+    /// </summary>
+    public Action<WorktreeViewModel>? OnStopJobRequested { get; set; }
 
     /// <summary>
     /// Whether the run button should be visible (executable is configured).
@@ -327,6 +340,12 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         if (OnResumeJobRequested != null)
             await OnResumeJobRequested(this);
+    }
+
+    [RelayCommand]
+    private void StopJob()
+    {
+        OnStopJobRequested?.Invoke(this);
     }
 
     /// <summary>

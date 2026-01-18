@@ -56,7 +56,7 @@ public sealed class SessionHistoryService
     }
 
     /// <summary>
-    /// Checks if a session file contains any user or assistant messages.
+    /// Checks if a session file contains any user or assistant messages with actual content.
     /// </summary>
     private static bool HasUserOrAssistantMessages(string sessionFilePath)
     {
@@ -67,9 +67,30 @@ public sealed class SessionHistoryService
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
                 // Quick check for message types without full parsing
-                if (line.Contains("\"type\":\"user\"") || line.Contains("\"type\":\"assistant\""))
+                if (!line.Contains("\"type\":\"user\"") && !line.Contains("\"type\":\"assistant\""))
+                    continue;
+
+                // Skip sidechain entries
+                if (line.Contains("\"isSidechain\":true"))
+                    continue;
+
+                // Parse and verify actual content exists
+                try
                 {
-                    return true;
+                    var entry = JsonSerializer.Deserialize<SessionHistoryEntry>(line);
+                    if (entry is null) continue;
+                    if (entry.Type != "user" && entry.Type != "assistant") continue;
+                    if (entry.IsSidechain == true) continue;
+
+                    var (content, toolUses) = ExtractContentAndToolUses(entry);
+                    if (!string.IsNullOrEmpty(content) || toolUses.Count > 0)
+                    {
+                        return true;
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Skip malformed entries
                 }
             }
         }
@@ -79,6 +100,23 @@ public sealed class SessionHistoryService
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Gets all session IDs that have actual loadable messages, ordered by modification time (most recent first).
+    /// </summary>
+    public IReadOnlyList<string> GetSessionsWithMessages(string worktreePath)
+    {
+        var projectDir = GetProjectDirectory(worktreePath);
+        if (!Directory.Exists(projectDir))
+            return Array.Empty<string>();
+
+        return Directory.GetFiles(projectDir, "*.jsonl")
+            .Where(f => !Path.GetFileName(f).StartsWith("agent-"))
+            .Where(HasUserOrAssistantMessages)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .Select(f => Path.GetFileNameWithoutExtension(f))
+            .ToList();
     }
 
     /// <summary>
@@ -337,17 +375,13 @@ public sealed class SessionHistoryService
     private static string GetProjectDirectory(string worktreePath)
     {
         // Claude encodes paths by replacing /, \, ., and : with -
+        // Note: Claude keeps the leading dash from Unix absolute paths
         var encodedPath = worktreePath
             .Replace("/", "-")
             .Replace("\\", "-")
             .Replace(".", "-")
             .Replace(":", "-");
 
-        // Remove leading dash if present (e.g., from paths starting with / on Unix)
-        if (encodedPath.StartsWith("-"))
-            encodedPath = encodedPath.Substring(1);
-
-        // Directory name is just the encoded path, no leading dash
         return Path.Combine(ClaudeProjectsPath, encodedPath);
     }
 

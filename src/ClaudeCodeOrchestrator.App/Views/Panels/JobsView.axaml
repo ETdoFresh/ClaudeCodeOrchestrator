@@ -282,6 +282,15 @@
                                             Foreground="#4CAF50"
                                             IsVisible="{Binding CanResumeJob}"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='ResumeJob_{0}'}" />
+                                    <!-- Stop button - shown when job is active (any state) -->
+                                    <Button Command="{Binding StopJobCommand}"
+                                            Content="⏹"
+                                            Padding="4,2"
+                                            FontSize="10"
+                                            ToolTip.Tip="Stop job"
+                                            Foreground="#F44336"
+                                            IsVisible="{Binding CanStopJob}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='StopJob_{0}'}" />
                                     <!-- Merge button - shown when ready to merge -->
                                     <Button Command="{Binding MergeCommand}"
                                             Content="↗"

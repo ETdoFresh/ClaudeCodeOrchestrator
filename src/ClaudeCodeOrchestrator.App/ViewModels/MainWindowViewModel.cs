@@ -839,6 +839,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         vm.OnOpenInVSCodeRequested = OnOpenInVSCodeRequestedAsync;
         vm.OnPauseJobRequested = OnPauseJobRequested;
         vm.OnResumeJobRequested = OnResumeJobRequestedAsync;
+        vm.OnStopJobRequested = OnStopJobRequested;
         vm.CanRun = _repositorySettingsService.HasExecutable;
         vm.CanOpenInVSCode = _repositorySettingsService.IsVSCodeAvailable;
     }
@@ -851,6 +852,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task OnResumeJobRequestedAsync(WorktreeViewModel worktree)
     {
         await ResumeJobAsync(worktree.Id);
+    }
+
+    private void OnStopJobRequested(WorktreeViewModel worktree)
+    {
+        StopJob(worktree.Id);
     }
 
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
@@ -1273,41 +1279,47 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (worktreeInfo == null) return;
 
-            // Find the Claude session ID from metadata or disk
             var historyService = new SessionHistoryService();
-            var claudeSessionId = worktreeInfo.ClaudeSessionId;
-            if (string.IsNullOrEmpty(claudeSessionId))
-            {
-                claudeSessionId = historyService.GetMostRecentSession(worktreeInfo.Path);
-            }
 
-            if (string.IsNullOrEmpty(claudeSessionId))
+            // For multi-session jobs, get all sessions with messages
+            var sessionsWithMessages = historyService.GetSessionsWithMessages(worktreeInfo.Path);
+
+            if (sessionsWithMessages.Count == 0)
             {
                 await _dialogService.ShowErrorAsync("No Session History",
-                    "Could not find any session history for this worktree.");
+                    "Could not find any session history with messages for this worktree.");
                 return;
             }
 
-            // Load the history
-            var history = await historyService.ReadSessionHistoryAsync(
-                worktreeInfo.Path, claudeSessionId);
+            // Load history from all sessions (for multi-session jobs)
+            // Sessions are ordered by modification time (most recent first), so reverse to get chronological order
+            var allHistory = new List<SessionHistoryMessage>();
 
-            if (history.Count == 0)
+            foreach (var sessionId in sessionsWithMessages.Reverse())
             {
-                // Debug: show the actual path being used
-                var debugPath = historyService.GetDebugProjectDirectory(worktreeInfo.Path);
-                var sessionFilePath = System.IO.Path.Combine(debugPath, $"{claudeSessionId}.jsonl");
-                var fileExists = System.IO.File.Exists(sessionFilePath);
-                var fileSize = fileExists ? new System.IO.FileInfo(sessionFilePath).Length : 0;
+                var sessionHistory = await historyService.ReadSessionHistoryAsync(
+                    worktreeInfo.Path, sessionId);
 
+                if (sessionHistory.Count > 0)
+                {
+                    allHistory.AddRange(sessionHistory);
+                }
+            }
+
+            // Use the most recent session as the "current" session ID for resumption
+            var claudeSessionId = sessionsWithMessages[0];
+
+            if (allHistory.Count == 0)
+            {
+                var debugPath = historyService.GetDebugProjectDirectory(worktreeInfo.Path);
                 await _dialogService.ShowErrorAsync("Empty Session History",
-                    $"Session file found ({claudeSessionId}) but contains no messages.\n\n" +
+                    $"Found {sessionsWithMessages.Count} session file(s) but none contain loadable messages.\n\n" +
                     $"Worktree: {worktreeInfo.Path}\n\n" +
-                    $"Looking in: {debugPath}\n\n" +
-                    $"Session file: {sessionFilePath}\n" +
-                    $"File exists: {fileExists}, Size: {fileSize} bytes");
+                    $"Looking in: {debugPath}");
                 return;
             }
+
+            var history = allHistory;
 
             // Convert history to SDK messages
             var historyMessages = new List<SDK.Messages.ISDKMessage>();
@@ -2124,8 +2136,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             }
 
             // Generate the initial prompt based on configuration
+            // If the task description is one of our job labels (from CreateNewJobAsync),
+            // don't wrap it - use null to get the base prompt
+            var isJobLabel = IsJobTaskDescriptionLabel(worktreeInfo.TaskDescription);
             var prompt = config.GeneratePrompt(
-                worktreeInfo.TaskDescription,
+                isJobLabel ? null : worktreeInfo.TaskDescription,
                 null // TODO: Get previous conversation summary if available
             );
 
@@ -2197,10 +2212,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
             var branchName = $"{jobPrefix}job-{timestamp}";
 
-            // Determine the task description/prompt to use
+            // Determine the task description - use a simple description for the worktree,
+            // not the full generated prompt (which would cause double-wrapping in StartJobAsync)
             var taskDescription = config.PromptOption == Docking.PromptOption.Other
-                ? config.CustomPromptText ?? "Long-running job"
-                : config.GeneratePrompt(null, null);
+                ? config.CustomPromptTitle ?? config.CustomPromptText ?? "Long-running job"
+                : GetJobTaskDescription(config.PromptOption);
 
             // Create the worktree
             var worktreeInfo = await _worktreeService.CreateWorktreeAsync(
@@ -2292,7 +2308,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             maxIterations: config.MaxIterations);
 
         // Generate the continuation prompt
-        var prompt = config.GeneratePrompt(job.InitialPrompt, null);
+        // If the initial prompt is one of our job labels, don't wrap it
+        var isJobLabel = IsJobTaskDescriptionLabel(job.InitialPrompt);
+        var prompt = config.GeneratePrompt(isJobLabel ? null : job.InitialPrompt, null);
 
         // Small delay to let UI update
         await Task.Delay(500);
@@ -2350,13 +2368,57 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Stops an active job for a worktree.
+    /// Gets a simple task description for a job based on prompt option.
+    /// This is used for display in the worktree list, not as the actual prompt.
     /// </summary>
-    public void StopJob(string worktreeId)
+    private static string GetJobTaskDescription(Docking.PromptOption promptOption)
+    {
+        return promptOption switch
+        {
+            Docking.PromptOption.ContinueUntilComplete => "Continue until complete",
+            Docking.PromptOption.ContinueWithSummary => "Continue with summary",
+            Docking.PromptOption.ReviewAndDecide => "Review and decide next steps",
+            _ => "Long-running job"
+        };
+    }
+
+    /// <summary>
+    /// Checks if a task description is one of our auto-generated job labels.
+    /// These labels should not be wrapped in a prompt template.
+    /// </summary>
+    private static bool IsJobTaskDescriptionLabel(string? taskDescription)
+    {
+        if (string.IsNullOrEmpty(taskDescription)) return false;
+
+        return taskDescription is
+            "Continue until complete" or
+            "Continue with summary" or
+            "Review and decide next steps" or
+            "Long-running job";
+    }
+
+    /// <summary>
+    /// Stops an active job for a worktree and interrupts any running session.
+    /// </summary>
+    public async void StopJob(string worktreeId)
     {
         _activeJobs.TryRemove(worktreeId, out _);
         var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
         ClearWorktreeIterationInfo(worktree);
+
+        // Interrupt the running session if there is one
+        var session = _sessionService.GetSessionByWorktreeId(worktreeId);
+        if (session != null)
+        {
+            try
+            {
+                await _sessionService.InterruptSessionAsync(session.Id);
+            }
+            catch
+            {
+                // Ignore errors when interrupting - session may already be stopped
+            }
+        }
     }
 
     /// <summary>
@@ -2396,20 +2458,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         job.State = JobState.Running;
 
-        // Get the session and send continuation message
-        var session = _sessionService.GetSessionByWorktreeId(worktreeId);
-        if (session == null) return;
-
         // Add iteration separator for the next iteration
         job.CurrentIteration++;
         if (worktree != null)
         {
             worktree.CurrentIteration = job.CurrentIteration;
         }
-
-        var isResumedSession = job.Configuration.SessionOption == Docking.SessionOption.ResumeSession;
-        var sessionDoc = Factory?.GetSessionDocument(session.Id);
-        sessionDoc?.AddIterationSeparator(job.CurrentIteration, job.Configuration.MaxIterations, isResumedSession);
 
         // Persist job iteration progress
         await _worktreeService.UpdateJobMetadataAsync(
@@ -2418,9 +2472,48 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             lastIteration: job.CurrentIteration,
             maxIterations: job.Configuration.MaxIterations);
 
-        // Generate and send continuation prompt
-        var prompt = job.Configuration.GeneratePrompt(job.InitialPrompt, null);
+        // Generate the continuation prompt
+        // If the initial prompt is one of our job labels, don't wrap it
+        var isJobLabel = IsJobTaskDescriptionLabel(job.InitialPrompt);
+        var prompt = job.Configuration.GeneratePrompt(isJobLabel ? null : job.InitialPrompt, null);
         await Task.Delay(500); // Small delay to let UI update
+
+        // Check if we should create a new session for each iteration
+        if (job.Configuration.SessionOption == Docking.SessionOption.NewSession)
+        {
+            // End the current session and create a fresh one
+            var existingSession = _sessionService.GetSessionByWorktreeId(worktreeId);
+            if (existingSession != null)
+            {
+                await _sessionService.EndSessionAsync(existingSession.Id);
+            }
+
+            // Get worktree info to create new session
+            if (!string.IsNullOrEmpty(CurrentRepositoryPath))
+            {
+                var worktreeInfo = await _worktreeService.GetWorktreeAsync(CurrentRepositoryPath, worktreeId);
+                if (worktreeInfo != null)
+                {
+                    await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+                    return;
+                }
+            }
+
+            // If we couldn't create a new session, clean up
+            _activeJobs.TryRemove(worktreeId, out _);
+            ClearWorktreeIterationInfo(worktree);
+            return;
+        }
+
+        // Resume existing session (default behavior)
+        var session = _sessionService.GetSessionByWorktreeId(worktreeId);
+        if (session == null) return;
+
+        var isResumedSession = job.Configuration.SessionOption == Docking.SessionOption.ResumeSession;
+        var sessionDoc = Factory?.GetSessionDocument(session.Id);
+        sessionDoc?.AddIterationSeparator(job.CurrentIteration, job.Configuration.MaxIterations, isResumedSession);
+
+        // Send the continuation message
         await _sessionService.SendMessageAsync(session.Id, prompt);
     }
 
