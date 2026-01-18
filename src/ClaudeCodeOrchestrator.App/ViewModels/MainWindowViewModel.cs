@@ -2108,6 +2108,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update worktree with iteration info
             worktree.CurrentIteration = 1;
             worktree.MaxIterations = config.MaxIterations;
+            worktree.IsResumedSessionJob = config.SessionOption == Docking.SessionOption.ResumeSession;
 
             // Persist job metadata for app restart recovery
             await _worktreeService.UpdateJobMetadataAsync(
@@ -2119,27 +2120,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Check if we should resume an existing session or start new
             var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
 
-            if (config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null)
+            var isResumedSession = config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null;
+
+            if (isResumedSession)
             {
                 // Add iteration separator for iteration 1 when resuming
-                var sessionDoc = Factory?.GetSessionDocument(existingSession.Id);
-                sessionDoc?.AddIterationSeparator(1, config.MaxIterations);
+                var sessionDoc = Factory?.GetSessionDocument(existingSession!.Id);
+                sessionDoc?.AddIterationSeparator(1, config.MaxIterations, isResumedSession: true);
 
                 // Resume existing session with the prompt
-                await _sessionService.SendMessageAsync(existingSession.Id, prompt);
+                await _sessionService.SendMessageAsync(existingSession!.Id, prompt);
             }
             else
             {
-                // Start a new session - iteration separator will be added after session is created
+                // Start a new session - iteration separator is added in OnSessionCreated via InsertSessionStartedIndicator
                 await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
-
-                // Add iteration separator for iteration 1 on new session
-                var newSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
-                if (newSession != null)
-                {
-                    var sessionDoc = Factory?.GetSessionDocument(newSession.Id);
-                    sessionDoc?.AddIterationSeparator(1, config.MaxIterations);
-                }
             }
         }
         catch (Exception ex)
@@ -2259,8 +2254,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         // Add iteration separator to the session UI
+        var isResumedSession = config.SessionOption == Docking.SessionOption.ResumeSession;
         var sessionDoc = Factory?.GetSessionDocument(session.Id);
-        sessionDoc?.AddIterationSeparator(job.CurrentIteration, config.MaxIterations);
+        sessionDoc?.AddIterationSeparator(job.CurrentIteration, config.MaxIterations, isResumedSession);
 
         // Generate the continuation prompt
         var prompt = config.GeneratePrompt(job.InitialPrompt, null);

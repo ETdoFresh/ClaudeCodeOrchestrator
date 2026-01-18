@@ -115,7 +115,14 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     private int? _maxIterations;
 
     /// <summary>
-    /// Gets the formatted iteration text (e.g., "Iteration 1/20").
+    /// Whether the active job is using a resumed session (true) or a new session (false).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    private bool _isResumedSessionJob;
+
+    /// <summary>
+    /// Gets the formatted iteration text (e.g., "Iteration 1/20 (Resume)").
     /// Shows current iteration for active jobs, or last iteration for historical jobs.
     /// Returns null if not part of a job.
     /// </summary>
@@ -123,9 +130,12 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         get
         {
-            // Active job: show current iteration
+            // Active job: show current iteration with session type
             if (CurrentIteration.HasValue && MaxIterations.HasValue)
-                return $"Iteration {CurrentIteration}/{MaxIterations}";
+            {
+                var sessionType = IsResumedSessionJob ? "Resume" : "New";
+                return $"{CurrentIteration}/{MaxIterations} ({sessionType})";
+            }
 
             // Historical job: show last iteration
             if (LastIteration.HasValue && JobMaxIterations.HasValue)
