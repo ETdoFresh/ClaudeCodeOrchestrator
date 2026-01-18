@@ -836,6 +836,26 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     /// <summary>
+    /// Appends a session/iteration indicator at the end of the messages.
+    /// Used when starting a new iteration in an existing document.
+    /// </summary>
+    /// <param name="iteration">The current iteration number.</param>
+    /// <param name="maxIterations">The max iterations.</param>
+    public void AppendIterationIndicator(int iteration, int maxIterations)
+    {
+        var systemMessage = new SystemMessageViewModel
+        {
+            Content = $"New Session Started - Iteration {iteration}/{maxIterations}",
+            Icon = "🔄",
+            MessageType = SystemMessageType.IterationStarted,
+            Timestamp = DateTime.UtcNow
+        };
+
+        // Append at the end
+        Messages.Add(systemMessage);
+    }
+
+    /// <summary>
     /// Sets the context needed for loading messages from disk when they've been unloaded.
     /// </summary>
     public void SetDiskLoadingContext(string worktreePath, string claudeSessionId, int totalMessageCount)

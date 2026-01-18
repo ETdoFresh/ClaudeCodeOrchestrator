@@ -23,6 +23,9 @@ public partial class SessionView : UserControl
     // Threshold in pixels from top to trigger loading more messages
     private const double LoadMoreThreshold = 200;
 
+    // Threshold in pixels from bottom to consider "near bottom" for auto-scroll
+    private const double AutoScrollThreshold = 50;
+
     private static readonly FilePickerFileType ImageFileTypes = new("Images")
     {
         Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp" },
@@ -73,11 +76,21 @@ public partial class SessionView : UserControl
 
     private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Scroll to bottom when new messages are added
+        // Scroll to bottom when new messages are added, but only if already near bottom
         if (e.Action == NotifyCollectionChangedAction.Add)
         {
-            ScrollToBottom();
+            // Check if near bottom BEFORE the layout updates
+            if (IsNearBottom())
+            {
+                ScrollToBottom();
+            }
         }
+    }
+
+    private bool IsNearBottom()
+    {
+        var distanceFromBottom = MessagesScrollViewer.Extent.Height - MessagesScrollViewer.Offset.Y - MessagesScrollViewer.Viewport.Height;
+        return distanceFromBottom <= AutoScrollThreshold;
     }
 
     private void ScrollToBottom()
@@ -525,54 +538,4 @@ public partial class SessionView : UserControl
         UpdateAttachmentsDisplay();
     }
 
-    /// <summary>
-    /// Shows the copy button when pointer enters a message bubble.
-    /// </summary>
-    private void MessageBorder_PointerEntered(object? sender, PointerEventArgs e)
-    {
-        if (sender is Border border)
-        {
-            var copyButton = FindCopyButton(border);
-            if (copyButton != null)
-                copyButton.Opacity = 1;
-        }
-    }
-
-    /// <summary>
-    /// Hides the copy button when pointer exits a message bubble.
-    /// Only hides if pointer actually left the border bounds.
-    /// </summary>
-    private void MessageBorder_PointerExited(object? sender, PointerEventArgs e)
-    {
-        if (sender is Border border)
-        {
-            // Check if pointer is still within the border bounds
-            var position = e.GetPosition(border);
-            var bounds = border.Bounds;
-
-            // If pointer is still inside the border, don't hide
-            if (position.X >= 0 && position.X <= bounds.Width &&
-                position.Y >= 0 && position.Y <= bounds.Height)
-            {
-                return;
-            }
-
-            var copyButton = FindCopyButton(border);
-            if (copyButton != null)
-                copyButton.Opacity = 0;
-        }
-    }
-
-    /// <summary>
-    /// Finds the CopyButton within a message border.
-    /// </summary>
-    private static Button? FindCopyButton(Control parent)
-    {
-        foreach (var child in parent.GetVisualDescendants())
-        {
-            if (child is Button button && button.Name == "CopyButton")
-                return button;
-        }
-        return null;
-    }
 }

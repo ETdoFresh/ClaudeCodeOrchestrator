@@ -1439,6 +1439,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         _dispatcher.Post(() =>
         {
+            // Check if this is a job session
+            var isJob = _activeJobs.TryGetValue(e.Session.WorktreeId, out var job);
+
+            // Check if there's an existing document for this worktree (e.g., from a previous iteration)
+            var existingDocument = Factory?.GetSessionDocumentByWorktreeId(e.Session.WorktreeId);
+            if (existingDocument != null && isJob && job != null && job.CurrentIteration > 1)
+            {
+                // Reuse the existing document - just update its session ID to receive new messages
+                existingDocument.SessionId = e.Session.Id;
+                existingDocument.CurrentIteration = job.CurrentIteration;
+
+                // Append an iteration indicator at the end (between previous and new messages)
+                existingDocument.AppendIterationIndicator(
+                    job.CurrentIteration,
+                    job.Configuration.MaxIterations);
+
+                // Load the initial user message from the new session
+                existingDocument.LoadMessagesFromSession(e.Session);
+
+                // Activate the existing document
+                Factory?.ActivateSessionDocument(existingDocument.SessionId);
+                return;
+            }
+
             // Create new document for session
             var branch = GetWorktreeBranch(e.Session.WorktreeId);
             var document = new SessionDocumentViewModel(
@@ -1451,8 +1475,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var isLoadingHistory = _pendingHistoryLoads.ContainsKey(e.Session.WorktreeId);
             document.IsLoadingHistory = isLoadingHistory;
 
-            // Check if this is a job session and set iteration info
-            var isJob = _activeJobs.TryGetValue(e.Session.WorktreeId, out var job);
+            // Set iteration info for job sessions
             if (isJob && job != null)
             {
                 document.CurrentIteration = job.CurrentIteration;
@@ -2238,6 +2261,40 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             lastIteration: job.CurrentIteration,
             maxIterations: config.MaxIterations);
 
+        // Generate the continuation prompt
+        var prompt = config.GeneratePrompt(job.InitialPrompt, null);
+
+        // Small delay to let UI update
+        await Task.Delay(500);
+
+        // Check if we should create a new session for each iteration
+        if (config.SessionOption == Docking.SessionOption.NewSession)
+        {
+            // End the current session and create a fresh one
+            var existingSession = _sessionService.GetSessionByWorktreeId(worktreeId);
+            if (existingSession != null)
+            {
+                await _sessionService.EndSessionAsync(existingSession.Id);
+            }
+
+            // Get worktree info to create new session
+            if (!string.IsNullOrEmpty(CurrentRepositoryPath))
+            {
+                var worktreeInfo = await _worktreeService.GetWorktreeAsync(CurrentRepositoryPath, worktreeId);
+                if (worktreeInfo != null)
+                {
+                    await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+                    return;
+                }
+            }
+
+            // If we couldn't create a new session, clean up
+            _activeJobs.TryRemove(worktreeId, out _);
+            ClearWorktreeIterationInfo(worktree);
+            return;
+        }
+
+        // Resume existing session (default behavior)
         var session = _sessionService.GetSessionByWorktreeId(worktreeId);
         if (session == null)
         {
@@ -2246,13 +2303,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Generate the continuation prompt
-        var prompt = config.GeneratePrompt(job.InitialPrompt, null);
-
-        // Small delay to let UI update
-        await Task.Delay(500);
-
-        // Send the continuation message
+        // Send the continuation message (will resume the Claude session)
         await _sessionService.SendMessageAsync(session.Id, prompt);
     }
 

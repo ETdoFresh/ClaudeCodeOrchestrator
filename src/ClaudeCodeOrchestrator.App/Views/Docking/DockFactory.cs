@@ -364,6 +364,18 @@ public class DockFactory : Factory
     }
 
     /// <summary>
+    /// Gets an existing session document by worktree ID.
+    /// </summary>
+    public SessionDocumentViewModel? GetSessionDocumentByWorktreeId(string worktreeId)
+    {
+        if (_documentDock?.VisibleDockables is null) return null;
+
+        return _documentDock.VisibleDockables
+            .OfType<SessionDocumentViewModel>()
+            .FirstOrDefault(d => d.WorktreeId == worktreeId);
+    }
+
+    /// <summary>
     /// Removes a session document from the dock by session ID.
     /// </summary>
     public void RemoveSessionDocument(string sessionId)
