@@ -758,6 +758,20 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     /// <summary>
+    /// Adds an iteration separator to mark the start of a new job iteration.
+    /// </summary>
+    public void AddIterationSeparator(int iteration, int maxIterations)
+    {
+        Messages.Add(new SystemMessageViewModel
+        {
+            Uuid = Guid.NewGuid().ToString(),
+            Icon = "🔄",
+            Content = $"Iteration {iteration} of {maxIterations}",
+            MessageType = SystemMessageType.IterationStarted
+        });
+    }
+
+    /// <summary>
     /// Loads existing messages from a session (for resumed sessions with history).
     /// Only loads the last InitialMessageCount messages initially for performance.
     /// More messages can be loaded by calling LoadMoreMessages().

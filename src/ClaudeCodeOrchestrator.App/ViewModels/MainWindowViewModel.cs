@@ -2121,13 +2121,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             if (config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null)
             {
+                // Add iteration separator for iteration 1 when resuming
+                var sessionDoc = Factory?.GetSessionDocument(existingSession.Id);
+                sessionDoc?.AddIterationSeparator(1, config.MaxIterations);
+
                 // Resume existing session with the prompt
                 await _sessionService.SendMessageAsync(existingSession.Id, prompt);
             }
             else
             {
-                // Start a new session
+                // Start a new session - iteration separator will be added after session is created
                 await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
+
+                // Add iteration separator for iteration 1 on new session
+                var newSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
+                if (newSession != null)
+                {
+                    var sessionDoc = Factory?.GetSessionDocument(newSession.Id);
+                    sessionDoc?.AddIterationSeparator(1, config.MaxIterations);
+                }
             }
         }
         catch (Exception ex)
@@ -2245,6 +2257,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             ClearWorktreeIterationInfo(worktree);
             return;
         }
+
+        // Add iteration separator to the session UI
+        var sessionDoc = Factory?.GetSessionDocument(session.Id);
+        sessionDoc?.AddIterationSeparator(job.CurrentIteration, config.MaxIterations);
 
         // Generate the continuation prompt
         var prompt = config.GeneratePrompt(job.InitialPrompt, null);
