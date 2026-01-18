@@ -243,6 +243,24 @@
                                             Foreground="#4EC9B0"
                                             IsVisible="{Binding CanRun}"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='RunWorktree_{0}'}" />
+                                    <!-- Pause button - shown when job is running -->
+                                    <Button Command="{Binding PauseJobCommand}"
+                                            Content="⏸"
+                                            Padding="4,2"
+                                            FontSize="10"
+                                            ToolTip.Tip="Pause job after current turn"
+                                            Foreground="#FF9800"
+                                            IsVisible="{Binding CanPauseJob}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='PauseJob_{0}'}" />
+                                    <!-- Resume button - shown when job is paused or errored -->
+                                    <Button Command="{Binding ResumeJobCommand}"
+                                            Content="▶"
+                                            Padding="4,2"
+                                            FontSize="10"
+                                            ToolTip.Tip="Resume job"
+                                            Foreground="#4CAF50"
+                                            IsVisible="{Binding CanResumeJob}"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='ResumeJob_{0}'}" />
                                     <!-- Merge button - shown when ready to merge -->
                                     <Button Command="{Binding MergeCommand}"
                                             Content="↗"

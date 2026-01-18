@@ -90,6 +90,8 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText))]
     [NotifyPropertyChangedFor(nameof(DisplayStatus))]
+    [NotifyPropertyChangedFor(nameof(CanPauseJob))]
+    [NotifyPropertyChangedFor(nameof(CanResumeJob))]
     private bool _hasError;
 
     /// <summary>
@@ -122,6 +124,15 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     private bool _isResumedSessionJob;
 
     /// <summary>
+    /// Whether the active job is currently paused.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IterationText))]
+    [NotifyPropertyChangedFor(nameof(CanPauseJob))]
+    [NotifyPropertyChangedFor(nameof(CanResumeJob))]
+    private bool _isJobPaused;
+
+    /// <summary>
     /// Gets the formatted iteration text (e.g., "Iteration 1/20 (Resume)").
     /// Shows current iteration for active jobs, or last iteration for historical jobs.
     /// Returns null if not part of a job.
@@ -130,11 +141,12 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         get
         {
-            // Active job: show current iteration with session type
+            // Active job: show current iteration with session type and pause state
             if (CurrentIteration.HasValue && MaxIterations.HasValue)
             {
                 var sessionType = IsResumedSessionJob ? "Resume" : "New";
-                return $"{CurrentIteration}/{MaxIterations} ({sessionType})";
+                var pauseState = IsJobPaused ? " ⏸" : "";
+                return $"{CurrentIteration}/{MaxIterations} ({sessionType}){pauseState}";
             }
 
             // Historical job: show last iteration
@@ -144,6 +156,16 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
             return null;
         }
     }
+
+    /// <summary>
+    /// Whether the job can be paused (is active and running, not already paused or errored).
+    /// </summary>
+    public bool CanPauseJob => CurrentIteration.HasValue && !IsJobPaused && !HasError;
+
+    /// <summary>
+    /// Whether the job can be resumed (is paused or has error).
+    /// </summary>
+    public bool CanResumeJob => CurrentIteration.HasValue && (IsJobPaused || HasError);
 
     [ObservableProperty]
     private string? _activeSessionId;
@@ -195,6 +217,16 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     /// Callback for opening VS Code in this worktree.
     /// </summary>
     public Func<WorktreeViewModel, Task>? OnOpenInVSCodeRequested { get; set; }
+
+    /// <summary>
+    /// Callback for pausing a job on this worktree.
+    /// </summary>
+    public Action<WorktreeViewModel>? OnPauseJobRequested { get; set; }
+
+    /// <summary>
+    /// Callback for resuming a paused/errored job on this worktree.
+    /// </summary>
+    public Func<WorktreeViewModel, Task>? OnResumeJobRequested { get; set; }
 
     /// <summary>
     /// Whether the run button should be visible (executable is configured).
@@ -282,6 +314,19 @@ public partial class WorktreeViewModel : ViewModelBase, IDisposable
     {
         if (OnOpenInVSCodeRequested != null)
             await OnOpenInVSCodeRequested(this);
+    }
+
+    [RelayCommand]
+    private void PauseJob()
+    {
+        OnPauseJobRequested?.Invoke(this);
+    }
+
+    [RelayCommand]
+    private async Task ResumeJobAsync()
+    {
+        if (OnResumeJobRequested != null)
+            await OnResumeJobRequested(this);
     }
 
     /// <summary>

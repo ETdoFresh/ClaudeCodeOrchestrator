@@ -837,8 +837,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         vm.OnDeleteRequested = OnDeleteRequestedAsync;
         vm.OnRunRequested = OnRunRequestedAsync;
         vm.OnOpenInVSCodeRequested = OnOpenInVSCodeRequestedAsync;
+        vm.OnPauseJobRequested = OnPauseJobRequested;
+        vm.OnResumeJobRequested = OnResumeJobRequestedAsync;
         vm.CanRun = _repositorySettingsService.HasExecutable;
         vm.CanOpenInVSCode = _repositorySettingsService.IsVSCodeAvailable;
+    }
+
+    private void OnPauseJobRequested(WorktreeViewModel worktree)
+    {
+        PauseJob(worktree.Id);
+    }
+
+    private async Task OnResumeJobRequestedAsync(WorktreeViewModel worktree)
+    {
+        await ResumeJobAsync(worktree.Id);
     }
 
     private async Task OnOpenSessionRequestedAsync(WorktreeViewModel worktree)
@@ -2229,11 +2241,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var config = job.Configuration;
         var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
 
-        // Check if session failed or errored
+        // Check if session failed or errored - mark job as errored but don't remove it
         if (finalState == Core.Models.SessionState.Error || finalState == Core.Models.SessionState.Cancelled)
         {
-            _activeJobs.TryRemove(worktreeId, out _);
-            ClearWorktreeIterationInfo(worktree);
+            job.State = JobState.Error;
+            if (worktree != null)
+            {
+                worktree.HasError = true;
+            }
+            // Don't remove the job - allow resumption
+            return;
+        }
+
+        // Check if job was paused - don't continue to next iteration
+        if (job.State == JobState.Paused)
+        {
+            // Job is paused, don't continue
             return;
         }
 
@@ -2337,6 +2360,79 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Pauses an active job for a worktree.
+    /// The job will stop after the current turn completes.
+    /// </summary>
+    public void PauseJob(string worktreeId)
+    {
+        if (_activeJobs.TryGetValue(worktreeId, out var job))
+        {
+            job.State = JobState.Paused;
+            var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+            if (worktree != null)
+            {
+                worktree.IsJobPaused = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resumes a paused or errored job for a worktree.
+    /// </summary>
+    public async Task ResumeJobAsync(string worktreeId)
+    {
+        if (!_activeJobs.TryGetValue(worktreeId, out var job))
+            return;
+
+        if (job.State != JobState.Paused && job.State != JobState.Error)
+            return;
+
+        var worktree = Worktrees.FirstOrDefault(w => w.Id == worktreeId);
+        if (worktree != null)
+        {
+            worktree.IsJobPaused = false;
+            worktree.HasError = false;
+        }
+
+        job.State = JobState.Running;
+
+        // Get the session and send continuation message
+        var session = _sessionService.GetSessionByWorktreeId(worktreeId);
+        if (session == null) return;
+
+        // Add iteration separator for the next iteration
+        job.CurrentIteration++;
+        if (worktree != null)
+        {
+            worktree.CurrentIteration = job.CurrentIteration;
+        }
+
+        var isResumedSession = job.Configuration.SessionOption == Docking.SessionOption.ResumeSession;
+        var sessionDoc = Factory?.GetSessionDocument(session.Id);
+        sessionDoc?.AddIterationSeparator(job.CurrentIteration, job.Configuration.MaxIterations, isResumedSession);
+
+        // Persist job iteration progress
+        await _worktreeService.UpdateJobMetadataAsync(
+            job.WorktreePath,
+            wasJob: true,
+            lastIteration: job.CurrentIteration,
+            maxIterations: job.Configuration.MaxIterations);
+
+        // Generate and send continuation prompt
+        var prompt = job.Configuration.GeneratePrompt(job.InitialPrompt, null);
+        await Task.Delay(500); // Small delay to let UI update
+        await _sessionService.SendMessageAsync(session.Id, prompt);
+    }
+
+    /// <summary>
+    /// Gets the state of an active job.
+    /// </summary>
+    public JobState? GetJobState(string worktreeId)
+    {
+        return _activeJobs.TryGetValue(worktreeId, out var job) ? job.State : null;
+    }
+
+    /// <summary>
     /// Checks if a job is active for a worktree.
     /// </summary>
     public bool IsJobActive(string worktreeId)
@@ -2383,6 +2479,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 }
 
 /// <summary>
+/// State of an active job.
+/// </summary>
+public enum JobState
+{
+    /// <summary>Job is actively running iterations.</summary>
+    Running,
+    /// <summary>Job is paused and waiting to be resumed.</summary>
+    Paused,
+    /// <summary>Job encountered an error and stopped.</summary>
+    Error,
+    /// <summary>Job completed all iterations successfully.</summary>
+    Completed
+}
+
+/// <summary>
 /// Tracks an active job and its state.
 /// </summary>
 public class ActiveJob
@@ -2392,6 +2503,7 @@ public class ActiveJob
     public required Docking.JobConfiguration Configuration { get; init; }
     public int CurrentIteration { get; set; }
     public string? InitialPrompt { get; init; }
+    public JobState State { get; set; } = JobState.Running;
 }
 
 /// <summary>
