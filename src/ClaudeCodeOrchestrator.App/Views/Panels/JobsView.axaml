@@ -155,21 +155,42 @@
                           Foreground="#CCCCCC"
                           AutomationProperties.AutomationId="CommitOnEndOfTurnCheckbox" />
 
-                <!-- New Job Button -->
-                <Button Command="{Binding CreateNewJobCommand}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"
-                        Padding="8,6"
-                        Margin="0,4,0,0"
-                        Background="#4EC9B0"
-                        Foreground="White"
-                        FontWeight="SemiBold"
-                        AutomationProperties.AutomationId="NewJobButton">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="+" FontSize="14" VerticalAlignment="Center" />
-                        <TextBlock Text="New Job" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <!-- Job Buttons Row -->
+                <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+                    <!-- New Job Button -->
+                    <Button Grid.Column="0"
+                            Command="{Binding CreateNewJobCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="8,6"
+                            Margin="0,0,2,0"
+                            Background="#4EC9B0"
+                            Foreground="White"
+                            FontWeight="SemiBold"
+                            AutomationProperties.AutomationId="NewJobButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="+" FontSize="14" VerticalAlignment="Center" />
+                            <TextBlock Text="New Job" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <!-- Start Job on Selected Button -->
+                    <Button Grid.Column="1"
+                            Command="{Binding StartJobOnSelectedCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="8,6"
+                            Margin="2,0,0,0"
+                            Background="#569CD6"
+                            Foreground="White"
+                            FontWeight="SemiBold"
+                            IsVisible="{Binding CanStartJobOnSelected}"
+                            AutomationProperties.AutomationId="StartJobOnSelectedButton">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="▶" FontSize="10" VerticalAlignment="Center" />
+                            <TextBlock Text="Start Job" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </StackPanel>
         </Border>
 

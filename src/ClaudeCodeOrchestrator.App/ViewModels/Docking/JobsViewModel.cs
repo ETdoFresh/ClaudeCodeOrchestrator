@@ -41,7 +41,15 @@ public class PromptOptionItem
 public partial class JobsViewModel : ToolViewModelBase
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStartJobOnSelected))]
+    [NotifyCanExecuteChangedFor(nameof(StartJobOnSelectedCommand))]
     private WorktreeViewModel? _selectedWorktree;
+
+    /// <summary>
+    /// Whether we can start a job on the currently selected worktree.
+    /// True when a worktree is selected and it's not currently running a job.
+    /// </summary>
+    public bool CanStartJobOnSelected => SelectedWorktree != null && !SelectedWorktree.CurrentIteration.HasValue;
 
     [ObservableProperty]
     private int _maxIterations = 20;
@@ -254,6 +262,13 @@ public partial class JobsViewModel : ToolViewModelBase
         };
 
         await OnStartJobRequested(worktree, config);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartJobOnSelected))]
+    private async Task StartJobOnSelectedAsync()
+    {
+        if (SelectedWorktree == null) return;
+        await StartJobAsync(SelectedWorktree);
     }
 }
 
