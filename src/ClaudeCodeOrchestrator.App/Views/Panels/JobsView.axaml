@@ -243,17 +243,6 @@
                                             Foreground="#4EC9B0"
                                             IsVisible="{Binding CanRun}"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='RunWorktree_{0}'}" />
-                                    <!-- Start Job button -->
-                                    <Button Command="{Binding $parent[ListBox].((vm:JobsViewModel)DataContext).StartJobCommand}"
-                                            CommandParameter="{Binding}"
-                                            Content="▶ Start"
-                                            Padding="6,2"
-                                            FontSize="10"
-                                            ToolTip.Tip="Start long-running job"
-                                            Background="#4EC9B0"
-                                            Foreground="White"
-                                            IsVisible="{Binding !IsProcessing}"
-                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='StartJob_{0}'}" />
                                     <!-- Merge button - shown when ready to merge -->
                                     <Button Command="{Binding MergeCommand}"
                                             Content="↗"
@@ -263,6 +252,14 @@
                                             Foreground="#4CAF50"
                                             IsVisible="{Binding IsReadyToMerge}"
                                             AutomationProperties.AutomationId="{Binding Id, StringFormat='MergeJob_{0}'}" />
+                                    <!-- Delete button -->
+                                    <Button Command="{Binding DeleteCommand}"
+                                            Content="✕"
+                                            Padding="4,2"
+                                            FontSize="10"
+                                            ToolTip.Tip="Delete worktree"
+                                            Foreground="#F44336"
+                                            AutomationProperties.AutomationId="{Binding Id, StringFormat='DeleteJob_{0}'}" />
                                     <!-- Active session spinner (small) - only show when actively processing -->
                                     <Panel Classes="arc-spinner-small"
                                            IsVisible="{Binding IsProcessing}"

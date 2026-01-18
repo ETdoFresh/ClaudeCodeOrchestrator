@@ -758,6 +758,21 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
     }
 
     /// <summary>
+    /// Adds an iteration separator to mark the start of a new job iteration.
+    /// </summary>
+    public void AddIterationSeparator(int iteration, int maxIterations, bool isResumedSession = true)
+    {
+        var sessionType = isResumedSession ? "Resume Session" : "New Session";
+        Messages.Add(new SystemMessageViewModel
+        {
+            Uuid = Guid.NewGuid().ToString(),
+            Icon = "🔄",
+            Content = $"{sessionType} — Iteration {iteration} of {maxIterations}",
+            MessageType = SystemMessageType.IterationStarted
+        });
+    }
+
+    /// <summary>
     /// Loads existing messages from a session (for resumed sessions with history).
     /// Only loads the last InitialMessageCount messages initially for performance.
     /// More messages can be loaded by calling LoadMoreMessages().
@@ -806,14 +821,14 @@ public partial class SessionDocumentViewModel : DocumentViewModelBase, IDisposab
 
         if (isJob && iteration.HasValue && maxIterations.HasValue)
         {
-            content = $"New Session Started - Iteration {iteration}/{maxIterations}";
+            content = $"New Session — Iteration {iteration} of {maxIterations}";
             icon = "🔄";
             messageType = SystemMessageType.IterationStarted;
         }
         else if (isJob)
         {
-            content = "Job Session Started";
-            icon = "🚀";
+            content = "New Session — Job Started";
+            icon = "🔄";
             messageType = SystemMessageType.SessionStarted;
         }
         else

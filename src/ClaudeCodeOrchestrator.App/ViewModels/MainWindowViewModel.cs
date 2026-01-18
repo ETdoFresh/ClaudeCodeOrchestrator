@@ -2131,6 +2131,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Update worktree with iteration info
             worktree.CurrentIteration = 1;
             worktree.MaxIterations = config.MaxIterations;
+            worktree.IsResumedSessionJob = config.SessionOption == Docking.SessionOption.ResumeSession;
 
             // Persist job metadata for app restart recovery
             await _worktreeService.UpdateJobMetadataAsync(
@@ -2142,14 +2143,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             // Check if we should resume an existing session or start new
             var existingSession = _sessionService.GetSessionByWorktreeId(worktree.Id);
 
-            if (config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null)
+            var isResumedSession = config.SessionOption == Docking.SessionOption.ResumeSession && existingSession != null;
+
+            if (isResumedSession)
             {
+                // Add iteration separator for iteration 1 when resuming
+                var sessionDoc = Factory?.GetSessionDocument(existingSession!.Id);
+                sessionDoc?.AddIterationSeparator(1, config.MaxIterations, isResumedSession: true);
+
                 // Resume existing session with the prompt
-                await _sessionService.SendMessageAsync(existingSession.Id, prompt);
+                await _sessionService.SendMessageAsync(existingSession!.Id, prompt);
             }
             else
             {
-                // Start a new session
+                // Start a new session - iteration separator is added in OnSessionCreated via InsertSessionStartedIndicator
                 await CreateSessionForWorktreeAsync(worktreeInfo, prompt, isPreview: false);
             }
         }
@@ -2302,6 +2309,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             ClearWorktreeIterationInfo(worktree);
             return;
         }
+
+        // Add iteration separator to the session UI
+        var isResumedSession = config.SessionOption == Docking.SessionOption.ResumeSession;
+        var sessionDoc = Factory?.GetSessionDocument(session.Id);
+        sessionDoc?.AddIterationSeparator(job.CurrentIteration, config.MaxIterations, isResumedSession);
 
         // Send the continuation message (will resume the Claude session)
         await _sessionService.SendMessageAsync(session.Id, prompt);
